@@ -1,4 +1,4 @@
-/** Ajustes do jogo persistidos (assistido, vibração, dificuldade, atraso online, botões, som, controles). */
+/** Ajustes do jogo persistidos (assistido, vibração, dificuldade, atraso online, botões, som, controles, reduzir movimento). */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -24,6 +24,7 @@ export async function loadSettings(): Promise<void> {
         sfx: typeof s.sfx === "boolean" ? s.sfx : cur.sfx,
         // quem já jogava antes do modo simples continua no clássico; instalação nova começa no simples
         controls: s.controls === undefined ? { ...cur.controls, mode: "classic" } : sanitizeControls(s.controls),
+        reduceMotion: typeof s.reduceMotion === "boolean" ? s.reduceMotion : cur.reduceMotion,
       },
     });
   } catch {

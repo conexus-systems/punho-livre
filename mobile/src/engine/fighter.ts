@@ -5,7 +5,18 @@
 
 import { advanceAnim, animTime, resetAnim } from "./anim";
 import { getAnim } from "./character";
-import { GROUND_Y, SCREEN_W, STAGE_LEFT, STAGE_RIGHT } from "./constants";
+import {
+  CommandTier,
+  GROUND_Y,
+  GUARD_HITSTOP_MIN,
+  GUARD_HITSTOP_RATIO,
+  HITSTOP_BY_LEVEL,
+  HitLevel,
+  INPUT_BUFFER_FRAMES,
+  SCREEN_W,
+  STAGE_LEFT,
+  STAGE_RIGHT,
+} from "./constants";
 import * as dm from "./detmath";
 import { evalBool, evalNum, evaluate, parseExpr, toNum, type EvalContext, type Expr, type Value } from "./expr";
 import { INPUT_HISTORY } from "./input";
@@ -490,10 +501,42 @@ export function addPower(p: FighterState, v: number): void {
 
 // ------------------------------------------------------- comandos
 
-export function updateCommands(p: FighterState, ch: CharacterData, frame: number): void {
+/** Nomes dos comandos de especial/super de cada personagem (os que ganham buffer). */
+const bufferedNames = new WeakMap<CharacterData, string[]>();
+
+function bufferedCommands(ch: CharacterData): string[] {
+  let names = bufferedNames.get(ch);
+  if (!names) {
+    names = [...new Set(ch.commands.filter((c) => (c.tier ?? CommandTier.NORMAL) >= CommandTier.SPECIAL).map((c) => c.name))];
+    bufferedNames.set(ch, names);
+  }
+  return names;
+}
+
+/**
+ * Reconhece os comandos do quadro. `frozen` = o lutador não age neste quadro
+ * (hitstop ou superpause): especiais e supers no buffer não envelhecem
+ * enquanto ele está congelado, então um meia-lua feito durante o impacto sai
+ * no primeiro quadro livre. Especiais e supers valem por pelo menos
+ * INPUT_BUFFER_FRAMES quadros livres depois de completos.
+ */
+export function updateCommands(p: FighterState, ch: CharacterData, frame: number, frozen = false): void {
+  if (frozen) {
+    for (const name of bufferedCommands(ch)) {
+      const until = p.cmdActive[name];
+      // ainda valia no quadro anterior: segura mais um quadro
+      if (until !== undefined && until >= frame - 1) p.cmdActive[name] = until + 1;
+    }
+  }
   const h = (ago: number) => inputAgo(p, ago);
   for (const cmd of ch.commands) {
-    if (matchCommand(cmd, h)) p.cmdActive[cmd.name] = frame + cmd.bufferTime - 1;
+    if (!matchCommand(cmd, h)) continue;
+    const special = (cmd.tier ?? CommandTier.NORMAL) >= CommandTier.SPECIAL;
+    const buffer = special ? Math.max(cmd.bufferTime, INPUT_BUFFER_FRAMES) : cmd.bufferTime;
+    // completo num quadro congelado: este quadro não conta para o buffer
+    const until = frame + buffer - 1 + (special && frozen ? 1 : 0);
+    const cur = p.cmdActive[cmd.name];
+    p.cmdActive[cmd.name] = cur === undefined || cur < until ? until : cur;
   }
 }
 
@@ -518,8 +561,13 @@ export function buildHitDef(c: Controller, ctx: FighterCtx): HitDefState {
   const animType = ANIM_TYPES[rawWord(c, "animtype") ?? "light"] ?? 0;
   const groundType = GROUND_TYPES[rawWord(c, "ground.type") ?? "high"] ?? 1;
   const damage = num("damage", 0, 0);
-  const pauseP1 = num("pausetime", 0, 0);
-  const pauseP2 = num("pausetime", 1, 0);
+  const attrKind = (attr[1] ?? "NA").trim();
+  const hitLevel = hitLevelOf(animType, attrKind);
+  // pausetime explícito (até 0) vale como no MUGEN; sem ele, o hitstop vem do nível do golpe
+  // (arremessos — attr ?T — ficam com o 0 do MUGEN: não há impacto na pegada)
+  const levelPause = !has("pausetime") && !attrKind.endsWith("T");
+  const pauseP1 = levelPause ? HITSTOP_BY_LEVEL[hitLevel][0] : num("pausetime", 0, 0);
+  const pauseP2 = levelPause ? HITSTOP_BY_LEVEL[hitLevel][1] : num("pausetime", 1, 0);
   const groundVelX = num("ground.velocity", 0, 0);
   const groundVelY = num("ground.velocity", 1, 0);
   const airVelX = num("air.velocity", 0, 0);
@@ -532,7 +580,7 @@ export function buildHitDef(c: Controller, ctx: FighterCtx): HitDefState {
 
   return {
     attrState: attr[0] ?? "S",
-    attrKind: attr[1] ?? "NA",
+    attrKind,
     damage,
     guardDamage: num("damage", 1, 0),
     animType,
@@ -541,8 +589,9 @@ export function buildHitDef(c: Controller, ctx: FighterCtx): HitDefState {
     hitFlag: (c.raw["hitflag"] ?? "MAF").toUpperCase(),
     pauseP1,
     pauseP2,
-    guardPauseP1: has("guard.pausetime") ? num("guard.pausetime", 0) : pauseP1,
-    guardPauseP2: has("guard.pausetime", 1) ? num("guard.pausetime", 1) : pauseP2,
+    // defesa congela menos que acerto, a não ser que o HitDef diga o contrário
+    guardPauseP1: has("guard.pausetime") ? num("guard.pausetime", 0) : guardPause(pauseP1),
+    guardPauseP2: has("guard.pausetime", 1) ? num("guard.pausetime", 1) : guardPause(pauseP2),
     groundType,
     airType: GROUND_TYPES[rawWord(c, "air.type") ?? ""] ?? groundType,
     groundSlideTime: groundSlide,
@@ -570,11 +619,26 @@ export function buildHitDef(c: Controller, ctx: FighterCtx): HitDefState {
     kill: has("kill") ? num("kill") !== 0 : true,
     guardKill: has("guard.kill") ? num("guard.kill") !== 0 : true,
     sparkLevel: Math.min(2, animType),
+    hitLevel,
     p2StateNo: has("p2stateno") ? num("p2stateno") : -1,
     p2Facing: has("p2facing") ? Math.sign(num("p2facing")) : 0,
     hitSound: parseSound(c.raw["hitsound"], (src) => evalNum(parseExprSafe(src), ctx, Number.NaN)),
     guardSound: parseSound(c.raw["guardsound"], (src) => evalNum(parseExprSafe(src), ctx, Number.NaN)),
   };
+}
+
+/** Nível do golpe (HitLevel) pelo animtype e pelo attr: SA/ST/SP especial, HA/HT/HP super. */
+export function hitLevelOf(animType: number, attrKind: string): number {
+  const kind = attrKind.toUpperCase().charAt(0);
+  if (kind === "H") return HitLevel.SUPER;
+  if (kind === "S") return HitLevel.SPECIAL;
+  return Math.max(HitLevel.LIGHT, Math.min(HitLevel.HEAVY, animType));
+}
+
+/** Hitstop na defesa derivado do hitstop do acerto (nunca maior que ele). */
+export function guardPause(hitPause: number): number {
+  if (hitPause <= 0) return 0;
+  return Math.min(hitPause, Math.max(GUARD_HITSTOP_MIN, Math.round(hitPause * GUARD_HITSTOP_RATIO)));
 }
 
 function parseExprSafe(src: string): Expr {

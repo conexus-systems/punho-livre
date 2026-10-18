@@ -64,6 +64,8 @@ export interface AppState {
     sfx: boolean;
     /** Modo simples/clássico, direcional, layout editado e vibração em acertos (docs/CONTROLS.md). */
     controls: ControlSettings;
+    /** Acessibilidade: sem tremor de tela, zoom de impacto nem flashes fortes na luta. */
+    reduceMotion: boolean;
   };
 }
 
@@ -72,5 +74,5 @@ export const app = createStore<AppState>({
   player: null,
   premium: false,
   matchesSinceAd: 0,
-  settings: { assist: true, vibration: true, difficulty: 2, inputDelay: 2, buttons: "snk", music: true, sfx: true, controls: DEFAULT_CONTROLS },
+  settings: { assist: true, vibration: true, difficulty: 2, inputDelay: 2, buttons: "snk", music: true, sfx: true, controls: DEFAULT_CONTROLS, reduceMotion: false },
 });

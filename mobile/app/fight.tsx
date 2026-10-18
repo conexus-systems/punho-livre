@@ -291,6 +291,7 @@ export default function Fight() {
         height,
         debugBoxes,
         banner: online ? onlineBanner(sessionRef.current) : null,
+        reduceMotion: settings.reduceMotion,
       });
       picture.value = rec.finishRecordingAsPicture();
       perf.current.draw(now() - drawStart);
@@ -318,7 +319,7 @@ export default function Fight() {
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, width, height, debugBoxes, tick]);
+  }, [loading, width, height, debugBoxes, tick, settings.reduceMotion]);
 
   const onAssist = useCallback(
     (id: string) => {

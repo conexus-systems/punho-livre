@@ -580,6 +580,8 @@ interface Fight {
 let fight: Fight | null = null;
 let paused = false;
 let debugBoxes = false;
+/** Acessibilidade: segue o "reduzir movimento" do sistema (sem tremor, zoom de impacto e flashes fortes). */
+const reducedMotionQuery = typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
 
 function assistsOf(charId: string): Assist[] {
   const meta = BUILTIN[charId].meta;
@@ -908,6 +910,7 @@ function frame(t: number) {
     width: cssW,
     height: cssH,
     debugBoxes,
+    reduceMotion: reducedMotionQuery?.matches === true,
   });
   if (!paused) perf.draw(now() - drawStart);
 

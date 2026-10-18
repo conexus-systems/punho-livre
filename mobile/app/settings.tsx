@@ -66,6 +66,12 @@ export default function Settings() {
               />
               <MetroToggle label="Música" description="Uma trilha para cada cenário." value={settings.music} onChange={(v) => setSetting("music", v)} />
               <MetroToggle label="Efeitos sonoros" description="Golpes, defesa, K.O. e anúncios." value={settings.sfx} onChange={(v) => setSetting("sfx", v)} />
+              <MetroToggle
+                label="Reduzir movimento"
+                description="Sem tremor de tela e zoom nos impactos; flashes mais fracos."
+                value={settings.reduceMotion}
+                onChange={(v) => setSetting("reduceMotion", v)}
+              />
               <MetroGroup title="Controles" />
               <MetroCheck
                 kind="radio"
