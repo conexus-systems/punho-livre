@@ -1,0 +1,101 @@
+/* Página de jogo: tela única escura, canvas 16:9 centralizado. */
+:root {
+  --ink: #0b0c1d;
+  --panel: #171b38;
+  --amber: #ffb000;
+  --text: #e9ebff;
+  --btn: rgba(233, 235, 255, 0.14);
+  --btn-on: rgba(255, 176, 0, 0.55);
+  color-scheme: dark;
+}
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  box-sizing: border-box;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+#wrap {
+  position: relative;
+  width: min(100%, calc((100vh - 32px) * 16 / 9));
+  width: min(100%, calc((100dvh - 32px) * 16 / 9));
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 6px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.55);
+}
+
+#touch {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 8px;
+  pointer-events: none;
+}
+
+#touch button {
+  pointer-events: auto;
+  touch-action: none;
+  border: 2px solid rgba(233, 235, 255, 0.35);
+  background: var(--btn);
+  color: var(--text);
+  font: 700 18px "Chakra Petch", sans-serif;
+  border-radius: 50%;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+}
+
+#touch button.on { background: var(--btn-on); }
+
+#touch .pad {
+  display: grid;
+  grid-template-columns: repeat(3, 52px);
+  grid-template-rows: repeat(3, 52px);
+  gap: 2px;
+}
+#touch .pad .up { grid-column: 2; grid-row: 1; }
+#touch .pad .left { grid-column: 1; grid-row: 2; }
+#touch .pad .right { grid-column: 3; grid-row: 2; }
+#touch .pad .down { grid-column: 2; grid-row: 3; }
+
+#touch .sys { display: flex; gap: 10px; }
+#touch .sys button { width: 44px; height: 30px; border-radius: 8px; font-size: 13px; }
+
+#touch .btns {
+  display: grid;
+  grid-template-columns: repeat(2, 60px);
+  grid-template-rows: repeat(2, 60px);
+  gap: 6px;
+}
+#touch .btns button { width: 60px; height: 60px; font-size: 20px; }
+#touch .btns .a { grid-column: 2; grid-row: 2; border-color: var(--amber); }
+#touch .btns .j { grid-column: 1; grid-row: 2; }
+#touch .btns .d { grid-column: 2; grid-row: 1; }
+
+/* Em retrato, os controles de toque ficam abaixo da tela do jogo. */
+@media (orientation: portrait) {
+  body.has-touch { align-items: flex-start; padding-top: 16px; }
+  body.has-touch #wrap { width: 100%; }
+  body.has-touch #touch { position: static; padding: 18px 0 0; }
+}
