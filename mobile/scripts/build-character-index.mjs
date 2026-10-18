@@ -11,7 +11,7 @@ const charsDir = path.join(root, "characters");
 const out = path.join(root, "src/characters/builtin.generated.ts");
 
 const ids = readdirSync(charsDir).filter((d) => statSync(path.join(charsDir, d)).isDirectory()).sort();
-const order = ["kaze", "brasa", "tita", "yuki", "volt", "sombra", "kenshi", "lua"];
+const order = ["kaze", "brasa", "tita", "yuki", "volt", "sombra", "kenshi", "lua", "bento", "jaguara", "mei", "icaro", "akemi", "tetsu", "ze", "iara", "severino", "hercules", "nadia", "kai"];
 ids.sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99));
 
 const entries = ids.map((id) => {
@@ -22,7 +22,7 @@ const entries = ids.map((id) => {
   }
   const sprites = JSON.parse(readFileSync(path.join(dir, "sprites.json"), "utf8"));
   const meta = JSON.parse(readFileSync(path.join(dir, "meta.json"), "utf8"));
-  const pages = Array.from({ length: sprites.pages }, (_, i) => `require("../../characters/${id}/sprites${i}.png")`);
+  const pages = Array.from({ length: sprites.pages }, (_, i) => `require("../../characters/${id}/sprites${i}.webp")`);
   return `  ${JSON.stringify(id)}: {
     meta: ${JSON.stringify(meta)},
     pack: {

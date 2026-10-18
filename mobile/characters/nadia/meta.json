@@ -1,0 +1,35 @@
+{
+  "id": "nadia",
+  "name": "Nadia",
+  "bio": "Campeã de savate de Marselha. Elegante, precisa e com chutes que cortam o ar.",
+  "specials": [
+    {
+      "name": "Chassé Rápido",
+      "cmd": "qcf_k"
+    },
+    {
+      "name": "Fouetté",
+      "cmd": "qcb_k"
+    },
+    {
+      "name": "Revers",
+      "cmd": "dp_k"
+    },
+    {
+      "name": "Coup de Pied",
+      "cmd": "qcf_k"
+    }
+  ],
+  "super": {
+    "name": "Ballet de Combat",
+    "cmd": "super_k"
+  },
+  "super2": {
+    "name": "Grand Finale",
+    "cmd": "super2_k"
+  },
+  "quotes": [
+    "Bonito e eficiente. Como deve ser.",
+    "Pés no lugar, cabeça também."
+  ]
+}

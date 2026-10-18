@@ -14,11 +14,19 @@
     {
       "name": "Avalanche",
       "cmd": "qcf_k"
+    },
+    {
+      "name": "Chuva de Kunai",
+      "cmd": "qcf_p"
     }
   ],
   "super": {
     "name": "Mil Flocos",
     "cmd": "super_p"
+  },
+  "super2": {
+    "name": "Nevasca",
+    "cmd": "super2_p"
   },
   "quotes": [
     "Nem viu a neve cair, né?",

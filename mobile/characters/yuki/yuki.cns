@@ -571,6 +571,120 @@ type = ChangeState
 trigger1 = Pos Y >= 0 && Time > 0
 value = 52
 
+[Statedef 1300]
+type = A
+movetype = A
+physics = N
+anim = 1300
+ctrl = 0
+poweradd = 35
+
+[State 1300, paira]
+type = VelSet
+trigger1 = Time = 0
+x = 0.5
+y = -1.5
+
+[State 1300, cai]
+type = VelAdd
+trigger1 = Time > 0
+y = 0.3
+
+[State 1300, projetil]
+type = Projectile
+trigger1 = AnimElem = 3
+projid = 1300
+projanim = 1350
+projhitanim = 1360
+velocity = 4.8, 3.6
+offset = 31, -44
+attr = A, SP
+damage = 40, 7
+animtype = Medium
+guardflag = HA
+hitflag = MAF
+pausetime = 0, 12
+ground.hittime = 16
+ground.velocity = -4
+air.velocity = -3, -4
+
+[State 1300, pousa]
+type = ChangeState
+trigger1 = Pos Y >= 0 && Vel Y > 0
+value = 52
+
+[Statedef 3100]
+type = S
+movetype = A
+physics = S
+anim = 3100
+ctrl = 0
+velset = 0, 0
+
+[State 3100, custo]
+type = PowerAdd
+trigger1 = Time = 0
+value = -2000
+
+[State 3100, pausa]
+type = SuperPause
+trigger1 = Time = 0
+time = 45
+
+[State 3100, invencivel]
+type = NotHitBy
+trigger1 = Time = 0
+value = SCA
+time = 20
+
+[State 3100, avanca]
+type = VelSet
+trigger1 = AnimElemTime(3) >= 0 && AnimElemTime(7) < 0
+x = 3.6
+
+[State 3100, combo]
+type = HitDef
+trigger1 = AnimElem = 3
+trigger2 = AnimElem = 4
+trigger3 = AnimElem = 5
+trigger4 = AnimElem = 6
+attr = S, HA
+animtype = Medium
+damage = 42, 2
+guardflag = MA
+hitflag = MAF
+pausetime = 4, 8
+ground.type = High
+ground.slidetime = 12
+ground.hittime = 20
+ground.velocity = -1
+air.velocity = -1, -2
+air.fall = 0
+fall = 0
+
+[State 3100, final]
+type = HitDef
+trigger1 = AnimElem = 7
+attr = S, HA
+animtype = Hard
+damage = 182, 10
+guardflag = MA
+hitflag = MAF
+pausetime = 16, 18
+ground.type = High
+ground.slidetime = 14
+ground.hittime = 24
+ground.velocity = -6, -7
+air.velocity = -6, -7
+air.fall = 1
+fall = 1
+
+[State 3100, fim]
+type = ChangeState
+trigger1 = AnimTime = 0
+value = 0
+ctrl = 1
+
 [Statedef 3000]
 type = S
 movetype = A

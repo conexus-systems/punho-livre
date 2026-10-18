@@ -1,0 +1,35 @@
+{
+  "id": "jaguara",
+  "name": "Jaguara",
+  "bio": "Luchador mascarado das arenas de Guadalajara. Voa das cordas e cai como um meteoro.",
+  "specials": [
+    {
+      "name": "Suplex Jaguar",
+      "cmd": "hcf_p"
+    },
+    {
+      "name": "Plancha",
+      "cmd": "qcf_k"
+    },
+    {
+      "name": "Huracán",
+      "cmd": "dp_k"
+    },
+    {
+      "name": "Bomba",
+      "cmd": "qcb_p"
+    }
+  ],
+  "super": {
+    "name": "Jaguar Voador",
+    "cmd": "super_k"
+  },
+  "super2": {
+    "name": "Piledriver Asteca",
+    "cmd": "super2_p"
+  },
+  "quotes": [
+    "A máscara fica. Você é que cai.",
+    "¡Arriba! Era só o aquecimento."
+  ]
+}

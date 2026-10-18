@@ -127,5 +127,11 @@ export const POSES = {
   flyingKnee: { torso: -62, armF: [-50, -110], armB: [-40, -100], legF: [-30, 100], legB: [110, 150], ground: false, strike: "kneeF" },
   elbow: { torso: -70, armF: [-10, 175], armB: [110, -60], legF: [50, 96], legB: [128, 100], hurtArm: true, strike: "elbowF" },
   iai: { torso: -55, armF: [10, -5], armB: [140, 160], legF: [25, 95], legB: [160, 150], hurtArm: true, strike: "handF", weapon: 0 },
+  // agarrão, contra-golpe e projétil aéreo
+  grabWind: { torso: -94, armF: [150, 120], armB: [160, 130], legF: [62, 100], legB: [120, 94], hipX: -2 },
+  grabReach: { torso: -68, armF: [-4, 6], armB: [8, 12], legF: [40, 96], legB: [134, 104], hurtArm: true, strike: "hands" },
+  counterStance: { torso: -96, armF: [-40, -70], armB: [30, -20], legF: [70, 98], legB: [118, 96], hipX: -3 },
+  airThrowWind: { torso: -100, armF: [-150, -120], armB: [160, 120], ...tuck },
+  airThrow: { torso: -70, armF: [40, 60], armB: [150, -150], ...tuck, hurtArm: true },
   superPose: { torso: -92, armF: [-35, -40], armB: [-145, -140], legF: [62, 100], legB: [120, 92] },
 };

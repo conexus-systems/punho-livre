@@ -580,6 +580,120 @@ trigger1 = AnimTime = 0
 value = 0
 ctrl = 1
 
+[Statedef 1300]
+type = S
+movetype = A
+physics = S
+anim = 1300
+ctrl = 0
+velset = 0, 0
+poweradd = 45
+
+[State 1300, avanca]
+type = VelSet
+trigger1 = AnimElemTime(3) >= 0 && AnimElemTime(9) < 0
+x = 0.8
+
+[State 1300, rajada]
+type = HitDef
+trigger1 = AnimElem = 3
+trigger2 = AnimElem = 4
+trigger3 = AnimElem = 5
+trigger4 = AnimElem = 6
+trigger5 = AnimElem = 7
+trigger6 = AnimElem = 8
+attr = S, SA
+animtype = Medium
+damage = 16, 3
+guardflag = MA
+hitflag = MAF
+pausetime = 3, 6
+ground.type = High
+ground.slidetime = 8
+ground.hittime = 14
+ground.velocity = -1.6
+air.velocity = -2, -3
+air.fall = 0
+fall = 0
+
+[State 1300, fim]
+type = ChangeState
+trigger1 = AnimTime = 0
+value = 0
+ctrl = 1
+
+[Statedef 3100]
+type = S
+movetype = A
+physics = S
+anim = 3100
+ctrl = 0
+velset = 0, 0
+
+[State 3100, custo]
+type = PowerAdd
+trigger1 = Time = 0
+value = -2000
+
+[State 3100, pausa]
+type = SuperPause
+trigger1 = Time = 0
+time = 45
+
+[State 3100, invencivel]
+type = NotHitBy
+trigger1 = Time = 0
+value = SCA
+time = 20
+
+[State 3100, avanca]
+type = VelSet
+trigger1 = AnimElemTime(3) >= 0 && AnimElemTime(7) < 0
+x = 3.6
+
+[State 3100, combo]
+type = HitDef
+trigger1 = AnimElem = 3
+trigger2 = AnimElem = 4
+trigger3 = AnimElem = 5
+trigger4 = AnimElem = 6
+attr = S, HA
+animtype = Medium
+damage = 46, 2
+guardflag = MA
+hitflag = MAF
+pausetime = 4, 8
+ground.type = High
+ground.slidetime = 12
+ground.hittime = 20
+ground.velocity = -1
+air.velocity = -1, -2
+air.fall = 0
+fall = 0
+
+[State 3100, final]
+type = HitDef
+trigger1 = AnimElem = 7
+attr = S, HA
+animtype = Hard
+damage = 196, 10
+guardflag = MA
+hitflag = MAF
+pausetime = 16, 18
+ground.type = High
+ground.slidetime = 14
+ground.hittime = 24
+ground.velocity = -6, -7
+air.velocity = -6, -7
+air.fall = 1
+fall = 1
+
+[State 3100, fim]
+type = ChangeState
+trigger1 = AnimTime = 0
+value = 0
+ctrl = 1
+
 [Statedef 3000]
 type = S
 movetype = A

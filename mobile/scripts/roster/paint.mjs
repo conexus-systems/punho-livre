@@ -306,7 +306,7 @@ export function paintFighter(P, S, look, k) {
     const upperR = P.armR * 1.35;
     const elbowR = P.armR * 0.95;
     const wristR = P.armR * 0.72;
-    const sleeve = look.sleeves ? top : null;
+    const sleeve = look.jacket ? col(look.jacket) : look.sleeves ? top : null;
     const fore = look.forearm ? col(look.forearm) : skin;
     if (sleeve) {
       sp.part(limb(shoulder, elbow, upperR * 1.35, elbowR * 1.4, [0.6, 0.6], 0.4), dimmed(sleeve, f));
@@ -367,6 +367,18 @@ export function paintFighter(P, S, look, k) {
     ];
     const body = smooth(pts);
     sp.part(body, top, { shadeSize: 3.6 });
+    if (look.belly) {
+      sp.part(ellipse(at(0.3, P.hipR * 0.7), P.hipR * 0.75, L * 0.3, Math.atan2(t[1], t[0]) * (180 / Math.PI)), top, { shadeSize: 2.4 });
+    }
+    if (look.jacket) {
+      // jaqueta aberta: cobre costas e ombros, deixa o peito à mostra
+      sp.part(
+        smooth([at(1.02, -P.armR * 0.9), at(0.92, -sh * 0.95), at(0.72, -P.chestR * 1.12), at(0.4, -P.hipR * 0.95), at(0.0, -P.hipR * 1.15), at(-0.06, P.hipR * 0.1), at(0.35, P.hipR * 0.3), at(0.7, P.chestR * 0.55), at(0.95, P.chestR * 0.35)]),
+        col(look.jacket),
+        { shadeSize: 3 },
+      );
+      sp.line([at(0.98, P.chestR * 0.4), at(0.7, P.chestR * 0.62), at(0.35, P.hipR * 0.38)], shadowOf(col(look.jacket), 1.4), sp.u * 1.4);
+    }
     const ink = shadowOf(top, 1.5);
     if (bare) {
       // peitoral e abdômen
@@ -432,7 +444,21 @@ export function paintFighter(P, S, look, k) {
     sp.flat(ellipse(F([r * 0.66, -r * 0.07]), r * 0.08, r * 0.1, ang), [30, 22, 26]);
     sp.line([F([r * 0.32, -r * 0.34]), F([r * 0.6, -r * 0.3]), F([r * 0.86, -r * 0.18])], OUTLINE, sp.u * 1.6);
     sp.line([F([r * 0.6, r * 0.55]), F([r * 0.86, r * 0.5])], shadowOf(skin, 1.6), sp.u * 0.9);
-    hair(F, r, ang);
+    if (look.beard) {
+      sp.part(smooth([F([-r * 0.3, r * 0.15]), F([r * 0.35, r * 0.42]), F([r * 0.95, r * 0.55]), F([r * 0.92, r * 1.05]), F([r * 0.4, r * 1.25]), F([-r * 0.3, r * 0.85])]), col(look.beard), { shadeSize: 1.6 });
+      sp.line([F([r * 0.62, r * 0.6]), F([r * 0.9, r * 0.56])], [40, 20, 20], sp.u * 1.1);
+    }
+    if (look.mask) {
+      // máscara de luta-livre: cobre a cabeça, com aberturas e detalhe
+      const m = col(look.mask);
+      sp.part(smooth([F([-r * 1.02, r * 0.55]), F([-r * 1.0, -r * 0.75]), F([0, -r * 1.08]), F([r * 0.85, -r * 0.78]), F([r * 1.1, -r * 0.1]), F([r * 1.14, r * 0.3]), F([r * 0.9, r * 0.45]), F([0, r * 0.62])]), m, { shadeSize: 2.2 });
+      sp.flat(ellipse(F([r * 0.62, -r * 0.1]), r * 0.24, r * 0.17, ang), col(look.maskTrim ?? "#FFFFFF"));
+      sp.flat(ellipse(F([r * 0.64, -r * 0.08]), r * 0.15, r * 0.1, ang), [250, 248, 240]);
+      sp.flat(ellipse(F([r * 0.7, -r * 0.07]), r * 0.07, r * 0.09, ang), [30, 22, 26]);
+      sp.line([F([-r * 0.2, -r * 1.0]), F([r * 0.3, -r * 0.6]), F([r * 0.95, -r * 0.35])], col(look.maskTrim ?? "#FFFFFF"), sp.u * 2.2);
+    } else {
+      hair(F, r, ang);
+    }
     if (look.headband) {
       const hb = col(look.headband);
       sp.part(limb(F([-r * 0.95, -r * 0.3]), F([r * 0.95, -r * 0.42]), r * 0.17, r * 0.17), hb, { shadeSize: 0.9 });
@@ -475,6 +501,35 @@ export function paintFighter(P, S, look, k) {
         sp.part(smooth([F([-r * 1.05, -r * 0.2]), F([-r * 0.9, -r * 1.3]), F([-r * 0.1, -r * 1.75]), F([r * 0.75, -r * 1.25]), F([r * 0.6, -r * 0.85]), F([-r * 0.2, -r * 0.95])]), hc, { shadeSize: 1.8 });
         break;
       }
+      case "bald":
+        // careca: só um brilho
+        sp.flat(ellipse(F([r * 0.1, -r * 0.82]), r * 0.35, r * 0.12, ang), [255, 255, 255], { alpha: 0.35 });
+        break;
+      case "afro": {
+        const pts = [];
+        for (let i = 0; i < 14; i++) {
+          const a = Math.PI * (0.78 + (i / 13) * 1.32);
+          const rr = r * (1.45 + (i % 2) * 0.12);
+          pts.push(F([-r * 0.15 + Math.cos(a) * rr, -r * 0.35 + Math.sin(a) * rr * 0.92]));
+        }
+        pts.push(F([r * 0.75, -r * 0.45]), F([r * 0.3, -r * 0.55]), F([-r * 0.5, -r * 0.2]), F([-r * 0.9, r * 0.35]));
+        sp.part(smooth(pts), hc, { shadeSize: 2.6 });
+        break;
+      }
+      case "ponytail": {
+        sp.part(smooth([F([-r * 0.8, -r * 0.6]), F([-r * 1.6, -r * 0.4]), F([-r * 2.1, r * 0.5]), F([-r * 1.9, r * 1.6]), F([-r * 1.4, r * 0.6]), F([-r * 0.9, -r * 0.1])]), hc, { shadeSize: 1.8 });
+        sp.part(smooth([F([-r * 1.02, r * 0.1]), F([-r * 0.9, -r * 0.8]), F([0, -r * 1.12]), F([r * 0.85, -r * 0.82]), F([r * 1.0, -r * 0.35]), F([r * 0.5, -r * 0.55]), F([-r * 0.3, -r * 0.45]), F([-r * 0.65, 0])]), hc, { shadeSize: 2 });
+        sp.part(ellipse(F([-r * 0.95, -r * 0.45]), r * 0.14, r * 0.2, ang), col(look.accentHair ?? "#DC2626"), { shadeSize: 0.6, outlineScale: 0.6 });
+        break;
+      }
+      case "buns": {
+        sp.part(smooth([F([-r * 1.02, r * 0.15]), F([-r * 0.9, -r * 0.8]), F([0, -r * 1.12]), F([r * 0.85, -r * 0.8]), F([r * 1.0, -r * 0.3]), F([r * 0.45, -r * 0.55]), F([-r * 0.35, -r * 0.45]), F([-r * 0.65, 0])]), hc, { shadeSize: 2 });
+        for (const bx of [-0.75, 0.25]) {
+          sp.part(circle(F([r * bx, -r * 1.12]), r * 0.42), hc, { shadeSize: 1.4 });
+          sp.part(limb(F([r * bx - r * 0.42, -r * 1.12]), F([r * bx + r * 0.42, -r * 1.12]), r * 0.08, r * 0.08), col(look.accentHair ?? "#F8FAFC"), { shadeSize: 0.4, outlineScale: 0.5 });
+        }
+        break;
+      }
       case "short":
       default:
         sp.part(smooth([F([-r * 1.02, r * 0.2]), F([-r * 0.95, -r * 0.75]), F([0, -r * 1.12]), F([r * 0.82, -r * 0.82]), F([r * 0.95, -r * 0.45]), F([r * 0.4, -r * 0.62]), F([-r * 0.4, -r * 0.45])]), hc, { shadeSize: 2 });
@@ -486,6 +541,15 @@ export function paintFighter(P, S, look, k) {
     const seg = weaponSegment(P, S, look);
     if (!seg) return;
     const w = look.weapon;
+    if (w.kind === "staff") {
+      // bastão (bō): madeira com ponteiras de metal
+      sp.part(limb(seg.butt, seg.tip, P.H * 0.016, P.H * 0.016), col(w.wood ?? "#8B5A2B"), { shadeSize: 0.8, outlineScale: 0.8 });
+      const dd = norm(sub(seg.tip, seg.butt));
+      for (const [a, b] of [[seg.butt, add(seg.butt, dd, P.H * 0.06)], [add(seg.tip, dd, -P.H * 0.06), seg.tip]]) {
+        sp.part(limb(a, b, P.H * 0.018, P.H * 0.018), col(w.metal ?? "#9CA3AF"), { shadeSize: 0.5, outlineScale: 0.7 });
+      }
+      return;
+    }
     const d = dirOf(seg.ang);
     const n = perp(d);
     const guard = add(seg.hand, d, P.H * 0.035);
@@ -588,4 +652,22 @@ export function paintProjectile(kind, look, H, frameNo, k) {
     }
   }
   return render(sp, k, 4);
+}
+
+/**
+ * Codifica uma página do atlas em WebP (com alfa). Bem menor que PNG para a
+ * arte sombreada; o Skia do app e os navegadores leem WebP.
+ */
+export function encodeWebP(canvas, quality = 80) {
+  const { w, h } = canvas;
+  const bytes = new Uint8Array(w * h * 4);
+  for (let i = 0; i < w * h; i++) {
+    const a = canvas.px[i * 4 + 3];
+    for (let k = 0; k < 3; k++) bytes[i * 4 + k] = a > 0 ? Math.round(Math.min(1, canvas.px[i * 4 + k] / a) * 255) : 0;
+    bytes[i * 4 + 3] = Math.round(a * 255);
+  }
+  const img = CK.MakeImage({ width: w, height: h, alphaType: CK.AlphaType.Unpremul, colorType: CK.ColorType.RGBA_8888, colorSpace: CK.ColorSpace.SRGB }, bytes, w * 4);
+  const out = img.encodeToBytes(CK.ImageFormat.WEBP, quality);
+  img.delete();
+  return Buffer.from(out);
 }

@@ -14,11 +14,19 @@
     {
       "name": "Chute Tesoura",
       "cmd": "dp_k"
+    },
+    {
+      "name": "Clinch",
+      "cmd": "hcf_k"
     }
   ],
   "super": {
     "name": "Tempestade de Joelhos",
     "cmd": "super_k"
+  },
+  "super2": {
+    "name": "Lua Cheia",
+    "cmd": "super2_k"
   },
   "quotes": [
     "Oito armas, uma vitória.",

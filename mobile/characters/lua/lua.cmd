@@ -15,6 +15,21 @@ command.time = 15
 command.buffer.time = 2
 
 [Command]
+name = "super2_k"
+command = ~D, DB, B, D, DB, B, a
+time = 35
+
+[Command]
+name = "super2_k"
+command = ~D, DB, B, D, DB, B, b
+time = 35
+
+[Command]
+name = "super2_k"
+command = ~D, DB, B, D, DB, B, c
+time = 35
+
+[Command]
 name = "super_k"
 command = ~D, DF, F, D, DF, F, a
 time = 35
@@ -75,13 +90,28 @@ command = ~F, D, DF, c
 time = 15
 
 [Command]
+name = "hcf_k"
+command = ~B, DB, D, DF, F, a
+time = 15
+
+[Command]
+name = "hcf_k"
+command = ~B, DB, D, DF, F, b
+time = 15
+
+[Command]
+name = "hcf_k"
+command = ~B, DB, D, DF, F, c
+time = 15
+
+[Command]
 name = "FF"
-command = F, F
+command = F, >F
 time = 10
 
 [Command]
 name = "BB"
-command = B, B
+command = B, >B
 time = 10
 
 [Command]
@@ -142,6 +172,15 @@ time = 1
 ; ------------------------------------------------------------
 [Statedef -1]
 
+[State -1, Lua Cheia]
+type = ChangeState
+value = 3100
+triggerall = command = "super2_k"
+triggerall = power >= 2000
+triggerall = statetype != A
+trigger1 = ctrl
+trigger2 = stateno = [200, 2999] && movecontact
+
 [State -1, Tempestade de Joelhos]
 type = ChangeState
 value = 3000
@@ -171,6 +210,14 @@ trigger2 = stateno = [200, 499] && movecontact
 type = ChangeState
 value = 1200
 triggerall = command = "dp_k"
+triggerall = statetype != A
+trigger1 = ctrl
+trigger2 = stateno = [200, 499] && movecontact
+
+[State -1, Clinch]
+type = ChangeState
+value = 1300
+triggerall = command = "hcf_k"
 triggerall = statetype != A
 trigger1 = ctrl
 trigger2 = stateno = [200, 499] && movecontact

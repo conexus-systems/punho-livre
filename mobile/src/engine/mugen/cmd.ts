@@ -166,6 +166,10 @@ export function matchCommand(cmd: CommandDef, h: History): boolean {
       }
     }
     if (found < 0) return false;
+    // ">" no elemento seguinte: nada pode ter sido apertado entre os dois
+    if (els[i + 1].strict) {
+      for (let s = t + 1; s < found; s++) if (h(s) !== 0) return false;
+    }
     t = found;
   }
   return t <= cmd.time;

@@ -1,0 +1,35 @@
+{
+  "id": "ze",
+  "name": "Zé Pilão",
+  "bio": "Brigão das quadras de Belo Horizonte. Não aprendeu em academia, aprendeu na rua.",
+  "specials": [
+    {
+      "name": "Rajada de Rua",
+      "cmd": "dd_p"
+    },
+    {
+      "name": "Soco Bomba",
+      "cmd": "qcf_p"
+    },
+    {
+      "name": "Pisão",
+      "cmd": "qcb_k"
+    },
+    {
+      "name": "Gravata",
+      "cmd": "hcf_p"
+    }
+  ],
+  "super": {
+    "name": "Sem Pena",
+    "cmd": "super_p"
+  },
+  "super2": {
+    "name": "Final de Baile",
+    "cmd": "super2_p"
+  },
+  "quotes": [
+    "Academia é bom. Rua é melhor.",
+    "Levanta, que a festa tá começando."
+  ]
+}

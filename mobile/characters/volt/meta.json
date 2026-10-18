@@ -14,11 +14,19 @@
     {
       "name": "Faísca",
       "cmd": "qcb_p"
+    },
+    {
+      "name": "Metralhadora",
+      "cmd": "dd_p"
     }
   ],
   "super": {
     "name": "Tempestade de Socos",
     "cmd": "super_p"
+  },
+  "super2": {
+    "name": "Curto-Circuito",
+    "cmd": "super2_p"
   },
   "quotes": [
     "Na periferia a gente aprende a apanhar. E a bater mais forte.",

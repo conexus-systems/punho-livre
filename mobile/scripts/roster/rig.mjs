@@ -104,7 +104,7 @@ export function weaponSegment(P, S, look) {
   const fore = S.pose.armF[1];
   const ang = S.pose.weapon ?? fore - 12;
   const d = dir(ang);
-  return { butt: add(hand, d, -P.H * 0.1), hand, tip: add(hand, d, P.H * (wpn.length ?? 0.6)), ang };
+  return { butt: add(hand, d, -P.H * (wpn.back ?? 0.1)), hand, tip: add(hand, d, P.H * (wpn.length ?? 0.6)), ang };
 }
 
 function weaponShapes(P, S, look, col) {

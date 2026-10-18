@@ -14,11 +14,19 @@
     {
       "name": "Tsubame Gaeshi",
       "cmd": "dp_p"
+    },
+    {
+      "name": "Kiri Kaeshi",
+      "cmd": "dd_p"
     }
   ],
   "super": {
     "name": "Mil Cortes",
     "cmd": "super_p"
+  },
+  "super2": {
+    "name": "Lâmina Infinita",
+    "cmd": "super2_p"
   },
   "quotes": [
     "Um corte. Era só o que precisava.",

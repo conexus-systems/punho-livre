@@ -753,10 +753,10 @@ export function stepWorld(w: WorldState, inputs: readonly [number, number], rost
     updateCommands(p, roster[p.charId], w.frame);
   }
 
+  // pausa de super: o mundo inteiro congela, inclusive quem soltou (pausemovetime = 0 do MUGEN);
+  // antes a animação dele andava sozinha e os golpes do começo do super se perdiam
   if (w.superPause > 0) {
     w.superPause--;
-    const owner = w.superPauseOwner === -1 ? null : w.fighters[w.superPauseOwner];
-    if (owner) advanceFighterAnim(owner, roster[owner.charId]);
     return;
   }
 

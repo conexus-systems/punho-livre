@@ -117,7 +117,7 @@ export class CpuController {
 
     // anti-aéreo
     if (opp.stateType === "A" && dist < 90 && r < this.cfg.special) {
-      const dp = motions.find((c) => c.name.startsWith("dp"));
+      const dp = motions.find((c) => c.name.startsWith("dp") || c.name.startsWith("chg_du"));
       if (dp) return this.play(ch, dp.name, me);
       return this.holdFor(Btn.D | C, 2);
     }
@@ -126,8 +126,14 @@ export class CpuController {
     if (me.maxTime === 0 && me.power >= 2000 && dist < 160 && r < sys * 0.4) return this.holdFor(A | B | C, 3);
     const superChance = me.maxTime > 0 ? this.cfg.special * 1.5 : this.cfg.special * 0.6;
     if (me.power >= 1000 && dist < 130 && r < superChance) {
-      const sup = motions.find((c) => c.name.startsWith("super"));
+      // super de 2 estoques quando dá; senão o de 1
+      const sup = (me.power >= 2000 ? motions.find((c) => c.name.startsWith("super2")) : undefined) ?? motions.find((c) => c.name.startsWith("super") && !c.name.startsWith("super2"));
       if (sup) return this.play(ch, sup.name, me);
+    }
+    // agarrão de comando colado
+    if (dist < 40 && opp.stateType !== "A" && opp.moveType !== "H" && r < this.cfg.special * 0.5) {
+      const grab = motions.find((c) => c.name.startsWith("hcf"));
+      if (grab) return this.play(ch, grab.name, me);
     }
 
     // colado: arremesso

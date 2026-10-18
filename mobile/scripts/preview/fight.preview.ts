@@ -21,7 +21,7 @@ test("renderiza cenas de luta", async () => {
   const atlases: Record<string, any[]> = {};
   for (const id of BUILTIN_ORDER) {
     atlases[id] = BUILTIN[id].pack.sprites!.atlas.map((_: string, i: number) => {
-      const bytes = require("node:fs").readFileSync(`${__dirname}/../../characters/${id}/sprites${i}.png`);
+      const bytes = require("node:fs").readFileSync(`${__dirname}/../../characters/${id}/sprites${i}.webp`);
       return state.Skia.Image.MakeImageFromEncoded(state.Skia.Data.fromBytes(new Uint8Array(bytes)));
     });
   }

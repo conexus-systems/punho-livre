@@ -1,0 +1,35 @@
+{
+  "id": "tetsu",
+  "name": "Tetsu",
+  "bio": "Monge do bastão de um templo nas montanhas. Alcance enorme e calma inabalável.",
+  "specials": [
+    {
+      "name": "Estocada",
+      "cmd": "qcf_p"
+    },
+    {
+      "name": "Roda do Bastão",
+      "cmd": "qcb_k"
+    },
+    {
+      "name": "Bastão Ascendente",
+      "cmd": "dp_p"
+    },
+    {
+      "name": "Guarda do Bastão",
+      "cmd": "dd_p"
+    }
+  ],
+  "super": {
+    "name": "Mil Bastões",
+    "cmd": "super_p"
+  },
+  "super2": {
+    "name": "Sutra de Luz",
+    "cmd": "super2_p"
+  },
+  "quotes": [
+    "O bastão é longo. A paciência, mais.",
+    "Volte quando souber esperar."
+  ]
+}

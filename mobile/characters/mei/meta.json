@@ -1,0 +1,35 @@
+{
+  "id": "mei",
+  "name": "Mei",
+  "bio": "Mestra de kung fu de Macau. Golpes de carga, pés rápidos e uma palma que vira dragão.",
+  "specials": [
+    {
+      "name": "Palma do Dragão",
+      "cmd": "chg_bf_p"
+    },
+    {
+      "name": "Chute Fênix",
+      "cmd": "chg_du_k"
+    },
+    {
+      "name": "Cem Chutes",
+      "cmd": "qcf_k"
+    },
+    {
+      "name": "Pétala de Fogo",
+      "cmd": "qcf_p"
+    }
+  ],
+  "super": {
+    "name": "Dança da Garça",
+    "cmd": "super_k"
+  },
+  "super2": {
+    "name": "Grande Dragão",
+    "cmd": "super2_p"
+  },
+  "quotes": [
+    "Paciência também é velocidade.",
+    "O dragão dorme no meu punho."
+  ]
+}

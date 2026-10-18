@@ -285,9 +285,7 @@ window.addEventListener("keydown", (e) => {
     held.add(e.code);
     e.preventDefault();
   }
-  if (e.code === "Digit1" || e.code === "Digit2" || e.code === "Digit3") assist(Number(e.code.slice(5)) - 1);
-  if (e.code === "Digit4") assist(3);
-  if (e.code === "Digit5") assist(4);
+  if (/^Digit[1-9]$/.test(e.code)) assist(Number(e.code.slice(5)) - 1);
   if (e.code === "Escape" || e.code === "KeyP") togglePause();
   if (e.code === "KeyB" && fight?.mode === "training") debugBoxes = !debugBoxes;
 });
@@ -382,7 +380,7 @@ touchLayer.addEventListener("pointercancel", release);
 interface Assist {
   label: string;
   cmd: string;
-  kind: "special" | "super" | "max";
+  kind: "special" | "super" | "super2" | "max";
 }
 
 interface Fight {
@@ -408,6 +406,7 @@ function assistsOf(charId: string): Assist[] {
   return [
     ...meta.specials.map((s) => ({ label: s.name, cmd: s.cmd, kind: "special" as const })),
     { label: "Super", cmd: meta.super.cmd, kind: "super" },
+    ...(meta.super2 ? [{ label: "Super 2", cmd: meta.super2.cmd, kind: "super2" as const }] : []),
     { label: "MAX", cmd: "", kind: "max" },
   ];
 }
@@ -423,7 +422,7 @@ function renderAssists() {
     b.dataset.assist = String(i);
     b.className = "assist";
     b.textContent = a.label;
-    b.title = a.kind === "max" ? "Tecla M ou 5 (A+B+C)" : `Tecla ${i + 1}`;
+    b.title = a.kind === "max" ? "Tecla M (A+B+C)" : i < 9 ? `Tecla ${i + 1}` : "";
     assistBox.append(b);
   });
 }
@@ -473,7 +472,7 @@ function assist(i: number) {
   const a = fight.assists[i];
   if (!a) return;
   const me = fight.world.fighters[0];
-  if (a.kind !== "special" && me.power < 1000) return;
+  if (a.kind !== "special" && me.power < (a.kind === "super2" ? 2000 : 1000)) return;
   if (a.kind === "max") {
     if (me.maxTime === 0) fight.macro.play(MAX_MACRO, me.facing);
     return;
@@ -635,7 +634,7 @@ function frame(t: number) {
     const ready = me.power >= 1000;
     document.querySelectorAll<HTMLButtonElement>(".assist").forEach((b, i) => {
       const kind = fight!.assists[i]?.kind;
-      b.disabled = (kind === "super" && !ready) || (kind === "max" && (!ready || me.maxTime > 0));
+      b.disabled = (kind === "super" && !ready) || (kind === "super2" && me.power < 2000) || (kind === "max" && (!ready || me.maxTime > 0));
     });
     const w = fight.world;
     if (!fight.over && w.matchWinner >= 0 && w.roundStateTime > 120) {

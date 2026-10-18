@@ -14,11 +14,19 @@
     {
       "name": "Cabeçada",
       "cmd": "dp_p"
+    },
+    {
+      "name": "Abraço de Titã",
+      "cmd": "hcf_p"
     }
   ],
   "super": {
     "name": "Fenda Tectônica",
     "cmd": "super_p"
+  },
+  "super2": {
+    "name": "Fim do Mundo",
+    "cmd": "super2_p"
   },
   "quotes": [
     "Pode levantar. Eu espero.",

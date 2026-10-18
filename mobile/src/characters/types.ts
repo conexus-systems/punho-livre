@@ -6,6 +6,8 @@ export interface CharacterMeta {
   bio: string;
   specials: { name: string; cmd: string }[];
   super: { name: string; cmd: string };
+  /** Super de 2 estoques. */
+  super2?: { name: string; cmd: string };
   /** Frases de vitória (tela de resultado). */
   quotes?: string[];
 }

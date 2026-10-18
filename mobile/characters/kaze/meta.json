@@ -14,11 +14,19 @@
     {
       "name": "Senpu",
       "cmd": "qcb_k"
+    },
+    {
+      "name": "Kaze no Kamae",
+      "cmd": "dd_p"
     }
   ],
   "super": {
     "name": "Shinku Kaze",
     "cmd": "super_p"
+  },
+  "super2": {
+    "name": "Kaze Tenshō",
+    "cmd": "super2_p"
   },
   "quotes": [
     "O vento não escolhe lado. Eu também não.",

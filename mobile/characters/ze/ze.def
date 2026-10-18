@@ -1,0 +1,24 @@
+; Zé Pilão — Brigão das quadras de Belo Horizonte. Não aprendeu em academia, aprendeu na rua.
+; Personagem original do MUGEN Arena (CONEXUS). Gerado por scripts/roster/generate.mjs.
+
+[Info]
+name = "Zé Pilão"
+displayname = "Zé Pilão"
+versiondate = 10,18,2026
+mugenversion = 1.0
+author = "CONEXUS Arena"
+localcoord = 320, 240
+
+[Files]
+cmd = ze.cmd
+cns = ze.cns
+stcommon = common1.cns ; fornecido pela engine
+anim = ze.air
+
+; Extensão do MUGEN Arena (ignorada pelo MUGEN): cores do HUD/efeitos
+[Arena]
+body = #111827
+accent = #F43F5E
+skin = #7B4A2E
+trim = #1D4ED8
+energy = #F43F5E

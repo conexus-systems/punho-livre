@@ -31,7 +31,7 @@ describe("elenco nativo", () => {
     const parsed = parseStates(Object.entries(files).filter(([n]) => /\.(cns|cmd)$/.test(n)).map(([, t]) => t));
     expect(parsed.problems).toEqual([]);
     expect(Object.keys(ch.anims).length).toBeGreaterThan(60);
-    expect(ch.commands.some((c) => c.name === "qcf_p" || c.name === "qcb_k" || c.name === "dd_p")).toBe(true);
+    for (const sp of BUILTIN[id].meta.specials) expect(ch.commands.some((c) => c.name === sp.cmd)).toBe(true);
   });
 });
 

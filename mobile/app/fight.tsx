@@ -35,6 +35,8 @@ interface Assist {
   label: string;
   cmd: string;
   isSuper: boolean;
+  /** Estoques de power necessários (padrão 1000). */
+  cost?: number;
 }
 
 /** A+B+C por alguns frames: liga o MAX (bits relativos = absolutos para botões). */
@@ -52,6 +54,7 @@ function assistsFor(charId: string): Assist[] {
     return [
       ...builtin.meta.specials.map((s, i) => ({ id: `sp${i}`, label: s.name, cmd: s.cmd, isSuper: false })),
       { id: "super", label: "SUPER", cmd: builtin.meta.super.cmd, isSuper: true },
+      ...(builtin.meta.super2 ? [{ id: "super2", label: "SUPER 2", cmd: builtin.meta.super2.cmd, isSuper: true, cost: 2000 }] : []),
     ];
   }
   // personagem MUGEN importado: usa os comandos de movimento do .cmd
@@ -93,7 +96,7 @@ export default function Fight() {
   const [loading, setLoading] = useState(true);
   const [paused, setPaused] = useState(false);
   const [result, setResult] = useState<{ winner: number } | null>(null);
-  const [superReady, setSuperReady] = useState(false);
+  const [power, setPower] = useState(0);
   const [maxReady, setMaxReady] = useState(false);
   const [localChar, setLocalChar] = useState(localSide === 0 ? p1 : p2);
   const [winner, setWinner] = useState<{ char: string; quote: string | null } | null>(null);
@@ -105,7 +108,7 @@ export default function Fight() {
 
   const assists = useMemo(() => assistsFor(localChar), [localChar]);
   const assistButtons: AssistButton[] = [
-    ...(settings.assist ? assists.map((a) => ({ id: a.id, label: a.label, enabled: !a.isSuper || superReady })) : []),
+    ...(settings.assist ? assists.map((a) => ({ id: a.id, label: a.label, enabled: !a.isSuper || power >= (a.cost ?? 1000) })) : []),
     // MAX (A+B+C) num toque: gasta 1 estoque
     { id: "max", label: "MAX", enabled: maxReady },
   ];
@@ -213,7 +216,7 @@ export default function Fight() {
       if (t - lastUi > 200) {
         lastUi = t;
         const me = w.fighters[localSide];
-        setSuperReady(me.power >= 1000);
+        setPower(me.power);
         setMaxReady(me.power >= 1000 && me.maxTime === 0 && me.ctrl);
         setLocalChar(me.charId);
         if (w.matchWinner >= 0 && w.roundStateTime > 120 && !reported.current) {

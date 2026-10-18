@@ -123,6 +123,9 @@ export const COSMETIC_CONTROLLERS = new Set([
   "fallenvshake",
 ]);
 
+/** Parâmetros que são flags/palavras, lidos crus pelos controladores. */
+const FLAG_PARAMS = new Set(["attr", "hitflag", "guardflag", "animtype", "air.animtype", "fall.animtype", "ground.type", "air.type", "statetype", "movetype", "physics"]);
+
 function safeExpr(src: string, problems: string[], where: string): Expr {
   try {
     return parseExpr(src);
@@ -237,6 +240,8 @@ function parseController(section: IniSection, index: number, problems: string[])
       continue;
     }
     ctrl.raw[l.key] = l.value;
+    // flags (M-, SCA, Hard...) não são expressões: ficam só em `raw`
+    if (FLAG_PARAMS.has(l.key)) continue;
     ctrl.params[l.key] = splitTopLevel(l.value).map((v) => safeExpr(v, problems, `${where} ${l.key}`));
   }
 

@@ -15,6 +15,21 @@ command.time = 15
 command.buffer.time = 2
 
 [Command]
+name = "super2_p"
+command = ~D, DB, B, D, DB, B, x
+time = 35
+
+[Command]
+name = "super2_p"
+command = ~D, DB, B, D, DB, B, y
+time = 35
+
+[Command]
+name = "super2_p"
+command = ~D, DB, B, D, DB, B, z
+time = 35
+
+[Command]
 name = "super_p"
 command = ~D, DF, F, D, DF, F, x
 time = 35
@@ -75,13 +90,28 @@ command = ~D, DB, B, z
 time = 15
 
 [Command]
+name = "dd_p"
+command = ~D, D, x
+time = 15
+
+[Command]
+name = "dd_p"
+command = ~D, D, y
+time = 15
+
+[Command]
+name = "dd_p"
+command = ~D, D, z
+time = 15
+
+[Command]
 name = "FF"
-command = F, F
+command = F, >F
 time = 10
 
 [Command]
 name = "BB"
-command = B, B
+command = B, >B
 time = 10
 
 [Command]
@@ -142,6 +172,15 @@ time = 1
 ; ------------------------------------------------------------
 [Statedef -1]
 
+[State -1, Curto-Circuito]
+type = ChangeState
+value = 3100
+triggerall = command = "super2_p"
+triggerall = power >= 2000
+triggerall = statetype != A
+trigger1 = ctrl
+trigger2 = stateno = [200, 2999] && movecontact
+
 [State -1, Tempestade de Socos]
 type = ChangeState
 value = 3000
@@ -173,6 +212,14 @@ value = 1200
 triggerall = command = "qcb_p"
 triggerall = statetype != A
 triggerall = NumProjID(1200) = 0
+trigger1 = ctrl
+trigger2 = stateno = [200, 499] && movecontact
+
+[State -1, Metralhadora]
+type = ChangeState
+value = 1300
+triggerall = command = "dd_p"
+triggerall = statetype != A
 trigger1 = ctrl
 trigger2 = stateno = [200, 499] && movecontact
 

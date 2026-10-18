@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Confere que o elenco gerado (texto MUGEN + índice) está atualizado com o gerador.
-// PNGs ficam de fora: o zlib pode variar entre versões do Node.
+// imagens (WebP) ficam de fora: o zlib pode variar entre versões do Node.
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -13,7 +13,7 @@ const before = new Map();
 for (const id of readdirSync(chars)) {
   if (!statSync(path.join(chars, id)).isDirectory()) continue;
   for (const f of readdirSync(path.join(chars, id))) {
-    if (!f.endsWith(".png")) before.set(`${id}/${f}`, readFileSync(path.join(chars, id, f), "utf8"));
+    if (!/\.(png|webp)$/.test(f)) before.set(`${id}/${f}`, readFileSync(path.join(chars, id, f), "utf8"));
   }
 }
 const index = path.join(root, "src/characters/builtin.generated.ts");

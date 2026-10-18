@@ -273,6 +273,15 @@ export const STAGES: StageDef[] = [
   },
 ];
 
+// cenários que só existem pintados (stages.generated.ts); a reserva é só céu e chão
+STAGES.push(
+  { id: "praia", name: "Praia ao Entardecer", sky: ["#2B1055", "#FFD39A"], floor: ["#F2EEE6", "#1F1F24"], layers: [] },
+  { id: "templo", name: "Ruínas da Amazônia", sky: ["#0F3B2E", "#B7D9A8"], floor: ["#6F6B52", "#3F3D2E"], layers: [] },
+  { id: "telhado", name: "Heliponto", sky: ["#020617", "#3B4C8C"], floor: ["#3A4152", "#1C2029"], layers: [] },
+  { id: "neve", name: "Templo na Neve", sky: ["#7DA2D6", "#EEF3FB"], floor: ["#F8FAFC", "#C7D4E8"], layers: [] },
+  { id: "ringue", name: "Octógono", sky: ["#05050A", "#1A1028"], floor: ["#E5E7EB", "#9CA3AF"], layers: [] },
+);
+
 export function stageById(id: string): StageDef {
   return STAGES.find((s) => s.id === id) ?? STAGES[0];
 }

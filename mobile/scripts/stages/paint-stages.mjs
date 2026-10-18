@@ -583,10 +583,374 @@ function metro() {
   return { id, sky: ["#050816", "#B5367B"], layers: out };
 }
 
+// --------------------------------------------------------- praia (Rio)
+
+function palm(c, x, base, h, lean, r) {
+  const pb = new CK.PathBuilder();
+  pb.moveTo(x - 3, base);
+  pb.quadTo(x + lean * 0.4, base - h * 0.5, x + lean, base - h);
+  pb.lineTo(x + lean + 3, base - h);
+  pb.quadTo(x + lean * 0.4 + 4, base - h * 0.5, x + 3, base);
+  pb.close();
+  c.drawPath(pb.detachAndDelete(), vgrad(base - h, base, [[0, "#6B4A2B"], [1, "#4A3020"]]));
+  for (let k = 0; k < 7; k++) {
+    const a = (k / 7) * Math.PI * 2 + r() * 0.3;
+    const tip = [x + lean + Math.cos(a) * 34, base - h + Math.sin(a) * 14 + 10];
+    const fb = new CK.PathBuilder();
+    fb.moveTo(x + lean, base - h);
+    fb.quadTo((x + lean + tip[0]) / 2, base - h - 12, tip[0], tip[1]);
+    fb.quadTo((x + lean + tip[0]) / 2, base - h - 4, x + lean, base - h);
+    c.drawPath(fb.detachAndDelete(), fill(k % 2 ? "#2F7D3A" : "#3E9A47"));
+  }
+}
+
+function praia() {
+  const id = "praia";
+  const out = [];
+  out.push(
+    layer(id, "sky", 0.12, -260, 10, (c, L) => {
+      c.drawRect(R(L.left, L.top, L.right - L.left, L.bottom - L.top), vgrad(L.top, 0, [[0, "#2B1055"], [0.4, "#D53A6B"], [0.7, "#FF8A3D"], [1, "#FFD39A"]]));
+      c.drawCircle(-60, -55, 40, glow("#FFE4A8", 20, 0.8));
+      c.drawCircle(-60, -55, 22, fill("#FFF1C9"));
+      // morros à beira-mar
+      c.drawPath(poly([[60, -40], [100, -150], [118, -170], [134, -150], [150, -95], [175, -40]]), fill("#3B1F3F"));
+      c.drawPath(poly([[150, -40], [185, -85], [205, -90], [230, -40]]), fill("#3B1F3F"));
+      c.drawPath(poly([[L.left, -40], [-300, -70], [-200, -55], [-120, -78], [-30, -40]]), fill("#4A2847"));
+      // mar com reflexo
+      c.drawRect(R(L.left, -40, L.right - L.left, 50), vgrad(-40, 10, [[0, "#B2507A"], [1, "#3D2A6B"]]));
+      const r = rng(13);
+      for (let k = 0; k < 70; k++) {
+        const y = -36 + r() * 44;
+        const x = -60 + (r() - 0.5) * (30 + (y + 40) * 1.4);
+        c.drawLine(x, y, x + 6 + r() * 10, y, stroke("#FFD39A", 0.8, 0.7));
+      }
+    }, { opaque: true }),
+  );
+  out.push(
+    layer(id, "orla", 0.7, -200, 2, (c, L) => {
+      const r = rng(17);
+      // calçada e areia ao fundo
+      c.drawRect(R(L.left, -30, L.right - L.left, 32), vgrad(-30, 2, [[0, "#E9C99A"], [1, "#D9B27E"]]));
+      // quiosques e palmeiras
+      for (let x = Math.floor(L.left / 120) * 120; x < L.right; x += 120) {
+        palm(c, x + 20, -26, 120 + r() * 50, (r() - 0.5) * 40, r);
+        const kx = x + 70;
+        c.drawRect(R(kx - 22, -58, 44, 30), fill("#F8FAFC"));
+        c.drawPath(poly([[kx - 30, -58], [kx, -78], [kx + 30, -58]]), fill(["#DC2626", "#16A34A", "#2563EB"][Math.floor(r() * 3)]));
+        c.drawRect(R(kx - 16, -50, 32, 10), fill("#1E293B"));
+        c.drawLine(kx + 26, -28, kx + 26, -66, stroke("#475569", 1.4));
+        c.drawCircle(kx + 26, -68, 3, glow("#FFE2A8", 3, 0.9));
+      }
+      // guarda-sóis
+      for (let x = L.left; x < L.right; x += 45 + r() * 30) {
+        const col = ["#F97316", "#FACC15", "#22C55E", "#3B82F6", "#EC4899"][Math.floor(r() * 5)];
+        c.drawLine(x, -6, x + 2, -34, stroke("#F8FAFC", 1));
+        c.drawArc(R(x - 16, -44, 36, 20), 180, 180, true, fill(col));
+      }
+    }),
+  );
+  out.push(
+    layer(id, "crowd", 0.9, -70, 2, (c, L) => {
+      const r = rng(23);
+      const pal = ["#FACC15", "#22C55E", "#F97316", "#38BDF8", "#EC4899", "#F8FAFC", "#EF4444"];
+      for (let x = L.left + 8; x < L.right; x += 16 + r() * 12) {
+        if (Math.abs(x) < 60) continue;
+        person(c, x, 0, 0.85 + r() * 0.15, r, pal, { cheer: true, dark: 0.25 });
+      }
+    }),
+  );
+  out[out.length - 1].bob = 0.8;
+  out.push(
+    layer(id, "floor", 1, -4, 60, (c, L) => {
+      // calçadão de ondas pretas e brancas
+      c.drawRect(R(L.left, -4, L.right - L.left, 64), fill("#F2EEE6"));
+      const rows = floorRows(0, 60, 8);
+      rows.forEach(([y0, y1]) => {
+        const hh = y1 - y0;
+        const wl = hh * 5;
+        const pb = new CK.PathBuilder();
+        pb.moveTo(L.left, y0 + hh * 0.5);
+        for (let x = L.left; x < L.right; x += wl) {
+          pb.quadTo(x + wl * 0.25, y0, x + wl * 0.5, y0 + hh * 0.5);
+          pb.quadTo(x + wl * 0.75, y1, x + wl, y0 + hh * 0.5);
+        }
+        pb.lineTo(L.right, y1);
+        pb.lineTo(L.left, y1);
+        pb.close();
+        c.drawPath(pb.detachAndDelete(), fill("#1F1F24"));
+      });
+      c.drawRect(R(L.left, -4, L.right - L.left, 64), vgrad(-4, 60, [[0, "#FF8A3D", 0.18], [1, "#000000", 0.2]]));
+    }, { opaque: true }),
+  );
+  return { id, sky: ["#2B1055", "#FFD39A"], layers: out };
+}
+
+// ------------------------------------------------ ruínas na Amazônia
+
+function templo() {
+  const id = "templo";
+  const out = [];
+  out.push(
+    layer(id, "sky", 0.15, -260, 10, (c, L) => {
+      c.drawRect(R(L.left, L.top, L.right - L.left, L.bottom - L.top), vgrad(L.top, 0, [[0, "#0F3B2E"], [0.5, "#2F7A4F"], [1, "#B7D9A8"]]));
+      c.drawCircle(80, -230, 60, glow("#F4FFD6", 30, 0.6));
+      const r = rng(41);
+      for (let k = 0; k < 40; k++) {
+        const x = L.left + r() * (L.right - L.left);
+        c.drawCircle(x, -40 - r() * 60, 30 + r() * 40, fill(mixHex("#1F5A3C", "#3E8A5A", r()), 0.9));
+      }
+      // cachoeira
+      c.drawRect(R(-40, -200, 40, 200), vgrad(-200, 0, [[0, "#D9F5FF", 0.95], [1, "#8FD3E8", 0.9]]));
+      for (let k = 0; k < 20; k++) c.drawLine(-38 + k * 2, -200, -38 + k * 2, 0, stroke("#FFFFFF", 0.6, 0.4 + r() * 0.4));
+      c.drawOval(R(-70, -20, 100, 30), glow("#FFFFFF", 8, 0.8));
+    }, { opaque: true }),
+  );
+  out.push(
+    layer(id, "ruins", 0.7, -240, 2, (c, L) => {
+      const r = rng(43);
+      for (let x = Math.floor(L.left / 160) * 160; x < L.right; x += 160) {
+        // pirâmide em degraus
+        const w = 120;
+        for (let k = 0; k < 5; k++) {
+          c.drawRect(R(x - w / 2 + k * 10, -30 - k * 28, w - k * 20, 30), vgrad(-30 - k * 28, -k * 28, [[0, "#8C8A6A"], [1, "#5E5C45"]]));
+          for (let b = 0; b < (w - k * 20) / 14; b++) c.drawLine(x - w / 2 + k * 10 + b * 14, -30 - k * 28, x - w / 2 + k * 10 + b * 14, -k * 28, stroke("#4A4836", 0.7, 0.7));
+        }
+        c.drawRect(R(x - 12, -170, 24, 30), fill("#2A291E"));
+        // cipós e musgo
+        for (let k = 0; k < 6; k++) {
+          const vx = x - w / 2 + r() * w;
+          const pb = new CK.PathBuilder();
+          pb.moveTo(vx, -170 + r() * 40);
+          pb.quadTo(vx + 8, -100, vx - 4, -20 - r() * 40);
+          c.drawPath(pb.detachAndDelete(), stroke("#2F6B2F", 2));
+        }
+        c.drawOval(R(x - 70, -40, 50, 20), fill("#3E7A3A", 0.8));
+      }
+      // folhagem alta nas bordas de cada vão
+      for (let x = L.left; x < L.right; x += 22) {
+        const h = 14 + r() * 34;
+        c.drawPath(poly([[x, 0], [x + 8, -h], [x + 16, 0]]), fill(mixHex("#1E5E2E", "#3F9A4A", r())));
+      }
+    }),
+  );
+  out.push(
+    layer(id, "crowd", 0.9, -70, 2, (c, L) => {
+      // vagalumes e folhas em primeiro plano baixo
+      const r = rng(47);
+      for (let x = L.left; x < L.right; x += 14) {
+        const h = 20 + r() * 30;
+        const pb = new CK.PathBuilder();
+        pb.moveTo(x, 0);
+        pb.quadTo(x + 6, -h, x + 14 + r() * 6, -h * 0.9);
+        pb.quadTo(x + 8, -h * 0.4, x + 6, 0);
+        c.drawPath(pb.detachAndDelete(), fill(mixHex("#174A24", "#2E7D3A", r())));
+      }
+      for (let k = 0; k < 60; k++) c.drawCircle(L.left + r() * (L.right - L.left), -10 - r() * 55, 1.2, glow("#EFFF8A", 2, 0.9));
+    }),
+  );
+  out.push(
+    layer(id, "floor", 1, -4, 60, (c, L) => {
+      c.drawRect(R(L.left, -4, L.right - L.left, 64), vgrad(-4, 60, [[0, "#6F6B52"], [1, "#3F3D2E"]]));
+      const r = rng(49);
+      floorRows(0, 60, 7).forEach(([y0, y1], i) => {
+        const hh = y1 - y0;
+        const w = hh * 2.6;
+        const off = (i % 2) * w * 0.5;
+        for (let x = L.left - off; x < L.right; x += w) {
+          c.drawRect(R(x + 0.8, y0 + 0.6, w - 1.6, hh - 1.2), fill(mixHex("#7D7860", "#55523F", r())));
+          if (r() < 0.3) c.drawOval(R(x + r() * w * 0.6, y0, w * 0.4, hh * 0.6), fill("#4C7A3A", 0.7));
+        }
+      });
+    }, { opaque: true }),
+  );
+  return { id, sky: ["#0F3B2E", "#B7D9A8"], layers: out };
+}
+
+// ----------------------------------------------- heliponto à noite
+
+function telhado() {
+  const id = "telhado";
+  const out = [];
+  out.push(
+    layer(id, "sky", 0.1, -260, 10, (c, L) => {
+      c.drawRect(R(L.left, L.top, L.right - L.left, L.bottom - L.top), vgrad(L.top, 0, [[0, "#020617"], [0.6, "#0F1E45"], [1, "#3B4C8C"]]));
+      const r = rng(61);
+      for (let k = 0; k < 160; k++) c.drawCircle(L.left + r() * (L.right - L.left), -255 + r() * 170, 0.3 + r() * 0.6, fill("#FFFFFF", 0.3 + r() * 0.6));
+      // cidade lá embaixo: luzes
+      for (let k = 0; k < 900; k++) c.drawCircle(L.left + r() * (L.right - L.left), -30 + r() * 38, 0.4 + r() * 0.6, fill(["#FFD88A", "#FFFFFF", "#FF7A59", "#9AD7FF"][Math.floor(r() * 4)], 0.5 + r() * 0.5));
+      c.drawRect(R(L.left, -40, L.right - L.left, 12), vgrad(-40, -28, [[0, "#3B4C8C", 0], [1, "#F59E0B", 0.25]]));
+    }, { opaque: true }),
+  );
+  out.push(
+    layer(id, "towers", 0.45, -250, 2, (c, L) => {
+      const r = rng(63);
+      let x = L.left;
+      while (x < L.right) {
+        const w = 40 + r() * 50;
+        const h = 120 + r() * 120;
+        c.drawRect(R(x, -h, w, h + 2), vgrad(-h, 0, [[0, "#1A2246"], [1, "#0B1026"]]));
+        for (let wy = -h + 8; wy < -6; wy += 10) for (let wx = x + 5; wx < x + w - 5; wx += 8) if (r() < 0.25) c.drawRect(R(wx, wy, 4, 5), fill("#FFE7A3", 0.7));
+        c.drawCircle(x + w / 2, -h - 4, 2, glow("#FF3B3B", 2, 1));
+        x += w + 20 + r() * 40;
+      }
+    }),
+  );
+  out.push(
+    layer(id, "deck", 0.88, -120, 2, (c, L) => {
+      // grade do heliponto e holofotes
+      c.drawLine(L.left, -24, L.right, -24, stroke("#94A3B8", 1.6));
+      for (let x = Math.floor(L.left / 14) * 14; x < L.right; x += 14) c.drawLine(x, -24, x, 0, stroke("#64748B", 1));
+      for (let x = Math.floor(L.left / 180) * 180; x < L.right; x += 180) {
+        c.drawRect(R(x - 4, -60, 8, 60), fill("#334155"));
+        c.drawPath(poly([[x - 2, -60], [x + 2, -60], [x + 90, -260], [x - 40, -260]]), fill("#E0F2FE", 0.06));
+        c.drawCircle(x, -62, 6, glow("#E0F2FE", 5, 0.9));
+      }
+      // luzes de pouso
+      for (let x = Math.floor(L.left / 30) * 30; x < L.right; x += 30) c.drawCircle(x, -2, 1.6, glow("#22C55E", 2, 1));
+    }),
+  );
+  out.push(
+    layer(id, "floor", 1, -4, 60, (c, L) => {
+      c.drawRect(R(L.left, -4, L.right - L.left, 64), vgrad(-4, 60, [[0, "#3A4152"], [1, "#1C2029"]]));
+      const r = rng(67);
+      for (let k = 0; k < 500; k++) c.drawCircle(L.left + r() * (L.right - L.left), r() * 60, 0.3, fill("#FFFFFF", 0.06));
+      // o "H" e o círculo pintados no chão, em perspectiva
+      c.drawOval(R(-120, 6, 240, 46), stroke("#F8FAFC", 3, 0.75));
+      c.drawPath(poly([[-30, 12], [-20, 12], [-24, 48], [-38, 48]]), fill("#FACC15", 0.85));
+      c.drawPath(poly([[20, 12], [30, 12], [38, 48], [24, 48]]), fill("#FACC15", 0.85));
+      c.drawPath(poly([[-22, 27], [22, 27], [24, 33], [-24, 33]]), fill("#FACC15", 0.85));
+      for (let x = Math.floor(L.left / 60) * 60; x < L.right; x += 60) c.drawRect(R(x, 1, 30, 2), fill("#F8FAFC", 0.4));
+    }, { opaque: true }),
+  );
+  return { id, sky: ["#020617", "#3B4C8C"], layers: out };
+}
+
+// ------------------------------------------------ templo na neve
+
+function neve() {
+  const id = "neve";
+  const out = [];
+  out.push(
+    layer(id, "sky", 0.12, -260, 10, (c, L) => {
+      c.drawRect(R(L.left, L.top, L.right - L.left, L.bottom - L.top), vgrad(L.top, 0, [[0, "#7DA2D6"], [0.7, "#C9DAF2"], [1, "#EEF3FB"]]));
+      const peaks = [[-300, -150], [-170, -200], [-40, -170], [90, -215], [230, -160], [330, -190]];
+      for (const [x, h] of peaks) {
+        c.drawPath(poly([[x - 140, 10], [x, h], [x + 140, 10]]), fill("#8BA3C7"));
+        c.drawPath(poly([[x - 40, h + 45], [x, h], [x + 40, h + 45], [x + 18, h + 35], [x, h + 48], [x - 16, h + 34]]), fill("#F8FAFC"));
+      }
+      c.drawRect(R(L.left, -60, L.right - L.left, 70), vgrad(-60, 10, [[0, "#EEF3FB", 0], [1, "#EEF3FB", 0.9]]));
+    }, { opaque: true }),
+  );
+  out.push(
+    layer(id, "gate", 0.7, -230, 2, (c, L) => {
+      const r = rng(71);
+      for (let x = Math.floor(L.left / 200) * 200; x < L.right; x += 200) {
+        // portal de templo
+        const red = "#B91C1C";
+        c.drawRect(R(x - 50, -150, 10, 150), fill(red));
+        c.drawRect(R(x + 40, -150, 10, 150), fill(red));
+        c.drawRect(R(x - 64, -160, 128, 10), fill("#1F1F24"));
+        c.drawRect(R(x - 56, -135, 112, 7), fill(red));
+        c.drawPath(poly([[x - 70, -160], [x - 64, -168], [x + 64, -168], [x + 70, -160]]), fill("#F8FAFC"));
+        // lanternas de pedra e pinheiros
+        c.drawRect(R(x + 80, -40, 10, 40), fill("#9CA3AF"));
+        c.drawRect(R(x + 74, -52, 22, 12), fill("#6B7280"));
+        c.drawRect(R(x + 80, -50, 10, 7), glow("#FFD38A", 2, 0.9));
+        for (let k = 0; k < 2; k++) {
+          const px = x - 110 + k * 26;
+          for (let t = 0; t < 4; t++) c.drawPath(poly([[px - 20 + t * 4, -20 - t * 22], [px, -48 - t * 22], [px + 20 - t * 4, -20 - t * 22]]), fill(t % 2 ? "#2F5D50" : "#3B6E5E"));
+          c.drawPath(poly([[px - 10, -60], [px, -70], [px + 10, -60]]), fill("#F8FAFC", 0.9));
+        }
+      }
+      for (let k = 0; k < 160; k++) c.drawCircle(L.left + r() * (L.right - L.left), -230 + r() * 230, 0.6 + r() * 1.2, fill("#FFFFFF", 0.8));
+    }),
+  );
+  out.push(
+    layer(id, "crowd", 0.88, -60, 2, (c, L) => {
+      const r = rng(73);
+      for (let x = L.left + 10; x < L.right; x += 26 + r() * 12) {
+        if (Math.abs(x) < 70) continue;
+        // monges de manto
+        const s = 0.8;
+        const robe = ["#EA580C", "#B45309", "#9A3412"][Math.floor(r() * 3)];
+        c.drawPath(poly([[x - 10 * s, 0], [x - 6 * s, -32 * s], [x + 6 * s, -32 * s], [x + 10 * s, 0]]), fill(robe));
+        c.drawCircle(x, -38 * s, 6 * s, fill("#C68B59"));
+      }
+      c.drawRect(R(L.left, -4, L.right - L.left, 6), fill("#FFFFFF", 0.7));
+    }),
+  );
+  out.push(
+    layer(id, "floor", 1, -4, 60, (c, L) => {
+      c.drawRect(R(L.left, -4, L.right - L.left, 64), vgrad(-4, 60, [[0, "#F8FAFC"], [1, "#C7D4E8"]]));
+      const r = rng(79);
+      for (let k = 0; k < 120; k++) {
+        const x = L.left + r() * (L.right - L.left);
+        const y = r() * 58;
+        c.drawOval(R(x, y, 6 + y * 0.2, 2 + y * 0.05), fill("#A9B9D6", 0.35));
+      }
+    }, { opaque: true }),
+  );
+  return { id, sky: ["#7DA2D6", "#EEF3FB"], layers: out };
+}
+
+// ------------------------------------------------------ ringue
+
+function ringue() {
+  const id = "ringue";
+  const out = [];
+  out.push(
+    layer(id, "sky", 0.2, -260, 10, (c, L) => {
+      c.drawRect(R(L.left, L.top, L.right - L.left, L.bottom - L.top), vgrad(L.top, 0, [[0, "#05050A"], [1, "#1A1028"]]));
+      // telão e treliça de luz
+      c.drawRect(R(-90, -245, 180, 70), fill("#0F172A"));
+      c.drawRect(R(-84, -240, 168, 60), vgrad(-240, -180, [[0, "#7C3AED"], [1, "#DB2777"]]));
+      c.drawRect(R(L.left, -255, L.right - L.left, 6), fill("#1F2937"));
+      for (let x = Math.floor(L.left / 60) * 60; x < L.right; x += 60) c.drawCircle(x, -246, 5, glow("#FFFFFF", 6, 0.8));
+      // arquibancada lotada com luzes de celular
+      const r = rng(83);
+      for (let row = 0; row < 9; row++) {
+        const y = -170 + row * 18;
+        for (let x = L.left; x < L.right; x += 7 + r() * 4) {
+          c.drawCircle(x, y, 3.5, fill(mixHex("#1F1830", "#3A2D52", r())));
+          if (r() < 0.06) c.drawCircle(x + 1, y - 4, 1.2, glow("#FFFFFF", 1.5, 1));
+        }
+      }
+    }, { opaque: true }),
+  );
+  out.push(
+    layer(id, "cage", 0.85, -150, 2, (c, L) => {
+      // alambrado do octógono
+      c.drawRect(R(L.left, -120, L.right - L.left, 120), fill("#0B0B12", 0.25));
+      for (let x = Math.floor(L.left / 8) * 8; x < L.right; x += 8) {
+        c.drawLine(x, -120, x + 60, 0, stroke("#9CA3AF", 0.5, 0.35));
+        c.drawLine(x, -120, x - 60, 0, stroke("#9CA3AF", 0.5, 0.35));
+      }
+      for (let x = Math.floor(L.left / 140) * 140; x < L.right; x += 140) {
+        c.drawRect(R(x - 4, -130, 8, 130), vgrad(-130, 0, [[0, "#111827"], [1, "#374151"]]));
+        c.drawRect(R(x - 6, -60, 12, 30), fill("#DC2626"));
+      }
+      c.drawRect(R(L.left, -124, L.right - L.left, 6), fill("#111827"));
+      c.drawRect(R(L.left, -6, L.right - L.left, 8), fill("#111827"));
+      // luz forte de cima
+      c.drawPath(poly([[-160, -260], [160, -260], [260, 0], [-260, 0]]), fill("#FFFFFF", 0.05));
+    }),
+  );
+  out.push(
+    layer(id, "floor", 1, -4, 60, (c, L) => {
+      c.drawRect(R(L.left, -4, L.right - L.left, 64), vgrad(-4, 60, [[0, "#E5E7EB"], [1, "#9CA3AF"]]));
+      c.drawOval(R(-160, 4, 320, 52), fill("#DC2626", 0.25));
+      c.drawOval(R(-70, 12, 140, 30), stroke("#111827", 2, 0.5));
+      for (let k = 0; k < 6; k++) c.drawLine(-50 + k * 20, 20, -46 + k * 20, 36, stroke("#111827", 3, 0.35));
+      c.drawRect(R(L.left, 50, L.right - L.left, 10), fill("#000000", 0.2));
+    }, { opaque: true }),
+  );
+  return { id, sky: ["#05050A", "#1A1028"], layers: out };
+}
+
 // ------------------------------------------------------------------ saída
 
 mkdirSync(OUT, { recursive: true });
-const stages = [dojo(), pelourinho(), metro()];
+const stages = [dojo(), pelourinho(), metro(), praia(), templo(), telhado(), neve(), ringue()];
 const lines = [
   "/* eslint-disable */",
   "// GERADO por scripts/stages/paint-stages.mjs — não edite à mão.",
