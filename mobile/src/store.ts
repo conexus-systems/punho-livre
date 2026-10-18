@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from "react";
 
+import { DEFAULT_CONTROLS, type ControlSettings } from "@/src/game/controlLayout";
+
 /** Store mínima (sem dependências) com seletor para React. */
 export function createStore<T extends object>(initial: T) {
   let state = initial;
@@ -60,6 +62,8 @@ export interface AppState {
     buttons: "snk" | "mugen";
     music: boolean;
     sfx: boolean;
+    /** Modo simples/clássico, direcional, layout editado e vibração em acertos (docs/CONTROLS.md). */
+    controls: ControlSettings;
   };
 }
 
@@ -68,5 +72,5 @@ export const app = createStore<AppState>({
   player: null,
   premium: false,
   matchesSinceAd: 0,
-  settings: { assist: true, vibration: true, difficulty: 2, inputDelay: 2, buttons: "snk", music: true, sfx: true },
+  settings: { assist: true, vibration: true, difficulty: 2, inputDelay: 2, buttons: "snk", music: true, sfx: true, controls: DEFAULT_CONTROLS },
 });

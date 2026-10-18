@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import Constants from "expo-constants";
 
 import { MetroButton, MetroCheck, MetroDialog, MetroGroup, MetroHeader, MetroPage, MetroPivot, MetroRow, MetroSlider, MetroTextField, MetroToggle } from "@/components/metro";
-import { setSetting } from "@/src/settings";
+import { setControls, setSetting } from "@/src/settings";
 import { app } from "@/src/store";
 import { colorName, ESSENTIALS, forWhiteText, MORE, parseLoose } from "@/src/ui/accent";
 import { setTheme, themeStore } from "@/src/ui/theme";
@@ -52,10 +52,57 @@ export default function Settings() {
                 value={settings.assist}
                 onChange={(v) => setSetting("assist", v)}
               />
-              <MetroToggle label="Vibração" description="Toque nos botões da luta." value={settings.vibration} onChange={(v) => setSetting("vibration", v)} />
+              <MetroToggle label="Vibração nos botões" description="Toque nos botões da luta." value={settings.vibration} onChange={(v) => setSetting("vibration", v)} />
+              <MetroToggle
+                label="Vibração em acertos"
+                description="Ao acertar, apanhar e defender (mais forte quando você apanha)."
+                value={settings.controls.hitHaptics}
+                onChange={(v) => setControls({ hitHaptics: v })}
+              />
               <MetroToggle label="Música" description="Uma trilha para cada cenário." value={settings.music} onChange={(v) => setSetting("music", v)} />
               <MetroToggle label="Efeitos sonoros" description="Golpes, defesa, K.O. e anúncios." value={settings.sfx} onChange={(v) => setSetting("sfx", v)} />
-              <MetroGroup title="Botões" />
+              <MetroGroup title="Controles" />
+              <MetroCheck
+                kind="radio"
+                label="Simples"
+                description="Especial + direção solta os 4 especiais; Super com barra; toques no Soco fazem um combo curto."
+                checked={settings.controls.mode === "simple"}
+                onChange={() => setControls({ mode: "simple" })}
+              />
+              <MetroCheck
+                kind="radio"
+                label="Clássico"
+                description="Comandos de verdade (meia-lua + botão), com os botões escolhidos abaixo."
+                checked={settings.controls.mode === "classic"}
+                onChange={() => setControls({ mode: "classic" })}
+              />
+              <MetroGroup title="Direcional" />
+              <MetroCheck
+                kind="radio"
+                label="Flutuante"
+                description="Aparece onde o polegar toca, na metade esquerda."
+                checked={settings.controls.stick === "floating"}
+                onChange={() => setControls({ stick: "floating" })}
+              />
+              <MetroCheck
+                kind="radio"
+                label="Fixo"
+                description="Sempre no mesmo lugar (ajuste no editor de layout)."
+                checked={settings.controls.stick === "fixed"}
+                onChange={() => setControls({ stick: "fixed" })}
+              />
+              <MetroSlider
+                label="Zona morta"
+                value={settings.controls.deadZone}
+                min={6}
+                max={40}
+                step={2}
+                format={(v) => `${v} dp`}
+                onChange={(v) => setControls({ deadZone: v })}
+              />
+              <Text style={[TYPE.CAPTION, { color: t.muted }]}>Quanto o polegar anda antes de contar como direção. As 8 direções têm folga para a diagonal não escorregar.</Text>
+              <MetroRow title="Editar layout" secondary="Arrastar, redimensionar, opacidade e padrão." glyph="settings" onPress={() => router.push("/controls")} />
+              <MetroGroup title="Botões do modo clássico" />
               <MetroCheck
                 kind="radio"
                 label="4 botões (padrão SNK)"
