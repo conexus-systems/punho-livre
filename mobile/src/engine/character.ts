@@ -5,7 +5,7 @@
 
 import { COMMON1_CNS } from "./common1";
 import { parseAir, finalizeAnimation } from "./mugen/air";
-import { parseCmd, parseCommandElement } from "./mugen/cmd";
+import { parseCmd, parseCommandElement, prioritizeCommandStates } from "./mugen/cmd";
 import { COSMETIC_CONTROLLERS, parseConstants, parseStates, withJumpAliases } from "./mugen/cns";
 import { findSection, parseIni, sectionMap, unquote } from "./mugen/ini";
 import type { Animation, CharacterData, CharacterStyle, CommandDef, SpriteSheet } from "./types";
@@ -148,6 +148,10 @@ export function loadCharacter(pack: CharacterPack): CharacterData {
       if (el) commands.push({ name, elements: [el], time: 1, bufferTime: 1 });
     }
   }
+
+  // super > especial > normal quando várias entradas casam no mesmo quadro
+  const root = parsed.states[-1];
+  if (root) root.controllers = prioritizeCommandStates(root.controllers, commands);
 
   return {
     id: pack.id,

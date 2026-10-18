@@ -7,11 +7,15 @@
 import { advanceAnim, contactPoint, currentFrame, overlap, resetAnim, worldBox } from "./anim";
 import { getAnim } from "./character";
 import {
+  COUNTER_HITSTOP_BONUS,
   GROUND_Y,
+  GUARD_CRUSH_HITSTOP,
   GUARD_MAX,
   GUARD_REGEN_DELAY,
   INTRO_FRAMES,
+  JUST_DEFEND_HITSTOP_MAX,
   KO_FRAMES,
+  KO_HITSTOP_FRAMES,
   KO_SLOWMO_FRAMES,
   POWER_PER_LEVEL,
   OVER_FRAMES,
@@ -483,21 +487,21 @@ function applyHit(
       att.hitPause = hd.guardPauseP1;
       att.hitDefActive = false;
     }
-    def.hitPause = jd ? Math.min(hd.guardPauseP2, 6) : hd.guardPauseP2;
+    def.hitPause = jd ? Math.min(hd.guardPauseP2, JUST_DEFEND_HITSTOP_MAX) : hd.guardPauseP2;
     // medidor de defesa: quem só defende acaba aberto (guard crush)
     const crush = !jd && !air && (def.guardMeter -= guardCost(hd)) <= 0;
     if (!jd) def.guardRegenDelay = GUARD_REGEN_DELAY;
     if (crush) {
       def.guardMeter = GUARD_MAX;
       changeState(def, w, roster, SYS.GUARD_CRUSH);
-      def.hitPause = Math.max(def.hitPause, 16);
+      def.hitPause = Math.max(def.hitPause, GUARD_CRUSH_HITSTOP);
     } else {
       changeState(def, w, roster, air ? 154 : def.stateType === "C" ? 152 : 150);
     }
     def.ctrl = false;
     addPower(att, hd.getPower / 2);
     addPower(def, jd ? 40 : hd.givePower / 2);
-    w.events.push({ kind: "guard", x: at.x, y: at.y, side: att.side, level: hd.sparkLevel, frame: w.frame });
+    w.events.push({ kind: "guard", x: at.x, y: at.y, side: att.side, level: hd.hitLevel, frame: w.frame });
     if (hd.guardSound) w.events.push({ kind: "sound", x: at.x, y: at.y, side: att.side, level: 0, frame: w.frame, snd: [hd.guardSound[0], hd.guardSound[1]], common: hd.guardSound[2], charId: att.charId });
     if (jd) w.events.push({ kind: "justdefend", x: def.x, y: def.y - 70, side: def.side, level: 0, frame: w.frame });
     if (crush) w.events.push({ kind: "guardcrush", x: def.x, y: def.y - 70, side: def.side, level: 2, frame: w.frame });
@@ -552,13 +556,16 @@ function applyHit(
     hitTimeLeft: hitTime,
   };
 
+  // hitstop: o do HitDef (ou o do nível do golpe), mais longo no contra-ataque e no K.O.
+  const bonus = counter && hd.pauseP2 > 0 ? COUNTER_HITSTOP_BONUS : 0;
+  const koStop = def.life <= 0 && !w.training ? KO_HITSTOP_FRAMES : 0;
   if (!fromProjectile) {
     att.moveHit = 1;
     att.moveContact = 1;
-    att.hitPause = hd.pauseP1;
+    att.hitPause = Math.max(hd.pauseP1 + (hd.pauseP1 > 0 ? bonus : 0), koStop);
     att.hitDefActive = false;
   }
-  def.hitPause = hd.pauseP2;
+  def.hitPause = Math.max(hd.pauseP2 + bonus, koStop);
 
   const stateNo = airborne ? 5020 : def.stateType === "C" ? 5010 : 5000;
   changeState(def, w, roster, stateNo);
@@ -580,7 +587,7 @@ function applyHit(
   }
   if (hd.hitSound) w.events.push({ kind: "sound", x: at.x, y: at.y, side: att.side, level: 0, frame: w.frame, snd: [hd.hitSound[0], hd.hitSound[1]], common: hd.hitSound[2], charId: att.charId });
 
-  w.events.push({ kind: "hit", x: at.x, y: at.y, side: att.side, level: hd.sparkLevel, frame: w.frame });
+  w.events.push({ kind: "hit", x: at.x, y: at.y, side: att.side, level: hd.hitLevel, frame: w.frame });
   if (counter) w.events.push({ kind: "counter", x: def.x, y: def.y - 70, side: att.side, level: 0, frame: w.frame });
   if (def.life <= 0) w.events.push({ kind: "ko", x: def.x, y: def.y, side: def.side, level: 2, frame: w.frame });
 }
@@ -924,7 +931,8 @@ export function stepWorld(w: WorldState, inputs: readonly [number, number], rost
     p.rawInput = raw;
     p.inputHead = (p.inputHead + 1) % INPUT_HISTORY;
     p.inputs[p.inputHead] = toRelative(raw, p.facing);
-    updateCommands(p, roster[p.charId], w.frame);
+    // congelado neste quadro (superpause ou hitstop): o buffer dos especiais não envelhece
+    updateCommands(p, roster[p.charId], w.frame, w.superPause > 0 || p.hitPause > 0);
   }
 
   // pausa de super: o mundo inteiro congela, inclusive quem soltou (pausemovetime = 0 do MUGEN);

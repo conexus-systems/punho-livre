@@ -6,6 +6,13 @@
  * HUD no estilo KOF: vida com rastro e piscando no vermelho, medidor de
  * defesa, estoques de power com o modo MAX, retratos da equipe e textos de
  * sistema (COUNTER, JUST DEFEND, GUARD CRUSH...).
+ *
+ * Game feel: câmera viva (camera.ts: segue, zoom por distância, punch e
+ * tremor), impactos por nível do golpe (effects.ts), lutador que apanhou
+ * vibrando durante o hitstop e flash curto de tela no super e no K.O.
+ * Tudo isso anda em `addEvents`, que precisa ser chamado uma vez por quadro
+ * simulado: assim o que aparece na tela depende só do histórico da luta (o
+ * mesmo replay desenha igual), não da taxa de quadros do aparelho.
  */
 
 import { Platform } from "react-native";
@@ -28,6 +35,7 @@ import { animCharOf } from "@/src/engine/fighter";
 import type { Box, CharacterData, ExplodState, FighterState, GameEvent, ProjectileState, WorldState } from "@/src/engine/types";
 
 import { STAGE_ART } from "./stages.generated";
+import { FightCamera } from "./camera";
 import { Effects } from "./effects";
 import { StageCache, stageById, type StageImages } from "./stages";
 
@@ -45,7 +53,17 @@ export interface RenderInput {
   debugBoxes?: boolean;
   /** Mensagem central extra (ex.: "AGUARDANDO OPONENTE"). */
   banner?: string | null;
+  /** Acessibilidade: sem tremor, punch, zoom por distância nem vibração do lutador; flashes fracos. */
+  reduceMotion?: boolean;
 }
+
+/** Teto do alfa dos flashes de tela com "Reduzir movimento". */
+const REDUCED_FLASH_ALPHA = 0.25;
+/** Flash branco do super / do K.O. (quadros). */
+const SUPER_FLASH_FRAMES = 5;
+const KO_FLASH_FRAMES = 12;
+/** Alfa do flash no primeiro quadro (cai linearmente). */
+const SCREEN_FLASH_ALPHA = 0.7;
 
 /** Texto de sistema que sobe da cabeça do lutador. */
 interface Pop {
@@ -54,7 +72,14 @@ interface Pop {
   y: number;
   age: number;
   color: string;
+  /** Texto grande com faixa (COUNTER, GUARD CRUSH). */
+  big?: boolean;
 }
+
+/** Textos com destaque: faixa inclinada, fonte grande e mais tempo na tela. */
+const BIG_POPS = new Set<GameEvent["kind"]>(["counter", "guardcrush"]);
+const POP_LIFE = 50;
+const BIG_POP_LIFE = 62;
 
 const POP_TEXT: Partial<Record<GameEvent["kind"], [string, string]>> = {
   counter: ["COUNTER", "#F97316"],
@@ -98,48 +123,84 @@ function paint(color: string, alpha = 1): SkPaint {
 
 export class FightRenderer {
   private fx = new Effects();
+  private camera = new FightCamera();
+  /** Flash branco curto (super, K.O.): quadros restantes e duração. */
+  private screenFlash = 0;
+  private screenFlashLen = 1;
   /** Clarão branco no lutador que acabou de apanhar (frames restantes). */
   private flash: [number, number] = [0, 0];
   /** Estado anterior de cada lutador (para poeira ao pousar, quicar, correr). */
   private lastState: [number, number] = [-1, -1];
   private pops: Pop[] = [];
-  private shake = 0;
   private lifeTrail: [number, number] = [1, 1];
   private superFlash = 0;
   private superColor = "#000000";
-  private koFlash = 0;
   private frame = 0;
   private stage = new StageCache();
   /** Paints de cor sólida reaproveitados entre frames (só leitura: nunca altere o que `solid` devolve). */
   private solids = new Map<string, SkPaint>();
   private gradients = new Map<string, SkPaint>();
 
+  /**
+   * Um quadro simulado: avança efeitos, câmera e contadores e reage aos
+   * eventos do quadro. Chame uma vez por stepWorld (não por desenho).
+   */
   addEvents(events: GameEvent[], world: WorldState, roster: Record<string, CharacterData>): void {
+    this.fx.beginFrame(world.frame);
+    this.fx.tick();
+    this.camera.update(world, events);
+    for (let i = 0; i < 2; i++) if (this.flash[i] > 0) this.flash[i]--;
+    if (this.superFlash > 0) this.superFlash--;
+    if (this.screenFlash > 0) this.screenFlash--;
+    if (this.pops.length) {
+      for (const p of this.pops) p.age++;
+      this.pops = this.pops.filter((p) => p.age <= (p.big ? BIG_POP_LIFE : POP_LIFE));
+    }
+
+    // poeira ao pousar, cair, correr e rolar
+    for (const f of world.fighters) {
+      const prev = this.lastState[f.side];
+      if (f.stateNo !== prev) {
+        if (f.stateNo === 52) this.fx.dust(f.x, 4);
+        else if (f.stateNo === 5100) this.fx.dust(f.x, 10);
+        else if (f.stateNo === 100 || f.stateNo === 6000 || f.stateNo === 6001) this.fx.dust(f.x, 5, -f.facing);
+        this.lastState[f.side] = f.stateNo;
+      }
+    }
+
+    const counterHit = events.some((e) => e.kind === "counter");
     for (const e of events) {
       if (e.kind === "hit" || e.kind === "guard") {
         const owner = world.fighters[e.side];
         const guard = e.kind === "guard";
-        this.fx.hit(e.x, e.y, e.level, roster[owner.charId]?.style.energy ?? "#FDE047", owner.facing, guard);
-        if (!guard) {
-          this.shake = Math.max(this.shake, 3 + e.level * 3);
-          this.flash[e.side === 0 ? 1 : 0] = 4;
-        }
+        const color = roster[owner.charId]?.style.energy ?? "#FDE047";
+        this.fx.impact(guard ? "guard" : counterHit ? "counter" : "hit", e.x, e.y, e.level, color, owner.facing);
+        if (!guard) this.flash[e.side === 0 ? 1 : 0] = e.level >= 2 || counterHit ? 6 : 4;
       } else if (e.kind === "ko") {
-        this.shake = 14;
-        this.koFlash = 22;
+        this.flashScreen(KO_FLASH_FRAMES);
       } else if (e.kind === "super") {
         this.superFlash = 30;
         this.superColor = e.level >= 3 ? "#7F1D1D" : "#000000";
-        if (e.level >= 3) this.pops.push({ text: "MAX SUPER", x: e.x, y: e.y - 20, age: 0, color: "#FACC15" });
+        this.flashScreen(SUPER_FLASH_FRAMES);
+        if (e.level >= 3) this.pops.push({ text: "MAX SUPER", x: e.x, y: e.y - 20, age: 0, color: "#FACC15", big: true });
       } else {
         const pop = POP_TEXT[e.kind];
-        if (pop) this.pops.push({ text: pop[0], x: e.x, y: e.y, age: 0, color: pop[1] });
-        if (e.kind === "max" || e.kind === "guardcrush") this.shake = Math.max(this.shake, 6);
+        // os grandes sobem acima da cabeça para não cobrir o rosto
+        const big = BIG_POPS.has(e.kind);
+        if (pop) this.pops.push({ text: pop[0], x: e.x, y: big ? e.y - 38 : e.y, age: 0, color: pop[1], big });
+        if (e.kind === "guardcrush") this.fx.impact("crush", e.x, e.y + 30, 2, "#EF4444", 1);
         if (e.kind === "max") {
           this.superFlash = 18;
           this.superColor = "#78350F";
         }
       }
+    }
+  }
+
+  private flashScreen(frames: number): void {
+    if (frames >= this.screenFlash) {
+      this.screenFlash = frames;
+      this.screenFlashLen = frames;
     }
   }
 
@@ -168,32 +229,26 @@ export class FightRenderer {
   draw(c: SkCanvas, input: RenderInput): void {
     const { world: w, width, height } = input;
     this.frame++;
-    const k = height / 250; // px por unidade
+    const reduce = input.reduceMotion === true;
+    this.camera.reduceMotion = reduce;
+    const k = height / 250; // px por unidade (zoom 1)
     const groundPx = height * 0.8;
-    const shakeX = this.shake > 0 ? (this.frame % 2 === 0 ? 1 : -1) * this.shake * 0.35 * k : 0;
-    if (this.shake > 0) this.shake *= 0.82;
-    if (this.shake < 0.4) this.shake = 0;
+    const view = this.camera.view({ width, height, k, groundPx, hudPx: height * 0.2 });
 
-    const cam = w.cameraX;
-    const sx = (x: number) => (x - cam) * k + width / 2 + shakeX;
+    const cam = view.x;
+    const sx = (x: number) => (x - cam) * k + width / 2;
     const sy = (y: number) => groundPx + y * k;
 
-    this.stage.draw(c, stageById(w.stageId), { k, width, height, groundPx, cam, shakeX, frame: this.frame }, STAGE_ART[w.stageId], input.stageImages);
+    // mundo com a câmera (zoom em volta do pivô + tremor); HUD e flashes ficam fora
+    c.save();
+    c.translate(view.pivotX + view.shakeX, view.pivotY + view.shakeY);
+    if (view.zoom !== 1) c.scale(view.zoom, view.zoom);
+    c.translate(-view.pivotX, -view.pivotY);
+
+    this.stage.draw(c, stageById(w.stageId), { k, width, height, groundPx, cam, shakeX: 0, frame: this.frame }, STAGE_ART[w.stageId], input.stageImages);
 
     if (this.superFlash > 0) {
       c.drawRect(Skia.XYWHRect(0, 0, width, height), paint(this.superColor, Math.min(0.55, this.superFlash / 40)));
-      this.superFlash--;
-    }
-
-    // poeira ao pousar, cair, correr e rolar
-    for (const f of w.fighters) {
-      const prev = this.lastState[f.side];
-      if (f.stateNo !== prev) {
-        if (f.stateNo === 52) this.fx.dust(f.x, 4);
-        else if (f.stateNo === 5100) this.fx.dust(f.x, 10);
-        else if (f.stateNo === 100 || f.stateNo === 6000 || f.stateNo === 6001) this.fx.dust(f.x, 5, -f.facing);
-        this.lastState[f.side] = f.stateNo;
-      }
     }
 
     // sombras
@@ -217,11 +272,18 @@ export class FightRenderer {
     if (input.debugBoxes) for (const f of w.fighters) this.drawBoxes(c, f, input, sx, sy, k);
     this.fx.draw(c, sx, sy, k);
     this.drawPops(c, input, sx, sy);
-    if (this.koFlash > 0) {
-      c.drawRect(Skia.XYWHRect(0, 0, width, height), paint("#FFFFFF", Math.min(0.85, this.koFlash / 22)));
-      this.koFlash--;
+    c.restore();
+
+    const cap = reduce ? REDUCED_FLASH_ALPHA : 1;
+    if (this.screenFlash > 0) {
+      c.drawRect(Skia.XYWHRect(0, 0, width, height), paint("#FFFFFF", Math.min(cap, SCREEN_FLASH_ALPHA * (this.screenFlash / this.screenFlashLen))));
     }
     this.drawHud(c, input);
+  }
+
+  /** Partículas vivas (para benchmark/diagnóstico). */
+  get liveParticles(): number {
+    return this.fx.liveParticles;
   }
 
   // ---------------------------------------------------------- lutadores
@@ -281,15 +343,17 @@ export class FightRenderer {
     const flip = (f.facing === -1) !== frame.flipH;
     // invencível pisca (menos ao levantar e no rolamento, que já se vê)
     const blink = f.notHitBy > 0 && f.stateNo !== 5120 && (f.stateNo < 6000 || f.stateNo > 6070) && this.frame % 4 < 2 ? 0.55 : 1;
-    const ok = this.drawSprite(c, animCh, input.atlases[animCh.id], frame.group, frame.index, sx(f.x), sy(f.y), flip, frame.ox, frame.oy, k, blink);
-    if (!ok) this.drawBoxBody(c, f, ch, frame.clsn2, sx, sy, k);
+    // quem apanhou vibra durante o hitstop (o shaketime do MUGEN)
+    const shake = f.hitPause > 0 && f.moveType === "H" && !input.reduceMotion ? (input.world.frame % 2 === 0 ? 1 : -1) * Math.min(2.2, 0.6 + f.hitPause * 0.12) * k : 0;
+    const fx = sx(f.x) + shake;
+    const ok = this.drawSprite(c, animCh, input.atlases[animCh.id], frame.group, frame.index, fx, sy(f.y), flip, frame.ox, frame.oy, k, blink);
+    if (!ok) this.drawBoxBody(c, f, ch, frame.clsn2, (x) => sx(x) + shake, sy, k);
     // clarão de quem apanhou: o mesmo sprite somado por cima
-    if (ok && this.flash[f.side] > 0) {
+    if (ok && this.flash[f.side] > 0 && !f.helper) {
       const over = Skia.Paint();
       over.setBlendMode(BlendMode.Plus);
-      over.setAlphaf(0.18 * this.flash[f.side]);
-      this.drawSprite(c, animCh, input.atlases[animCh.id], frame.group, frame.index, sx(f.x), sy(f.y), flip, frame.ox, frame.oy, k, 1, over);
-      this.flash[f.side]--;
+      over.setAlphaf(Math.min(1, 0.16 * this.flash[f.side]));
+      this.drawSprite(c, animCh, input.atlases[animCh.id], frame.group, frame.index, fx, sy(f.y), flip, frame.ox, frame.oy, k, 1, over);
     }
   }
 
@@ -419,26 +483,39 @@ export class FightRenderer {
 
   private drawPops(c: SkCanvas, input: RenderInput, sx: (x: number) => number, sy: (y: number) => number): void {
     if (this.pops.length === 0) return;
-    const font = getFonts(input.height)?.medium;
-    const keep: Pop[] = [];
+    const fonts = getFonts(input.height);
+    if (!fonts) return;
     for (const p of this.pops) {
-      p.age++;
-      if (p.age > 50) continue;
-      keep.push(p);
-      if (!font) continue;
-      const rise = Math.min(p.age, 12) * 1.2;
-      const alpha = p.age < 38 ? 1 : 1 - (p.age - 38) / 12;
-      const grow = p.age < 5 ? 1.4 - p.age * 0.08 : 1;
+      const font = p.big ? fonts.big : fonts.medium;
+      const life = p.big ? BIG_POP_LIFE : POP_LIFE;
+      const fade = life - 12;
+      const rise = Math.min(p.age, 12) * (p.big ? 0.8 : 1.2);
+      const alpha = p.age < fade ? 1 : 1 - (p.age - fade) / 12;
+      // entra grande e "assenta" (punch do texto)
+      const grow = p.big ? (p.age < 6 ? 1.6 - p.age * 0.1 : 1) : p.age < 5 ? 1.4 - p.age * 0.08 : 1;
       const tw = font.measureText(p.text).width * grow;
       const x = Math.max(4, Math.min(input.width - tw - 4, sx(p.x) - tw / 2));
       c.save();
       c.translate(x, sy(p.y - rise));
       c.scale(grow, grow);
+      if (p.big) {
+        // faixa inclinada atrás do texto, com um fio da cor do texto
+        const h = font.getSize();
+        const w = tw / grow;
+        const band = Skia.PathBuilder.Make();
+        band.moveTo(-h * 0.5, -h * 0.95);
+        band.lineTo(w + h * 0.8, -h * 0.95);
+        band.lineTo(w + h * 0.5, h * 0.25);
+        band.lineTo(-h * 0.8, h * 0.25);
+        band.close();
+        c.drawPath(band.detach(), paint("#0B0B12", 0.72 * alpha));
+        c.drawRect(Skia.XYWHRect(-h * 0.8, h * 0.25, w + h * 1.3, Math.max(2, h * 0.08)), paint(p.color, alpha));
+      }
       c.drawText(p.text, 2, 2, paint("#000000", 0.75 * alpha), font);
-      c.drawText(p.text, 0, 0, paint(p.color, alpha), font);
+      // pisca branco nos primeiros quadros
+      c.drawText(p.text, 0, 0, paint(p.big && p.age % 6 < 3 && p.age < 18 ? "#FFFFFF" : p.color, alpha), font);
       c.restore();
     }
-    this.pops = keep;
   }
 
   // ---------------------------------------------------------------- HUD

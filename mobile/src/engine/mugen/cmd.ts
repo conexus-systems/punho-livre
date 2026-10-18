@@ -12,7 +12,9 @@
  * e `+` (simultâneo).
  */
 
-import { Key, type CommandDef, type CommandElement } from "../types";
+import { CommandTier } from "../constants";
+import type { Expr } from "../expr";
+import { Key, type CommandDef, type CommandElement, type Controller } from "../types";
 import { parseIni, sectionMap, splitTopLevel, unquote } from "./ini";
 
 const DIRS: Record<string, number> = {
@@ -95,13 +97,104 @@ export function parseCmd(text: string): CommandDef[] {
     if (!name || !cmd) continue;
     const elements = splitTopLevel(cmd).map(parseCommandElement);
     if (elements.some((e) => e === null)) continue;
-    out.push({
+    const def: CommandDef = {
       name,
       elements: elements as CommandElement[],
       time: Number.parseInt(map["time"] ?? "", 10) || defTime,
       bufferTime: Math.max(1, Number.parseInt(map["buffer.time"] ?? "", 10) || defBuffer),
-    });
+    };
+    def.tier = commandTier(def);
+    out.push(def);
   }
+  return out;
+}
+
+// ----------------------------------------------------------- prioridade
+
+const SUPER_NAME = /super|hyper|(^|[_\s-])(s?dm|hcm|lv\d)([_\s-]|$)/;
+
+/**
+ * Prioridade do comando (CommandTier):
+ * - super: nome de super (super, hyper, dm, sdm...) ou movimento que repete
+ *   uma direção com pelo menos dois passos no meio (meia-lua dupla etc.);
+ * - especial: movimento de 2+ elementos terminando em botão;
+ * - normal: o resto (botão sozinho, corrida FF, segurar direção).
+ */
+export function commandTier(cmd: CommandDef): number {
+  const els = cmd.elements;
+  const last = els[els.length - 1];
+  if (els.length < 2 || !last || last.buttons === 0) return CommandTier.NORMAL;
+  if (SUPER_NAME.test(cmd.name)) return CommandTier.SUPER;
+  const dirs = els.map((e) => e.dir);
+  for (let i = 0; i < dirs.length; i++) {
+    if (dirs[i] === 0) continue;
+    for (let j = i + 3; j < dirs.length; j++) if (dirs[j] === dirs[i]) return CommandTier.SUPER;
+  }
+  return CommandTier.SPECIAL;
+}
+
+/** Nomes de comando citados num trigger (`command = "x"`). */
+function commandRefs(e: Expr, out: string[]): void {
+  switch (e.k) {
+    case "bin":
+      if ((e.op === "=" || e.op === "!=") && e.a.k === "id" && e.a.name === "command" && e.b.k === "str") {
+        if (e.op === "=") out.push(e.b.v.toLowerCase());
+        return;
+      }
+      commandRefs(e.a, out);
+      commandRefs(e.b, out);
+      return;
+    case "un":
+      commandRefs(e.a, out);
+      return;
+    case "call":
+      for (const a of e.args) commandRefs(a, out);
+      return;
+    case "range":
+      commandRefs(e.a, out);
+      return;
+    case "redir":
+      return; // comando de outro lutador não conta
+    default:
+      return;
+  }
+}
+
+/** Maior prioridade entre os comandos que o controlador exige (-1 se não depende de comando). */
+export function controllerTier(c: Controller, tiers: Map<string, number>): number {
+  const names: string[] = [];
+  for (const e of c.triggerAll) commandRefs(e, names);
+  for (const group of c.triggers) for (const e of group) commandRefs(e, names);
+  let best = -1;
+  for (const n of names) best = Math.max(best, tiers.get(n) ?? CommandTier.NORMAL);
+  return best;
+}
+
+/**
+ * Prioridade super > especial > normal no estado -1: quando várias entradas
+ * casam no mesmo quadro (a meia-lua dupla + soco também completa a meia-lua
+ * simples e o soco), o ChangeState do comando mais forte é testado primeiro.
+ * Só os ChangeState que dependem de comando trocam de lugar entre si (ordem
+ * estável dentro do mesmo nível); os demais controladores ficam onde estavam.
+ * Se o super não puder sair (sem barra), os triggers dele falham e o especial
+ * sai normalmente.
+ */
+export function prioritizeCommandStates(controllers: Controller[], commands: CommandDef[]): Controller[] {
+  const tiers = new Map<string, number>();
+  for (const c of commands) tiers.set(c.name, Math.max(tiers.get(c.name) ?? 0, c.tier ?? CommandTier.NORMAL));
+  const slots: number[] = [];
+  const movable: { c: Controller; tier: number; order: number }[] = [];
+  controllers.forEach((c, i) => {
+    if (c.type !== "changestate") return;
+    const tier = controllerTier(c, tiers);
+    if (tier < 0) return;
+    slots.push(i);
+    movable.push({ c, tier, order: movable.length });
+  });
+  if (movable.length < 2) return controllers;
+  movable.sort((a, b) => b.tier - a.tier || a.order - b.order);
+  const out = controllers.slice();
+  slots.forEach((slot, k) => (out[slot] = movable[k].c));
   return out;
 }
 

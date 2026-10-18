@@ -63,6 +63,12 @@ Suportado:
   InGuardDist, NumProj(ID), SelfAnimExist, IfElse/Cond, funções matemáticas, redirecionamento
   `p2,` / `enemy,`, intervalos `[a, b]`, divisão inteira estilo MUGEN.
 - Comandos `.cmd`: `~` (com tempo), `/`, `$`, `>`, `+`, `time`, `buffer.time`, `[Defaults]`.
+  Diferenças de propósito (ver docs/GAME_FEEL.md): especiais e supers valem por pelo menos 5 quadros
+  (buffer que não envelhece no hitstop/superpause) e, no `[Statedef -1]`, os ChangeState de super são
+  testados antes dos de especial, e estes antes dos de normal.
+- HitDef sem `pausetime` ganha hitstop pelo nível do golpe (arremessos `?T` continuam 0); sem
+  `guard.pausetime`, a defesa congela 60% do acerto; contra-ataque e K.O. congelam mais. `pausetime`
+  e `guard.pausetime` explícitos são respeitados.
 - Movimentos internos do MUGEN: andar, agachar, pular, defesa automática segurando para trás.
 - Estados comuns (`common1`) próprios da engine: parado, agachar, andar, pulo, pouso,
   corrida, recuo, defesa, apanhar (em pé/agachado/ar), queda, quique, deitado, levantar,

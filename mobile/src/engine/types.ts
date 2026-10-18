@@ -80,6 +80,8 @@ export interface CommandDef {
   elements: CommandElement[];
   time: number;
   bufferTime: number;
+  /** Prioridade (CommandTier): 0 normal, 1 especial, 2 super. Ausente = 0. */
+  tier?: number;
 }
 
 // --------------------------------------------------------------- estados
@@ -220,6 +222,8 @@ export interface HitDefState {
   guardKill: boolean;
   /** Intensidade visual do impacto 0..2 (light/medium/hard). */
   sparkLevel: number;
+  /** Nível do golpe (HitLevel): 0 fraco, 1 médio, 2 forte, 3 especial, 4 super. */
+  hitLevel: number;
   /** Estado personalizado do oponente ao acertar (arremessos MUGEN); -1 nenhum. */
   p2StateNo: number;
   /** 1 = oponente vira para o atacante, -1 = de costas, 0 = não muda. */
@@ -386,6 +390,7 @@ export interface GameEvent {
   x: number;
   y: number;
   side: 0 | 1;
+  /** hit/guard: nível do golpe (HitLevel 0..4); super: 2 ou 3 (turbinado); outros: livre. */
   level: number;
   frame: number;
   snd?: [number, number];

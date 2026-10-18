@@ -25,9 +25,11 @@ import {
   CHORD_WINDOW,
   GUARD_MAX,
   JUST_DEFEND_WINDOW,
+  KO_HITSTOP_FRAMES,
   MAX_TICKS,
   POWER_PER_LEVEL,
   THROW_HIT_FRAME,
+  THROW_HITSTOP,
   THROW_RANGE,
   THROW_TECH_WINDOW,
 } from "./constants";
@@ -247,9 +249,13 @@ export function resolveThrows(w: WorldState, roster: Roster): void {
     changeState(opp, w, roster, 5030);
     opp.moveType = "H";
     opp.ctrl = false;
-    p.hitPause = 6;
-    opp.hitPause = 6;
+    p.hitPause = THROW_HITSTOP;
+    opp.hitPause = THROW_HITSTOP;
     addPower(p, 60);
+    if (opp.life <= 0 && !w.training) {
+      p.hitPause = KO_HITSTOP_FRAMES;
+      opp.hitPause = KO_HITSTOP_FRAMES;
+    }
     w.events.push({ kind: "hit", x: (p.x + opp.x) / 2, y: opp.y - 50, side: p.side, level: 2, frame: w.frame });
     if (opp.life <= 0) w.events.push({ kind: "ko", x: opp.x, y: opp.y, side: opp.side, level: 2, frame: w.frame });
   }

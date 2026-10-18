@@ -1,4 +1,4 @@
-/** Ajustes do jogo persistidos (assistido, vibração, dificuldade, atraso online, botões, som). */
+/** Ajustes do jogo persistidos (assistido, vibração, dificuldade, atraso online, botões, som, reduzir movimento). */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -21,6 +21,7 @@ export async function loadSettings(): Promise<void> {
         buttons: s.buttons === "snk" || s.buttons === "mugen" ? s.buttons : cur.buttons,
         music: typeof s.music === "boolean" ? s.music : cur.music,
         sfx: typeof s.sfx === "boolean" ? s.sfx : cur.sfx,
+        reduceMotion: typeof s.reduceMotion === "boolean" ? s.reduceMotion : cur.reduceMotion,
       },
     });
   } catch {
