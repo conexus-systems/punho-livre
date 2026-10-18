@@ -1,8 +1,12 @@
 /**
  * Benchmark da engine: simula lutas CPU × CPU e mede frames/s da simulação
  * pura e do custo do rollback (clone + re-simulação de 8 frames por frame).
- * Rodar com `npm run bench`.
+ * Rodar com `npm run bench`; `BENCH_JSON=arquivo.json` grava também os números
+ * em JSON (CI publica como artifact).
  */
+
+import { mkdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
 
 import { BUILTIN, BUILTIN_ORDER } from "@/src/characters/builtin.generated";
 import { loadCharacter } from "@/src/engine/character";
@@ -57,6 +61,8 @@ function fight(seed: number, rollback: number): { ms: number; frames: number } {
   return { ms: performance.now() - start, frames: n };
 }
 
+const results: { label: string; frames: number; ms_per_frame: number; frames_per_s: number; realtime_x: number }[] = [];
+
 function run(label: string, rollback: number): void {
   let ms = 0;
   let frames = 0;
@@ -66,9 +72,25 @@ function run(label: string, rollback: number): void {
     frames += r.frames;
   }
   const fps = (frames / ms) * 1000;
+  results.push({ label, frames, ms_per_frame: Number((ms / frames).toFixed(4)), frames_per_s: Math.round(fps), realtime_x: Math.round(fps / 60) });
   console.log(`${label.padEnd(28)} ${frames} frames  ${(ms / frames).toFixed(4)} ms/frame  ${Math.round(fps)} frames/s  (${(fps / 60).toFixed(0)}× tempo real)`);
 }
 
 console.log(`carregar ${BUILTIN_ORDER.length} personagens: ${loadMs.toFixed(1)} ms`);
 run("simulação", 0);
 run("rollback (8 frames/frame)", 8);
+
+if (process.env.BENCH_JSON) {
+  const out = path.resolve(process.env.BENCH_JSON);
+  mkdirSync(path.dirname(out), { recursive: true });
+  const report = {
+    format: "mugen-arena-engine-bench/1",
+    node: process.version,
+    platform: `${process.platform}-${process.arch}`,
+    characters: BUILTIN_ORDER.length,
+    load_ms: Number(loadMs.toFixed(1)),
+    frames_per_run: FRAMES,
+    results,
+  };
+  writeFileSync(out, JSON.stringify(report, null, 2) + "\n");
+}

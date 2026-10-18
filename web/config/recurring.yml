@@ -6,3 +6,6 @@ production:
   cleanup_stale_matchmaking_tickets:
     class: MatchmakingCleanupJob
     schedule: every 5 minutes
+  purge_old_telemetry:
+    class: TelemetryPurgeJob
+    schedule: every day at 4:17am

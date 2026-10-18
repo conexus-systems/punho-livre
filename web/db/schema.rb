@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_18_000014) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_18_000020) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -272,6 +272,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_000014) do
     t.index ["expires_at"], name: "index_solid_queue_semaphores_on_expires_at"
     t.index ["key", "value"], name: "index_solid_queue_semaphores_on_key_and_value"
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
+  end
+
+  create_table "telemetry_events", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "session_id", null: false
+    t.string "platform", null: false
+    t.string "app_version", null: false
+    t.string "os_version"
+    t.string "build"
+    t.decimal "screen_aspect", precision: 5, scale: 2
+    t.jsonb "props", default: {}, null: false
+    t.datetime "occurred_at", null: false
+    t.datetime "created_at", null: false
+    t.index ["created_at"], name: "index_telemetry_events_on_created_at"
+    t.index ["name", "occurred_at"], name: "index_telemetry_events_on_name_and_occurred_at"
+    t.index ["session_id"], name: "index_telemetry_events_on_session_id"
   end
 
   add_foreign_key "characters", "players", column: "submitted_by_id"

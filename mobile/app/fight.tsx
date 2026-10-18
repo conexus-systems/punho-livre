@@ -5,6 +5,7 @@ import { Canvas, Picture, Skia, type SkImage, type SkPicture } from "@shopify/re
 import { useSharedValue } from "react-native-reanimated";
 
 import { MetroButton, MetroProgress } from "@/components/metro";
+import { PerfOverlay } from "@/components/PerfOverlay";
 import { TouchControls, type AssistButton } from "@/components/TouchControls";
 import { TYPE } from "@/src/ui/type";
 import { space, useTokens, type Tokens } from "@/src/ui/theme";
@@ -27,6 +28,9 @@ import { joinMatch, onlineStore, type OnlineMatchHandle } from "@/src/net/online
 import type { RollbackSession } from "@/src/net/rollback";
 import { onMatchFinished, showRewarded } from "@/src/services/ads";
 import { fetchMe } from "@/src/services/api";
+import { devOptions, perfOverlayOn } from "@/src/services/devOptions";
+import { FightTelemetry, resultFor } from "@/src/services/fightTelemetry";
+import { now, PerfMonitor } from "@/src/services/perf";
 import { app } from "@/src/store";
 
 const STEP_MS = 1000 / 60;
@@ -93,6 +97,10 @@ export default function Fight() {
   const stageImages = useRef<Record<string, StageImages>>({});
   const pausedRef = useRef(false);
   const reported = useRef(false);
+  // QA: desempenho (overlay + resumo na telemetria) e eventos da luta
+  const perf = useRef(new PerfMonitor());
+  const fightTel = useRef<FightTelemetry | null>(null);
+  const showPerf = devOptions.use(perfOverlayOn);
 
   const [loading, setLoading] = useState(true);
   const [paused, setPaused] = useState(false);
@@ -156,9 +164,19 @@ export default function Fight() {
       setLoading(false);
       const startWorld = sessionRef.current?.world ?? worldRef.current;
       if (startWorld) audio.startMusic(startWorld.stageId);
+      perf.current.reset();
+      fightTel.current = new FightTelemetry({
+        mode: setup.mode,
+        p1,
+        p2,
+        stage: startWorld?.stageId ?? "",
+        difficulty: setup.mode === "versus" || setup.mode === "team" ? settings.difficulty : undefined,
+      });
+      fightTel.current.start();
     })();
     return () => {
       cancelled = true;
+      fightTel.current?.end(onlineStore.get().opponentLeft ? "abandoned" : "quit", perf.current);
       audio.stopMusic();
       void onlineRef.current?.leave();
     };
@@ -196,14 +214,19 @@ export default function Fight() {
       if (last === 0) last = t;
       acc += Math.min(100, t - last);
       last = t;
+      perf.current.frame(t);
+      const simStart = now();
       let steps = 0;
       while (acc >= STEP_MS && steps < 4) {
         tick();
         acc -= STEP_MS;
         steps++;
       }
+      if (steps > 0) perf.current.sim(now() - simStart);
+      if (sessionRef.current) perf.current.setRollbacks(sessionRef.current.stats.rollbacks);
       const w = sessionRef.current?.world ?? worldRef.current;
       if (!w) return;
+      const drawStart = now();
       const rec = Skia.PictureRecorder();
       const canvas = rec.beginRecording(Skia.XYWHRect(0, 0, width, height));
       renderer.current.draw(canvas, {
@@ -218,6 +241,7 @@ export default function Fight() {
         banner: sessionRef.current?.stats.desync ? "DESSINCRONIA" : null,
       });
       picture.value = rec.finishRecordingAsPicture();
+      perf.current.draw(now() - drawStart);
 
       if (t - lastUi > 200) {
         lastUi = t;
@@ -232,6 +256,7 @@ export default function Fight() {
             setWinner({ char, quote: pickQuote(char) });
           }
           onlineRef.current?.reportResult(w.matchWinner === 2 ? null : w.matchWinner);
+          fightTel.current?.end(resultFor(w.matchWinner, localSide), perf.current);
           setResult({ winner: w.matchWinner });
         }
       }
@@ -335,6 +360,8 @@ export default function Fight() {
           LUTA {setup.stageNo}/{setup.stageNo + setup.ladder.length}
         </Text>
       ) : null}
+
+      {showPerf && !loading ? <PerfOverlay monitor={perf.current} /> : null}
 
       {paused ? (
         <Overlay t={t} title="PAUSA">

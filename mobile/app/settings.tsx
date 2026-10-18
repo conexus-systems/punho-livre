@@ -4,6 +4,8 @@ import { router } from "expo-router";
 import Constants from "expo-constants";
 
 import { MetroButton, MetroCheck, MetroDialog, MetroGroup, MetroHeader, MetroPage, MetroPivot, MetroRow, MetroSlider, MetroTextField, MetroToggle } from "@/components/metro";
+import { devOptions, setDevOption } from "@/src/services/devOptions";
+import { setTelemetryConsent, telemetryStore } from "@/src/services/telemetry";
 import { setSetting } from "@/src/settings";
 import { app } from "@/src/store";
 import { colorName, ESSENTIALS, forWhiteText, MORE, parseLoose } from "@/src/ui/accent";
@@ -24,6 +26,9 @@ export default function Settings() {
   const [moreColors, setMoreColors] = useState(false);
   const [custom, setCustom] = useState("");
   const customParsed = parseLoose(custom);
+  const telemetry = telemetryStore.use((s) => s.consent);
+  const dev = devOptions.use((s) => s);
+  const [versionTaps, setVersionTaps] = useState(0);
 
   const swatch = (hex: string, name: string) => {
     const selected = theme.accent.toUpperCase() === hex.toUpperCase();
@@ -112,7 +117,40 @@ export default function Settings() {
 
           {pivot === 2 ? (
             <>
-              <MetroRow title="MUGEN Arena" secondary={`Versão ${Constants.expoConfig?.version ?? "?"}`} />
+              <MetroRow
+                title="MUGEN Arena"
+                secondary={`Versão ${Constants.expoConfig?.version ?? "?"}`}
+                onPress={() => {
+                  // 7 toques na versão liberam as opções de desenvolvedor (QA)
+                  const n = versionTaps + 1;
+                  setVersionTaps(n);
+                  if (n >= 7 && !dev.unlocked) setDevOption({ unlocked: true });
+                }}
+              />
+              <MetroGroup title="Privacidade" />
+              <MetroToggle
+                label="Enviar dados de uso e falhas"
+                description="Anônimos: modo de jogo, duração das lutas, desempenho (fps) e erros do app. Sem nome, e-mail, conta ou identificador do aparelho. Desligar apaga o que ainda não foi enviado."
+                value={telemetry === true}
+                onChange={(v) => setTelemetryConsent(v)}
+              />
+              {dev.unlocked ? (
+                <>
+                  <MetroGroup title="Desenvolvedor" />
+                  <MetroToggle
+                    label="Overlay de desempenho"
+                    description="fps, tempo de quadro, simulação, desenho e rollbacks durante a luta."
+                    value={dev.perfOverlay}
+                    onChange={(v) => setDevOption({ perfOverlay: v })}
+                  />
+                  <MetroRow title="Modo bench" secondary="Luta fixa CPU × CPU por 60 s; mostra e exporta os números." onPress={() => router.push("/bench")} />
+                  <MetroRow title="Esconder opções de desenvolvedor" onPress={() => {
+                      setVersionTaps(0);
+                      setDevOption({ unlocked: false, perfOverlay: false });
+                    }} />
+                </>
+              ) : null}
+              <MetroGroup title="Sobre" />
               <MetroRow title="Engine" secondary="Compatível com o formato de personagens do MUGEN (.def, .air, .cmd, .cns, .sff). Não usa código da Elecbyte." />
               <MetroRow
                 title="Sistema de luta"

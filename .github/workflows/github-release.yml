@@ -83,6 +83,12 @@ jobs:
           curl -fsSL "$url" -o "$apk"
           sha256sum "$apk" > "$apk.sha256"
 
+      # Tamanho real do APK (universal: todas as ABIs, maior que o download da Play por aparelho).
+      # Só avisa: o limite de download (150 MB) vale para o AAB por aparelho (docs/DEVICE_LAB.md).
+      - name: Tamanho do APK
+        continue-on-error: true
+        run: npm run size -- --dir /tmp/export --apk "mugen-arena-$VERSION.apk" --json size.json
+
       - name: Publicar release no GitHub
         env:
           GH_TOKEN: ${{ github.token }}
