@@ -56,7 +56,7 @@ class StageLogic {
     this.cleared = false;
     this.clearT = 0;
     this.startPhase(0);
-    this.banner = { text: `Stage ${i + 1}`, t: 90 };
+    this.banner = { text: `Fase ${i + 1}`, t: 90 };
   }
 
   startPhase(p) {
@@ -127,7 +127,7 @@ class StageLogic {
       if (!this.queue.length && !alive.length) {
         if (this.phase === STAGES[this.stageIndex].phases.length - 1) {
           this.cleared = true;
-          this.banner = { text: 'Stage Clear!', t: 90 };
+          this.banner = { text: 'Fase concluída!', t: 90 };
           Sound.play('1/m_end');
         } else {
           this.locked = false;
@@ -145,7 +145,7 @@ class StageLogic {
       text(ctx, 'GO →', LF.W - 30, 300, { align: 'right', size: 34, color: '#ffffff', shadow: '#1946ff' });
     }
     if (this.banner) text(ctx, this.banner.text, LF.W / 2, 300, { align: 'center', size: 40, color: '#ffffff', shadow: '#1946ff' });
-    text(ctx, `Stage ${this.stageIndex + 1}-${this.phase + 1}`, 10, LF.H - 14, { size: 13, color: '#ffffff', shadow: '#000' });
+    text(ctx, `Fase ${this.stageIndex + 1}-${this.phase + 1}`, 10, LF.H - 14, { size: 13, color: '#ffffff', shadow: '#000' });
   }
 }
 

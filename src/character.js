@@ -798,7 +798,8 @@ class Character extends Living {
   }
 
   idUpdate(event, K, tag) {
-    const f = CHAR_ID_UPDATES[this.id];
+    // lutadores novos herdam os ajustes do lutador em que foram baseados
+    const f = CHAR_ID_UPDATES[Assets.obj(this.id).base || this.id];
     return f ? f.call(this, event, K, tag) : undefined;
   }
 

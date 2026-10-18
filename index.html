@@ -2,22 +2,22 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Little Fighter 2 (port HTML5)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b1030">
+<title>Punho Livre</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main id="wrap">
-  <canvas id="game" width="794" height="550" aria-label="Little Fighter 2"></canvas>
+  <canvas id="game" width="794" height="550" aria-label="Punho Livre"></canvas>
   <div id="touch" hidden>
-    <div class="pad">
-      <button type="button" data-key="T_up" class="up" aria-label="Cima">▲</button>
-      <button type="button" data-key="T_left" class="left" aria-label="Esquerda">◀</button>
-      <button type="button" data-key="T_right" class="right" aria-label="Direita">▶</button>
-      <button type="button" data-key="T_down" class="down" aria-label="Baixo">▼</button>
+    <div class="dpad" aria-label="Direcional">
+      <span class="arrow up">▲</span><span class="arrow left">◀</span>
+      <span class="arrow right">▶</span><span class="arrow down">▼</span>
+      <span class="knob"></span>
     </div>
     <div class="sys">
-      <button type="button" data-key="Escape" aria-label="Sair da luta">Esc</button>
+      <button type="button" data-key="Escape" aria-label="Voltar ou sair da luta">Esc</button>
       <button type="button" data-key="F1" aria-label="Pausa">II</button>
     </div>
     <div class="btns">
@@ -27,6 +27,25 @@
     </div>
   </div>
 </main>
+
+<form id="netform" hidden autocomplete="off">
+  <h2>Jogar em rede</h2>
+  <label for="net-server">Servidor</label>
+  <input id="net-server" type="text" inputmode="url" placeholder="ex.: punholivre.onrender.com" spellcheck="false">
+  <label for="net-name">Seu nome</label>
+  <input id="net-name" type="text" maxlength="10" placeholder="Jogador">
+  <div class="row">
+    <button type="button" id="net-create">Criar sala</button>
+  </div>
+  <label for="net-code">Código da sala</label>
+  <div class="row">
+    <input id="net-code" type="text" maxlength="4" placeholder="ABCD" autocapitalize="characters" spellcheck="false">
+    <button type="button" id="net-join">Entrar</button>
+  </div>
+  <p id="net-status" role="status"></p>
+  <button type="button" id="net-back" class="secondary">Voltar</button>
+</form>
+
 <script>
   // ?assets=caminho/ usa outra pasta de dados (útil em desenvolvimento)
   (function () {
@@ -35,6 +54,7 @@
   })();
 </script>
 <script src="src/global.js"></script>
+<script src="src/logo.js"></script>
 <script src="src/assets.js"></script>
 <script src="src/input.js"></script>
 <script src="src/object.js"></script>
@@ -47,6 +67,7 @@
 <script src="src/match.js"></script>
 <script src="src/stage.js"></script>
 <script src="src/ui.js"></script>
+<script src="src/net.js"></script>
 <script src="src/main.js"></script>
 </body>
 </html>

@@ -220,7 +220,8 @@ class Ball extends Living {
     if (!this.chased) this.chased = {};
     const list = this.match.queryAll(this, { type: 'character', notTeam: this.team }).filter((c) => !c.dead);
     if (!list.length) return null;
-    const score = (o) => Math.hypot(o.ps.x - this.ps.x, o.ps.z - this.ps.z) + 500 * (this.chased[o.uid] || 0);
+    const dist = (o) => { const dx = o.ps.x - this.ps.x, dz = o.ps.z - this.ps.z; return Math.sqrt(dx * dx + dz * dz); };
+    const score = (o) => dist(o) + 500 * (this.chased[o.uid] || 0);
     list.sort((a, b) => score(a) - score(b));
     const t = list[0];
     this.chased[t.uid] = (this.chased[t.uid] || 0) + 1;

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Gera o APK do Little Fighter 2 (port HTML5) sem precisar do Android SDK.
+# Gera o APK do Punho Livre sem precisar do Android SDK.
 #
-# Antes, gere os dados do LF2 com ./tools/fetch-lf2.sh (pasta assets/).
-# Os dados do LF2 são de Marti Wong & Starsky Wong: o APK gerado é para uso
-# pessoal e não deve ser publicado nem enviado para o repositório.
+# Antes, gere os dados do jogo com ./tools/fetch-lf2.sh (pasta assets/).
+# Os lutadores, cenários e sons vêm do Little Fighter 2 (Marti Wong & Starsky
+# Wong): o APK gerado é para uso pessoal e não deve ser publicado nem enviado
+# para o repositório.
 #
 # Requisitos: Java 11+ (java, javac, keytool), Maven, Python 3, curl, unzip.
 # As ferramentas vêm do Maven Central e ficam em cache em android/.tools:
@@ -13,7 +14,7 @@
 #
 # Variáveis opcionais:
 #   LF2_ASSETS     pasta com os dados gerados (padrão: assets/)
-#   OUT            caminho do APK (padrão: dist/lf2.apk)
+#   OUT            caminho do APK (padrão: dist/punho-livre.apk)
 #   KEYSTORE (PKCS12), KEYSTORE_PASS, KEY_ALIAS   para assinar com a sua chave
 #   VERSION_CODE, VERSION_NAME
 set -euo pipefail
@@ -23,13 +24,13 @@ AND="$ROOT/android"
 TOOLS="$AND/.tools"
 BUILD="$AND/build"
 LF2_ASSETS="${LF2_ASSETS:-$ROOT/assets}"
-OUT="${OUT:-$ROOT/dist/lf2.apk}"
+OUT="${OUT:-$ROOT/dist/punho-livre.apk}"
 APKTOOL_VERSION=3.0.3
 VERSION_CODE="${VERSION_CODE:-1}"
 VERSION_NAME="${VERSION_NAME:-1.0}"
 
 if [ ! -f "$LF2_ASSETS/data.js" ]; then
-  echo "Dados do LF2 não encontrados em $LF2_ASSETS. Rode ./tools/fetch-lf2.sh primeiro." >&2
+  echo "Dados do jogo não encontrados em $LF2_ASSETS. Rode ./tools/fetch-lf2.sh primeiro." >&2
   exit 1
 fi
 
@@ -53,14 +54,10 @@ mkdir -p "$BUILD/assets/assets" "$BUILD/res"
 
 echo "Empacotando o jogo..."
 cp "$ROOT/index.html" "$ROOT/style.css" "$BUILD/assets/"
-cp -r "$ROOT/src" "$BUILD/assets/"
+cp -r "$ROOT/src" "$ROOT/fonts" "$BUILD/assets/"
 cp -r "$LF2_ASSETS"/. "$BUILD/assets/assets/"
 rm -f "$BUILD/assets/assets/sound-mp3.js"   # a WebView do Android toca o .ogg
-
-# ícone: o rosto do Davis, tirado dos próprios dados do LF2
 cp -r "$AND/res/." "$BUILD/res/"
-mkdir -p "$BUILD/res/mipmap-xhdpi"
-cp "$LF2_ASSETS/sprite/davis_f.png" "$BUILD/res/mipmap-xhdpi/ic_launcher.png"
 
 echo "Compilando recursos..."
 "$TOOLS/aapt2" compile --dir "$BUILD/res" -o "$BUILD/res.zip"
@@ -78,14 +75,14 @@ java -cp "$CP" org.jf.smali.Main assemble --api 24 -o "$BUILD/classes.dex" "$AND
 python3 "$AND/tools/package.py" "$BUILD/base.apk" "$BUILD/classes.dex" "$BUILD/aligned.apk"
 
 if [ -z "${KEYSTORE:-}" ]; then
-  KEYSTORE="$TOOLS/debug.p12"
+  KEYSTORE="$TOOLS/punholivre.p12"
   KEYSTORE_PASS=android
-  KEY_ALIAS=lf2
+  KEY_ALIAS=punholivre
   if [ ! -f "$KEYSTORE" ]; then
     echo "Criando chave de assinatura local..."
     keytool -genkeypair -storetype PKCS12 -keystore "$KEYSTORE" -storepass "$KEYSTORE_PASS" \
       -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 \
-      -dname "CN=LF2 port, O=tantoniazi, C=BR" 2> /dev/null
+      -dname "CN=Punho Livre, O=tantoniazi, C=BR" 2> /dev/null
   fi
 fi
 

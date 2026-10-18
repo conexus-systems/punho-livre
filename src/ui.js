@@ -1,5 +1,5 @@
 'use strict';
-// Telas do jogo no estilo do LF2: inicial, modos, seleção de lutadores,
+// Telas do Punho Livre: inicial, modos, seleção de lutadores,
 // configuração de teclas e a partida.
 
 const Game = {
@@ -8,7 +8,9 @@ const Game = {
   difficulty: 2,
   setScreen(s) { this.screen = s; if (s.enter) s.enter(); },
   update() {
-    if (!(this.screen instanceof MatchScreen)) for (const c of Input.controllers) c.fetch();
+    // nas partidas as teclas vão para os personagens (na de rede, para o envio)
+    const inMatch = this.screen instanceof MatchScreen || this.screen instanceof NetMatchScreen;
+    if (!inMatch) for (const c of Input.controllers) c.fetch();
     if (Input.code('KeyM') && !(this.screen instanceof ControlsScreen)) Sound.muted = !Sound.muted;
     this.screen.update();
   },
@@ -51,10 +53,9 @@ class LoadingScreen {
   constructor() { this.p = 0; this.error = null; }
   update() {}
   draw(ctx) {
-    ctx.fillStyle = '#10206c';
-    ctx.fillRect(0, 0, LF.W, LF.H);
+    menuBackdrop(ctx, 0);
     if (this.error) {
-      text(ctx, 'Não encontrei os dados do LF2.', LF.W / 2, 230, { align: 'center', size: 18 });
+      text(ctx, 'Não encontrei os dados do jogo.', LF.W / 2, 230, { align: 'center', size: 18 });
       text(ctx, 'Rode ./tools/fetch-lf2.sh para baixar e gerar a pasta assets/.', LF.W / 2, 262, { align: 'center', bold: false });
       text(ctx, this.error, LF.W / 2, 300, { align: 'center', bold: false, size: 11, color: '#afdcff', max: 740 });
       return;
@@ -69,46 +70,81 @@ class LoadingScreen {
 
 // ---- tela inicial ----
 
+// fundo das telas de menu: noite azul-escura com faixas diagonais
+function menuBackdrop(ctx, t) {
+  const g = ctx.createLinearGradient(0, 0, 0, LF.H);
+  g.addColorStop(0, '#0b1030');
+  g.addColorStop(1, '#1b0f2e');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, LF.W, LF.H);
+  ctx.save();
+  ctx.globalAlpha = 0.06;
+  ctx.fillStyle = '#ffb000';
+  for (let i = -8; i < 20; i++) {
+    const x = i * 70 + ((t * 0.5) % 70);
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 30, 0); ctx.lineTo(x - 170, LF.H); ctx.lineTo(x - 200, LF.H); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// lista de opções com destaque; devolve a área de cada item (toque/clique)
+function drawMenuList(ctx, items, sel, y0, gap = 40) {
+  items.forEach((it, i) => {
+    const y = y0 + i * gap, on = i === sel;
+    if (on) {
+      ctx.fillStyle = '#ffb000';
+      ctx.beginPath();
+      ctx.moveTo(LF.W / 2 - 150, y - 17); ctx.lineTo(LF.W / 2 + 160, y - 17);
+      ctx.lineTo(LF.W / 2 + 150, y + 17); ctx.lineTo(LF.W / 2 - 160, y + 17);
+      ctx.fill();
+    }
+    ctx.font = `28px ${LOGO_FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = on ? '#120a1e' : (it.disabled ? '#5b5f86' : '#e9ebff');
+    ctx.fillText(it.name, LF.W / 2, y + 1);
+  });
+}
+
+const TITLE_ITEMS = [{ name: 'Jogar' }, { name: 'Jogar em rede' }, { name: 'Controles' }];
+
 class TitleScreen {
-  constructor() { this.sel = 0; this.msg = 0; }
+  constructor() { this.sel = 0; this.t = 0; }
   update() {
-    const D = Assets.data.ui.frontpage_dialog;
-    this.sel = navVertical(D.item.length, this.sel);
-    if (this.msg > 0) this.msg--;
+    this.t++;
+    this.sel = navVertical(TITLE_ITEMS.length, this.sel);
     if (Input.anyHit('att') || Input.code('Enter')) {
       Sound.init();
       Sound.play('1/m_ok');
       if (this.sel === 0) Game.setScreen(new ModeScreen());
-      else if (this.sel === 1) this.msg = 90;
+      else if (this.sel === 1) Game.setScreen(new NetScreen());
       else Game.setScreen(new ControlsScreen());
     }
   }
   draw(ctx) {
-    const F = Assets.data.ui.frontpage, D = Assets.data.ui.frontpage_dialog;
-    ctx.fillStyle = F.bg_color;
-    ctx.fillRect(0, 0, LF.W, LF.H);
-    const pic = uiImg(F.pic);
-    if (pic) ctx.drawImage(pic, 0, 0);
-    drawMenuImage(ctx, D, D.x, D.y, this.sel);
-    if (this.msg) text(ctx, 'Jogo em rede não está disponível nesta versão.', LF.W / 2, 400, { align: 'center', color: '#afdcff' });
-    text(ctx, 'Little Fighter 2 © Marti Wong & Starsky Wong · dados convertidos pelo projeto F.LF', LF.W / 2, 520, { align: 'center', bold: false, size: 11, color: '#5a77d8' });
-    text(ctx, `1P: ${keyName(Input.keys[0].up)} ${keyName(Input.keys[0].down)} ${keyName(Input.keys[0].left)} ${keyName(Input.keys[0].right)} · ataque ${keyName(Input.keys[0].att)} · pulo ${keyName(Input.keys[0].jump)} · defesa ${keyName(Input.keys[0].def)}`,
-      LF.W / 2, 450, { align: 'center', bold: false, size: 12, color: '#afdcff' });
+    menuBackdrop(ctx, this.t);
+    drawLogo(ctx, LF.W / 2, 170, 1, this.t);
+    drawMenuList(ctx, TITLE_ITEMS, this.sel, 330);
+    const k = Input.keys[0];
+    text(ctx, `1P: ${keyName(k.up)} ${keyName(k.down)} ${keyName(k.left)} ${keyName(k.right)} mover · ${keyName(k.att)} ataque · ${keyName(k.jump)} pulo · ${keyName(k.def)} defesa`,
+      LF.W / 2, 478, { align: 'center', bold: false, size: 12, color: '#9aa3d8' });
+    text(ctx, 'Lutadores, cenários e sons originais de Little Fighter 2 © Marti Wong & Starsky Wong', LF.W / 2, 526, { align: 'center', bold: false, size: 10, color: '#5b5f86' });
   }
 }
 
 // ---- escolha do modo ----
 
 const MODES = [
-  { key: 'vs', name: 'VS Mode', desc: 'Todos contra todos ou em times, até 8 lutadores.' },
-  { key: 'stage', name: 'Stage Mode', desc: 'Avance pelas fases enfrentando bandidos e chefes.' },
-  { key: 'demo', name: 'Demo', desc: 'Assista aos computadores lutando.' },
+  { key: 'vs', name: 'Versus', desc: 'Todos contra todos ou em times, até 8 lutadores.' },
+  { key: 'stage', name: 'História', desc: 'Avance pelas fases enfrentando bandidos e chefes.' },
+  { key: 'demo', name: 'Demonstração', desc: 'Assista aos computadores lutando.' },
   { key: 'back', name: 'Voltar', desc: '' },
 ];
 
 class ModeScreen {
-  constructor() { this.sel = 0; }
+  constructor() { this.sel = 0; this.t = 0; }
   update() {
+    this.t++;
     this.sel = navVertical(MODES.length, this.sel);
     if (Input.anyHit('jump') || Input.code('Escape')) { Sound.play('1/m_cancel'); Game.setScreen(new TitleScreen()); return; }
     if (Input.anyHit('att') || Input.code('Enter')) {
@@ -120,23 +156,17 @@ class ModeScreen {
     }
   }
   draw(ctx) {
-    ctx.fillStyle = '#10206c';
-    ctx.fillRect(0, 0, LF.W, LF.H);
-    const pic = uiImg(Assets.data.ui.frontpage.pic);
-    if (pic) ctx.drawImage(pic, 0, 0);
-    MODES.forEach((m, i) => {
-      const y = 260 + i * 34, on = i === this.sel;
-      if (on) { ctx.fillStyle = '#5068c0'; ctx.fillRect(LF.W / 2 - 110, y - 14, 220, 28); }
-      text(ctx, m.name, LF.W / 2, y, { align: 'center', size: 18, color: on ? '#fff' : '#9b9bff' });
-    });
-    text(ctx, MODES[this.sel].desc, LF.W / 2, 420, { align: 'center', bold: false, color: '#afdcff' });
+    menuBackdrop(ctx, this.t);
+    drawLogo(ctx, LF.W / 2, 130, 0.62, this.t);
+    drawMenuList(ctx, MODES, this.sel, 260);
+    text(ctx, MODES[this.sel].desc, LF.W / 2, 440, { align: 'center', bold: false, color: '#9aa3d8' });
   }
 }
 
 // ---- seleção de lutadores (8 vagas, como no LF2) ----
 
 function characterList() {
-  const order = [11, 10, 9, 8, 7, 6, 5, 4, 2, 1, 30];
+  const order = [11, 10, 9, 8, 7, 6, 5, 4, 2, 1, 50, 51, 52, 53, 54, 30];
   const chars = Assets.data.objects.filter((o) => o.type === 'character');
   return chars.sort((a, b) => {
     const ia = order.indexOf(a.id), ib = order.indexOf(b.id);
@@ -356,7 +386,7 @@ class SelectScreen {
     ctx.fillRect(0, 0, LF.W, LF.H);
     const pic = uiImg(S.pic);
     if (pic) ctx.drawImage(pic, 0, 0);
-    text(ctx, this.mode === 'stage' ? 'Stage Mode' : 'VS Mode', 60, 38, { size: 14, color: '#afdcff' });
+    text(ctx, this.mode === 'stage' ? 'História' : 'Versus', 60, 38, { size: 14, color: '#afdcff' });
     for (let i = 0; i < 8; i++) this.drawSlot(ctx, i);
     if (this.step === 1) this.drawHowMany(ctx);
     if (this.step === 3) this.drawDialog(ctx);

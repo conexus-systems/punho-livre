@@ -11,6 +11,7 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from 
 import { join, dirname } from 'node:path';
 import zlib from 'node:zlib';
 import { parseDefine, parseLiteral } from './literal.mjs';
+import { NEW_CHARACTERS, buildCharacter, recolor } from './new-characters.mjs';
 
 const [src, out] = process.argv.slice(2);
 if (!src || !out) {
@@ -38,6 +39,16 @@ const properties = {};
 const propText = read(manifest.properties.file);
 for (const m of propText.matchAll(/ID\s*\[\s*(\d+)\s*\]\s*=\s*\{/g)) {
   properties[m[1]] = parseLiteral(propText, m.index + m[0].length - 1).value;
+}
+
+// ---- lutadores novos do Punho Livre ----
+
+const derived = []; // { to, from, color }
+for (const spec of NEW_CHARACTERS) {
+  const { object, images: imgs } = buildCharacter(spec, objects);
+  objects.push(object);
+  properties[spec.id] = { ...(properties[spec.base] || {}), ...spec.props };
+  for (const im of imgs) derived.push({ ...im, color: spec.color });
 }
 
 // ---- imagens ----
@@ -122,7 +133,35 @@ for (const b of backgrounds) {
 }
 for (const f of readdirSync(join(src, 'UI'))) if (f.endsWith('.png')) addImage('UI/' + f, false);
 
+// troca as cores da paleta (PLTE) de uma imagem indexada
+function recolorPng(png, color) {
+  const list = chunks(png);
+  if (list.find((c) => c.type === 'IHDR').data[9] !== 3) return png;
+  const parts = [png.subarray(0, 8)];
+  for (const c of list) {
+    if (c.type === 'PLTE') {
+      const p = Buffer.from(c.data);
+      for (let i = 0; i < p.length; i += 3) {
+        const [r, g, b] = recolor(p[i], p[i + 1], p[i + 2], color);
+        p[i] = r; p[i + 1] = g; p[i + 2] = b;
+      }
+      parts.push(encodeChunk('PLTE', p));
+    } else parts.push(encodeChunk(c.type, c.data));
+  }
+  return Buffer.concat(parts);
+}
+
+const derivedPaths = new Set(derived.map((d) => d.to));
+for (const d of derived) {
+  const to = join(out, d.to);
+  mkdirSync(dirname(to), { recursive: true });
+  let png = recolorPng(readFileSync(join(src, d.from)), d.color);
+  if (!/_[fs]\.png$/.test(d.to)) png = blackToTransparent(png);
+  writeFileSync(to, png);
+}
+
 for (const [rel, transparent] of images) {
+  if (derivedPaths.has(rel)) continue;
   const to = join(out, rel);
   mkdirSync(dirname(to), { recursive: true });
   const png = readFileSync(join(src, rel));
@@ -142,7 +181,7 @@ for (const ext of ['ogg', 'mp3']) {
 }
 
 const bundle = {
-  objects: objects.map((o) => ({ id: o.id, type: o.type, name: o.name || o.data.bmp.name || '', AI: o.AI, data: o.data })),
+  objects: objects.map((o) => ({ id: o.id, base: o.base, type: o.type, name: o.name || o.data.bmp.name || '', AI: o.AI, data: o.data })),
   backgrounds,
   ui,
   properties,

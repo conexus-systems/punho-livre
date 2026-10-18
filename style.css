@@ -1,10 +1,21 @@
-/* Janela única: o canvas 794x550 do LF2 escalado para caber na tela. */
+/* Punho Livre: o canvas 794x550 escalado para caber na tela.
+   No celular deitado, os controles ficam nas laterais; em pé, embaixo da tela. */
 :root {
   --ink: #050814;
-  --btn: rgba(233, 235, 255, 0.16);
-  --btn-on: rgba(175, 220, 255, 0.55);
-  --line: rgba(233, 235, 255, 0.4);
+  --panel: #121838;
+  --line: rgba(233, 235, 255, 0.35);
+  --btn: rgba(233, 235, 255, 0.14);
+  --btn-on: rgba(255, 176, 0, 0.6);
+  --amber: #ffb000;
+  --text: #e9ebff;
+  --muted: #9aa3d8;
   color-scheme: dark;
+}
+
+@font-face {
+  font-family: 'Bangers';
+  src: url(fonts/bangers.woff2) format('woff2');
+  font-display: block;
 }
 
 html, body { height: 100%; }
@@ -12,7 +23,8 @@ html, body { height: 100%; }
 body {
   margin: 0;
   background: var(--ink);
-  color: #e9ebff;
+  color: var(--text);
+  font: 15px Arial, Helvetica, sans-serif;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -40,6 +52,8 @@ canvas {
   image-rendering: pixelated;
 }
 
+/* ---- controles de toque ---- */
+
 #touch {
   position: absolute;
   inset: auto 0 0 0;
@@ -49,39 +63,163 @@ canvas {
   padding: 6px;
   pointer-events: none;
 }
+#touch[hidden] { display: none; }
+#touch > * { pointer-events: auto; }
 
 #touch button {
-  pointer-events: auto;
   touch-action: none;
   border: 2px solid var(--line);
   background: var(--btn);
   color: #fff;
-  font: bold 18px Arial, sans-serif;
+  font: 24px "Bangers", Arial, sans-serif;
   border-radius: 50%;
-  width: 54px;
-  height: 54px;
+  width: 64px;
+  height: 64px;
   padding: 0;
 }
-#touch[hidden] { display: none; }
-#touch button.on { background: var(--btn-on); }
+#touch button.on { background: var(--btn-on); border-color: var(--amber); }
 
-#touch .pad { display: grid; grid-template-columns: repeat(3, 54px); grid-template-rows: repeat(3, 54px); gap: 2px; }
-#touch .pad .up { grid-column: 2; grid-row: 1; }
-#touch .pad .left { grid-column: 1; grid-row: 2; }
-#touch .pad .right { grid-column: 3; grid-row: 2; }
-#touch .pad .down { grid-column: 2; grid-row: 3; }
+.dpad {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--btn);
+  touch-action: none;
+  flex: none;
+}
+.dpad .arrow {
+  position: absolute;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 18px;
+  line-height: 1;
+}
+.dpad .up { top: 10px; left: 50%; transform: translateX(-50%); }
+.dpad .down { bottom: 10px; left: 50%; transform: translateX(-50%); }
+.dpad .left { left: 12px; top: 50%; transform: translateY(-50%); }
+.dpad .right { right: 12px; top: 50%; transform: translateY(-50%); }
+.dpad .knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 54px;
+  height: 54px;
+  margin: -27px 0 0 -27px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  border: 2px solid var(--line);
+  transition: transform 60ms;
+}
+.dpad.on .knob { background: var(--btn-on); border-color: var(--amber); }
 
 #touch .sys { display: flex; gap: 10px; }
-#touch .sys button { width: 46px; height: 30px; border-radius: 8px; font-size: 13px; }
+#touch .sys button { width: 52px; height: 34px; border-radius: 8px; font-size: 18px; }
 
-#touch .btns { display: grid; grid-template-columns: repeat(2, 62px); grid-template-rows: repeat(2, 62px); gap: 6px; }
-#touch .btns button { width: 62px; height: 62px; font-size: 20px; }
-#touch .btns .a { grid-column: 2; grid-row: 2; }
+#touch .btns {
+  display: grid;
+  grid-template-columns: repeat(2, 72px);
+  grid-template-rows: repeat(2, 72px);
+  gap: 8px;
+}
+#touch .btns button { width: 72px; height: 72px; font-size: 30px; }
+#touch .btns .a { grid-column: 2; grid-row: 2; border-color: var(--amber); }
 #touch .btns .j { grid-column: 1; grid-row: 2; }
 #touch .btns .d { grid-column: 2; grid-row: 1; }
 
+/* celular deitado (tela larga): jogo no centro, controles nas laterais */
+@media (min-aspect-ratio: 17/10) {
+  body.has-touch { padding: 0; }
+  body.has-touch #wrap {
+    width: 100vw;
+    height: 100dvh;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas: "sys game ." "pad game btns" ". game .";
+    align-items: center;
+    justify-items: center;
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    box-sizing: border-box;
+  }
+  body.has-touch canvas {
+    grid-area: game;
+    height: 100dvh;
+    width: auto;
+    max-width: calc(100vw - 2 * 170px);
+    object-fit: contain;
+  }
+  body.has-touch #touch { display: contents; }
+  body.has-touch #touch[hidden] { display: none; }
+  body.has-touch .dpad { grid-area: pad; }
+  body.has-touch #touch .btns { grid-area: btns; }
+  body.has-touch #touch .sys { grid-area: sys; padding-top: 10px; }
+}
+
+/* em pé: controles embaixo da tela do jogo */
 @media (orientation: portrait) {
   body.has-touch { align-items: flex-start; padding-top: 12px; }
   body.has-touch #wrap { width: 100%; }
-  body.has-touch #touch { position: static; padding: 16px 0 0; }
+  body.has-touch #touch { position: static; padding: 14px 0 0; flex-wrap: wrap; row-gap: 14px; }
+  body.has-touch #touch .sys { order: -1; width: 100%; justify-content: center; }
+  body.has-touch .dpad { width: 140px; height: 140px; }
+  body.has-touch #touch .btns { grid-template-columns: repeat(2, 66px); grid-template-rows: repeat(2, 66px); }
+  body.has-touch #touch .btns button { width: 66px; height: 66px; }
 }
+
+/* ---- jogo em rede ---- */
+
+#netform {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(380px, calc(100vw - 32px));
+  height: fit-content;
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 18px 20px;
+  background: var(--panel);
+  border: 2px solid var(--amber);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 10;
+  -webkit-user-select: text;
+  user-select: text;
+}
+#netform[hidden] { display: none; }
+#netform h2 {
+  margin: 0 0 6px;
+  font: 32px "Bangers", Impact, sans-serif;
+  letter-spacing: 1px;
+  color: var(--amber);
+}
+#netform label { color: var(--muted); font-size: 13px; letter-spacing: 0.04em; margin-top: 4px; }
+#netform input {
+  font: 16px Arial, sans-serif;
+  padding: 9px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: #0b1030;
+  color: var(--text);
+  min-width: 0;
+  flex: 1;
+}
+#netform input:focus-visible, #netform button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+#netform .row { display: flex; gap: 8px; }
+#netform button {
+  font: 20px "Bangers", Impact, sans-serif;
+  letter-spacing: 1px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background: var(--amber);
+  color: #120a1e;
+  cursor: pointer;
+}
+#netform button.secondary { background: transparent; color: var(--text); border: 1px solid var(--line); margin-top: 8px; }
+#netform #net-create { flex: 1; }
+#net-status { min-height: 1.3em; margin: 6px 0 0; color: #ffd27a; font-size: 14px; }

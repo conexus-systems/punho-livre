@@ -96,6 +96,8 @@ const Input = {
       if (Array.isArray(saved) && saved.length === 4) this.keys = saved;
     } catch (e) { /* sem armazenamento local */ }
     window.addEventListener('keydown', (e) => {
+      // digitando num campo de texto (formulário do jogo em rede)
+      if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
       if (this.listeners.length) { e.preventDefault(); this.listeners[this.listeners.length - 1](e.code); return; }
       if (this.isGameKey(e.code) || /^(Arrow|F\d)/.test(e.code) || e.code === 'Space') e.preventDefault();
       this.setKey(e.code, true);
@@ -147,12 +149,57 @@ function setupTouch() {
     document.body.classList.add('has-touch');
     Input.touchActive = true;
     Sound.init();
+    // no navegador do celular: tela cheia e deitado (no app isso já é fixo)
+    const root = document.documentElement;
+    if (!window.AndroidApp && root.requestFullscreen && !document.fullscreenElement) {
+      root.requestFullscreen({ navigationUI: 'hide' })
+        .then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'))
+        .catch(() => {});
+    }
   }, { once: true, passive: true });
+
+  // direcional único: o ângulo do dedo vira até duas direções (8 sentidos)
+  const pad = el.querySelector('.dpad');
+  if (pad) {
+    const knob = pad.querySelector('.knob');
+    const held = { T_up: false, T_down: false, T_left: false, T_right: false };
+    const set = (code, on) => { if (held[code] !== on) { held[code] = on; Input.setKey(code, on); } };
+    const update = (e) => {
+      const r = pad.getBoundingClientRect();
+      const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+      const dist = Math.hypot(dx, dy), dead = r.width * 0.16;
+      let x = 0, y = 0;
+      if (dist > dead) {
+        const a = Math.atan2(dy, dx), sector = Math.round(a / (Math.PI / 4));
+        x = [-1, -1, 0, 1, 1, 1, 0, -1, -1][sector + 4];
+        y = [0, -1, -1, -1, 0, 1, 1, 1, 0][sector + 4];
+      }
+      set('T_left', x < 0); set('T_right', x > 0); set('T_up', y < 0); set('T_down', y > 0);
+      const k = Math.min(1, dist / (r.width / 2)) * r.width * 0.28;
+      knob.style.transform = dist > 1 ? `translate(${(dx / dist) * k}px, ${(dy / dist) * k}px)` : '';
+    };
+    const release = () => {
+      for (const c in held) set(c, false);
+      knob.style.transform = '';
+      pad.classList.remove('on');
+    };
+    pad.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      try { pad.setPointerCapture(e.pointerId); } catch (err) { /* ponteiro já liberado */ }
+      pad.classList.add('on');
+      Sound.init();
+      update(e);
+    });
+    pad.addEventListener('pointermove', (e) => { if (pad.classList.contains('on')) update(e); });
+    pad.addEventListener('pointerup', release);
+    pad.addEventListener('pointercancel', release);
+    pad.addEventListener('lostpointercapture', release);
+  }
   el.querySelectorAll('[data-key]').forEach((btn) => {
     const code = btn.dataset.key;
     const on = (e) => {
       e.preventDefault();
-      if (btn.setPointerCapture) btn.setPointerCapture(e.pointerId);
+      try { btn.setPointerCapture(e.pointerId); } catch (err) { /* ponteiro já liberado */ }
       Input.setKey(code, true);
       btn.classList.add('on');
       Sound.init();

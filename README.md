@@ -1,64 +1,93 @@
-# Little Fighter 2 — port HTML5
+# Punho Livre
 
-Port do **Little Fighter 2** (v1.9) para navegador e Android. O motor foi reescrito em
-JavaScript e roda os **dados originais do LF2**: quadros (`frame`), caixas de golpe (`itr`),
-corpos (`bdy`), pontos de arma, agarrão e objetos (`wpoint`, `cpoint`, `opoint`), sprites,
-cenários e sons. Assim, cada golpe, especial e reação se comporta como no jogo original.
+Jogo de luta 2.5D para navegador e Android, para até 8 lutadores. Dá para jogar com até
+4 pessoas no mesmo aparelho ou pela internet. O motor foi escrito em JavaScript e
+executa dados de quadros no formato do Little Fighter 2: quadros, caixas de golpe e de
+corpo, e pontos de arma, agarrão e objetos.
 
-O que está implementado:
+## O que tem
 
-- **Personagens:** Davis, Woody, Dennis, Freeze, Firen, Louis, Rudolf, Henry, John e Deep,
-  além do Bandit, com todos os especiais dos dados (D→A, D↑A, D↓A, D→J, D↑J, D↓J, DJA).
-  Inclui a transformação do Rudolf (agarrar + D J A) e os clones dele.
-- **Mecânicas do LF2:** combos e corrida com toque duplo, pulo, avanço, rolamento,
-  defesa e quebra de defesa, tontura e agarrão (socos e arremessos), quedas e quiques,
-  fogo, gelo, rebater bolas de energia, bolas que perseguem o alvo, flauta e redemoinho
-  do Henry. Também a vida que se recupera até a barra escura, a regeneração de MP e a
-  pausa do golpe ao acertar.
-- **Armas:** bastão, enxada, espada de gelo, pedra e caixa de madeira. Dá para pegar,
-  golpear, arremessar, rebater e quebrar.
-- **Cenários:** HK Coliseum, Lion Forest, Stanley Prison, The Great Wall, Queen's Island,
-  Forbidden Tower, CUHK e Tai Hom Village, com paralaxe e câmera seguindo os jogadores.
-- **Modos:** VS Mode (até 8 lutadores, times, de 0 a 7 computadores, 4 níveis de
-  dificuldade), Stage Mode (5 fases com trechos, "GO →" e chefes) e Demo.
-- **Interface:** seleção de lutadores com 8 vagas, "How many computer players?", menu
-  Fight / Reset All / Reset Random / Background / Difficulty / Exit, painel de vida e
-  MP e resumo do fim da luta, tudo com as imagens da interface do pacote.
-- **Teclas F do LF2:** F1 pausa, F2 avança um quadro, F4/Esc sai da luta, F6 MP
-  infinito, F7 recupera a vida, F8 joga armas e F9 some com as armas.
-- Até 4 jogadores no mesmo teclado, teclas configuráveis e controles de toque no celular.
+- **15 lutadores:** Davis, Woody, Dennis, Freeze, Firen, Louis, Rudolf, Henry, John,
+  Deep e Bandit, além de 5 lutadores novos do Punho Livre:
 
-## Dados do LF2
+  | Lutador | Base | Estilo |
+  |---------|------|--------|
+  | **Brasa** | Davis | rajadas viram bolas de fogo; o gancho (D↑A) queima |
+  | **Geada** | Dennis | bolas de gelo; o chute giratório (D→J) congela |
+  | **Corvo** | Woody | bolas que perseguem o alvo; mais rápido |
+  | **Titã** | Louis | mais vida e golpes 20% mais fortes, porém mais lento |
+  | **Faísca** | John | o mais rápido e o que pula mais alto, com rajada de energia |
 
-Os sprites, sons e dados são do **Little Fighter 2 © Marti Wong & Starsky Wong** e **não
-estão neste repositório**. O script abaixo baixa a versão 1.9 já convertida pelo
-[projeto F.LF](https://github.com/Project-F/LF2_19) e gera a pasta `assets/`, que fica
-fora do git:
+  Os lutadores novos usam o corpo de um lutador existente com outras cores e têm
+  golpes, atributos e especiais próprios (`tools/new-characters.mjs`).
+- **Mecânicas:** combos, corrida com toque duplo, pulo, avanço, rolamento, defesa e
+  quebra de defesa, tontura e agarrão, quedas, fogo, gelo, rebater bolas de energia,
+  bolas que perseguem o alvo, armas (pegar, golpear, arremessar), transformação e
+  clones do Rudolf.
+- **Modos:** Versus (até 8 lutadores, times, computadores com 4 níveis), História
+  (5 fases com chefes), Demonstração e **Jogo em rede**.
+- **Celular:** controles de toque com direcional de 8 direções. Deitado, os controles
+  ficam nas laterais da tela; em pé, ficam embaixo. No navegador do celular o jogo
+  entra em tela cheia.
+- Teclas configuráveis para até 4 jogadores no teclado e teclas de função (F1 pausa,
+  F7 recupera a vida, F8 joga armas...).
+
+## Dados do jogo
+
+Os sprites, cenários e sons dos lutadores originais são do **Little Fighter 2 © Marti
+Wong & Starsky Wong** e **não estão neste repositório**. O script abaixo baixa a versão
+1.9 já convertida pelo [projeto F.LF](https://github.com/Project-F/LF2_19). Ele também
+gera os lutadores novos e a pasta `assets/`, que fica fora do git:
 
 ```
 ./tools/fetch-lf2.sh
 ```
 
 O conversor (`tools/import-lf2.mjs`) só lê os arquivos de dados como texto, sem
-executá-los. Ele junta tudo em `assets/data.js` e embute os sons em `assets/sound-*.js`.
-Também torna o preto transparente nas imagens que o LF2 desenha com transparência.
+executá-los.
 
 ## Como jogar
 
-Depois de gerar `assets/`, abra `index.html` direto no navegador (funciona via `file://`)
-ou sirva a pasta com `python3 -m http.server`.
+Depois de gerar `assets/`, abra `index.html` no navegador ou rode o servidor (abaixo)
+e acesse `http://localhost:8080/`.
 
-| Ação        | 1P (padrão do LF2) | 2P           |
-|-------------|--------------------|--------------|
-| Mover       | `W` `X` `A` `D`    | Setas        |
-| Ataque (A)  | `S`                | `Enter`      |
-| Pulo (J)    | `Q`                | `Shift dir.` |
-| Defesa (D)  | `Z`                | `Ctrl dir.`  |
+| Ação        | 1P              | 2P           |
+|-------------|-----------------|--------------|
+| Mover       | `W` `X` `A` `D` | Setas        |
+| Ataque (A)  | `S`             | `Enter`      |
+| Pulo (J)    | `Q`             | `Shift dir.` |
+| Defesa (D)  | `Z`             | `Ctrl dir.`  |
 
-O 3P e o 4P também têm teclas padrão, e todas podem ser trocadas em *control settings*
-na tela inicial. `M` liga e desliga o som.
+Especiais: **Defesa, direção, Ataque/Pulo** em sequência (ex.: `Z D S` = D→A).
+As teclas podem ser trocadas em *Controles*. `M` liga e desliga o som.
 
-Especiais: aperte **Defesa, direção, Ataque/Pulo** em sequência (ex.: `Z D S` = D→A).
+## Jogo em rede
+
+Todos os aparelhos simulam a mesma partida ao mesmo tempo (*lockstep*). Cada um envia
+só as próprias teclas, e o servidor repassa essas teclas para os outros. As teclas valem
+4 quadros (~130 ms) depois de apertadas, para dar tempo de chegarem. A cada 2 segundos
+os aparelhos comparam o estado da luta e avisam se algo divergir.
+
+1. Rode o servidor (Node 18+):
+   ```
+   cd server
+   npm install
+   npm start          # porta 8080, ou PORT=xxxx npm start
+   ```
+2. No jogo, abra **Jogar em rede**, informe o endereço do servidor e o seu nome e
+   toque em **Criar sala**. Aparece um código de 4 letras.
+3. Os amigos informam o mesmo servidor, digitam o código e tocam em **Entrar**.
+4. Na sala, cada um escolhe lutador e time e marca **Pronto**. O anfitrião escolhe
+   computadores, dificuldade e cenário e começa a luta.
+
+Endereços: `192.168.0.10:8080` (mesmo Wi-Fi, usa `ws://`), `meujogo.onrender.com`
+(internet, usa `wss://`) ou o endereço completo com `ws://`/`wss://`.
+
+**Hospedar na internet (ex.: Render, Railway, VPS):** use a pasta `server/`, com
+`npm install` para instalar e `npm start` para iniciar. A porta vem da variável `PORT`.
+O servidor também entrega os arquivos do jogo. Para jogar pelo navegador nesse
+endereço, gere `assets/` no servidor (`./tools/fetch-lf2.sh`). Para quem joga pelo APK,
+o servidor só precisa repassar as salas.
 
 ## APK Android
 
@@ -67,42 +96,40 @@ Especiais: aperte **Defesa, direção, Ataque/Pulo** em sequência (ex.: `Z D S`
 ./android/build.sh
 ```
 
-Gera `dist/lf2.apk` (Android 7.0+) sem precisar do Android SDK. As ferramentas vêm do
-Maven Central: aapt2 e o framework Android que acompanham o `apktool-lib`, `smali` e
-`apksig`. O app abre o jogo numa WebView em tela cheia, deitada e funciona offline.
-O botão voltar pausa ou sai da luta, volta dos menus e fecha o app na tela inicial.
-O APK contém os dados do LF2, então é para uso pessoal: não publique o arquivo nem o
-coloque no repositório (`dist/` está no `.gitignore`).
+Gera `dist/punho-livre.apk` (Android 7.0+) sem precisar do Android SDK. As ferramentas
+vêm do Maven Central (aapt2 do `apktool-lib`, `smali` e `apksig`). O app abre o jogo
+numa WebView em tela cheia e deitada, funciona offline e tem permissão de internet para
+o jogo em rede. O APK contém os dados do LF2, então é para uso pessoal: não publique o
+arquivo nem o coloque no repositório (`dist/` está no `.gitignore`).
 
 ## Estrutura
 
 ```
-index.html, style.css   página do jogo
-src/global.js           constantes do LF2 (gravidade, quedas, defesa, combos...)
-src/assets.js           carrega dados, imagens e sons; desenha quadros das folhas de sprite
+index.html, style.css   página do jogo (canvas, controles de toque, formulário de rede)
+src/global.js           constantes do motor (gravidade, quedas, defesa, combos...)
+src/logo.js             logo do Punho Livre
+src/assets.js           carrega dados, imagens e sons
 src/input.js            teclado, toque, controles por jogador e detector de combos
-src/object.js           base dos objetos: transição de quadros com autoridade, física, efeitos
-src/character.js        estados do personagem, golpes, defesa, quedas, agarrão, armas
-src/weapon.js           armas leves e pesadas
-src/ball.js             ataques especiais (bolas, flechas, colunas de gelo, redemoinho)
-src/effects.js          faíscas, sangue, fogo e pedaços de objetos quebrados
-src/background.js       cenários em camadas com paralaxe e câmera
+src/object.js           base dos objetos: transição de quadros, física, efeitos
+src/character.js        estados do lutador, golpes, defesa, quedas, agarrão, armas
+src/weapon.js, ball.js  armas e ataques especiais
+src/effects.js          faíscas, sangue, fogo e pedaços
+src/background.js       cenários com paralaxe e câmera
 src/match.js            a partida: ordem de processamento, colisões, painel, resumo
-src/ai.js               computador (aperta as mesmas teclas que um jogador)
-src/stage.js            Stage Mode
-src/ui.js               telas: inicial, modos, seleção, teclas
-tools/                  download e conversão dos dados do LF2
+src/ai.js               computador
+src/stage.js            modo História
+src/ui.js               telas: inicial, modos, seleção, controles
+src/net.js              jogo em rede: conexão, sala e partida em lockstep
+server/                 servidor de salas (Node + ws) e dos arquivos do jogo
+tools/                  download e conversão dos dados e lutadores novos
 android/                app Android e build do APK
+fonts/                  fonte Bangers (SIL Open Font License)
 ```
 
-## Créditos e limitações
+## Créditos e licença
 
-- Little Fighter 2 é de Marti Wong & Starsky Wong (lf2.net).
-- As regras do motor seguem o "LF2 standard" e o motor do [F.LF](https://github.com/Project-F/F.LF)
-  (GPLv3), que documentaram o comportamento do LF2. Se for redistribuir este código,
+- Lutadores originais, cenários e sons: Little Fighter 2, de Marti Wong & Starsky Wong.
+- As regras do motor seguem o "LF2 standard" e o motor do
+  [F.LF](https://github.com/Project-F/F.LF) (GPLv3). Se for redistribuir este código,
   publique-o sob a GPLv3.
-- O pacote 1.9 não traz os personagens e inimigos que só existem no LF2 2.0 (Jan, Firzen,
-  Julian, Louis EX, Hunter, Mark, Jack, Sorcerer, Monk, Knight, Justin...), nem as
-  garrafas de leite e cerveja. Por isso o Stage Mode usa o Bandit e o próprio elenco
-  como chefes, e a transformação do Louis em Louis EX fica desativada.
-- Jogo em rede, Championship e Battle Mode não foram portados.
+- Fonte Bangers de Vernon Adams (SIL Open Font License 1.1).

@@ -13,7 +13,8 @@
 
   const loading = new LoadingScreen();
   Game.screen = loading;
-  Assets.load((p) => { loading.p = p; })
+  const font = document.fonts ? document.fonts.load('40px "Bangers"').catch(() => {}) : Promise.resolve();
+  Promise.all([Assets.load((p) => { loading.p = p; }), font])
     .then(() => Game.setScreen(new TitleScreen()))
     .catch((e) => { loading.error = String(e.message || e); });
 

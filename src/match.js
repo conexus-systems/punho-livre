@@ -90,7 +90,7 @@ class Match {
       (where.notTeam === undefined || o.team !== where.notTeam) &&
       (!where.type || o.type === where.type));
     if (where.sort === 'distance') {
-      const d = (o) => Math.hypot(o.ps.x - self.ps.x, o.ps.z - self.ps.z);
+      const d = (o) => { const dx = o.ps.x - self.ps.x, dz = o.ps.z - self.ps.z; return Math.sqrt(dx * dx + dz * dz); };
       out = out.sort((a, b) => d(a) - d(b));
     }
     return out;
@@ -223,6 +223,11 @@ class Match {
 
   // F1 pausa · F2 avança um TU · F4/Esc volta · F6 MP infinito · F7 recupera vida · F8 armas · F9 some com as armas
   functionKeys() {
+    // em rede as teclas de função mudariam a partida de um lado só
+    if (this.net) {
+      if (Input.code('Escape') || Input.code('F4')) this.end();
+      return;
+    }
     if (Input.code('F1') || Input.code('KeyP')) this.paused = !this.paused;
     if (Input.code('F2')) { this.paused = true; this.stepFrame = true; }
     if (Input.code('Escape') || Input.code('F4')) { this.end(); return; }
@@ -251,7 +256,7 @@ class Match {
       this.gameoverAt = null;
       this.summary = null;
     }
-    if (this.summary && this.time > this.gameoverAt + 60 && (Input.anyHit('att') || Input.anyHit('jump'))) this.end();
+    if (!this.net && this.summary && this.time > this.gameoverAt + 60 && (Input.anyHit('att') || Input.anyHit('jump'))) this.end();
     if (this.summary && this.demo && this.time > this.gameoverAt + 150) { this.end(); startDemo(); }
   }
 
