@@ -11,6 +11,8 @@ externos e não depende de nenhuma biblioteca.
 ## Como jogar
 
 - **Rápido:** abra `dist/mugen-brawl.html` no navegador (é um arquivo único).
+- **Android:** instale `dist/mugen-brawl.apk` (Android 7.0 ou mais novo). No celular, permita
+  "instalar apps de fontes desconhecidas" para o navegador ou gerenciador de arquivos usado.
 - **Código-fonte:** abra `index.html` diretamente ou sirva a pasta:
   `python3 -m http.server` e acesse `http://localhost:8000`.
 
@@ -78,9 +80,31 @@ js/game.js          mundo, colisões, câmera, HUD e modos de jogo
 js/menu.js          telas de título, seleção, controles e resultados
 js/main.js          laço principal (60 quadros por segundo)
 tools/build.mjs     gera dist/mugen-brawl.html em arquivo único
+android/            projeto do app Android e script build.sh do APK
 ```
 
 Depois de alterar o código, rode `node tools/build.mjs` para atualizar a versão em arquivo único.
+
+### APK Android
+
+```
+./android/build.sh
+```
+
+Gera `dist/mugen-brawl.apk` **sem precisar do Android SDK**. Precisa de Java, Maven, Node,
+Python 3, curl e unzip. As ferramentas (aapt2 e o framework Android que vêm no `apktool-lib`,
+`smali` e `apksig`) são baixadas do Maven Central e ficam em cache em `android/.tools`.
+
+- `android/AndroidManifest.xml`, `android/res/` (ícone e nome) e
+  `android/smali/.../MainActivity.smali`: uma Activity que abre o jogo numa WebView em
+  tela cheia, deitada e com a tela sempre acesa. O botão voltar pausa a luta ou volta de
+  menu, e na tela de título fecha o app.
+- O jogo vai em `assets/index.html` com as fontes locais (`android/assets/fonts`, licença
+  SIL Open Font License), então funciona sem internet.
+- A assinatura é só v2, por isso o mínimo é Android 7.0. Sem configuração, o script cria uma
+  chave local em `android/.tools/debug.p12`. Para publicar com a sua chave, defina
+  `KEYSTORE` (PKCS12), `KEYSTORE_PASS` e `KEY_ALIAS`. Para uma nova versão, use
+  `VERSION_CODE` e `VERSION_NAME`.
 
 ### Criar um personagem novo
 
