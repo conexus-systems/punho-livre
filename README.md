@@ -57,6 +57,13 @@ deploy/terraform/linode/  Terraform do LKE (módulo rails-lke do platform-infra)
 docs/      PROTOCOL.md (contrato app ⇄ backend), CHARACTERS.md, screenshots
 ```
 
+## Jogar agora (web)
+
+`npm run play:build` (em `mobile/`) gera `mobile/play/dist`: uma versão web jogável com a **mesma engine,
+personagens, IA e renderizador** do app (o desenho Skia passa por um adaptador para Canvas 2D). Arcade,
+versus CPU e treino; teclado (setas/WASD, U I O socos, J K L chutes, 1–4 especiais/super) ou toque.
+Não tem online, conta nem anúncios — isso é do app.
+
 ## Rodando
 
 **App** (precisa de development build — AdMob e Skia são módulos nativos):

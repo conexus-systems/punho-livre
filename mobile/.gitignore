@@ -10,3 +10,4 @@ dist/
 *.pack.json
 coverage/
 /dist-web
+/play/dist
