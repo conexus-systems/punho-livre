@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Text, useWindowDimensions, View } from "react-native";
+import { Text, useWindowDimensions, View } from "react-native";
 import { router } from "expo-router";
 import { Canvas, Picture, Skia, type SkImage, type SkPicture } from "@shopify/react-native-skia";
 import { useSharedValue } from "react-native-reanimated";
 
-import { ArcadeButton } from "@/components/ArcadeButton";
+import { MetroButton, MetroProgress } from "@/components/metro";
 import { TouchControls, type AssistButton } from "@/components/TouchControls";
-import { colors, spacing } from "@/constants/theme";
+import { TYPE } from "@/src/ui/type";
+import { space, useTokens, type Tokens } from "@/src/ui/theme";
 import { BUILTIN } from "@/src/characters/builtin.generated";
 import { getCharacter, rosterFor } from "@/src/characters/registry";
 import type { Roster } from "@/src/engine/fighter";
@@ -51,6 +52,7 @@ export default function Fight() {
   const setup = matchSetup.get();
   const settings = app.use((s) => s.settings);
   const { width, height } = useWindowDimensions();
+  const t = useTokens();
   const online = setup.mode === "online" && setup.online !== null;
 
   const p1 = online ? (setup.online!.side === 0 ? setup.online!.myCharacter : setup.online!.opponent.character) : setup.p1!;
@@ -250,13 +252,13 @@ export default function Fight() {
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           {error ? (
             <>
-              <Text style={{ color: colors.error, marginBottom: spacing.md }}>{error}</Text>
-              <ArcadeButton label="VOLTAR" onPress={() => router.replace("/online")} />
+              <Text style={[TYPE.BODY, { color: t.danger, marginBottom: space.md }]}>{error}</Text>
+              <MetroButton label="Voltar" onPress={() => router.replace("/online")} />
             </>
           ) : (
             <>
-              <ActivityIndicator color={colors.primary} />
-              <Text style={{ color: colors.inkSecondary, marginTop: spacing.sm }}>
+              <MetroProgress />
+              <Text style={[TYPE.BODY, { color: "#CCCCCC", marginTop: space.sm }]}>
                 {online ? "Aguardando o oponente…" : "Carregando lutadores…"}
               </Text>
             </>
@@ -273,62 +275,62 @@ export default function Fight() {
       )}
 
       {online && !loading ? (
-        <Text style={{ position: "absolute", top: 4, left: width / 2 + 50, color: ping > 150 ? colors.error : colors.success, fontSize: 11 }}>
+        <Text style={{ position: "absolute", top: 4, left: width / 2 + 50, color: ping > 150 ? t.danger : t.accentText, fontSize: 11 }}>
           {ping} ms
         </Text>
       ) : null}
       {setup.mode === "arcade" && !loading ? (
-        <Text style={{ position: "absolute", top: 4, left: width / 2 - 140, color: colors.inkSecondary, fontSize: 11 }}>
+        <Text style={{ position: "absolute", top: 4, left: width / 2 - 140, color: "#CCCCCC", fontSize: 11 }}>
           LUTA {setup.stageNo}/{setup.stageNo + setup.ladder.length}
         </Text>
       ) : null}
 
       {paused ? (
-        <Overlay title="PAUSA">
-          {!online ? <ArcadeButton variant="primary" label="CONTINUAR" onPress={() => setPause(false)} /> : null}
+        <Overlay t={t} title="PAUSA">
+          {!online ? <MetroButton kind="primary" label="Continuar" onPress={() => setPause(false)} /> : null}
           {setup.mode === "training" ? (
-            <ArcadeButton label={debugBoxes ? "ESCONDER CAIXAS" : "MOSTRAR CAIXAS"} onPress={() => setDebugBoxes((v) => !v)} />
+            <MetroButton label={debugBoxes ? "Esconder caixas" : "Mostrar caixas"} onPress={() => setDebugBoxes((v) => !v)} />
           ) : null}
-          {!online ? <ArcadeButton label="REINICIAR" onPress={() => router.replace("/fight")} /> : null}
-          <ArcadeButton variant="danger" label={online ? "DESISTIR" : "SAIR"} onPress={() => void leave("menu")} />
-          {online ? <ArcadeButton label="VOLTAR À LUTA" onPress={() => setPause(false)} /> : null}
+          {!online ? <MetroButton label="Reiniciar" onPress={() => router.replace("/fight")} /> : null}
+          <MetroButton label={online ? "Desistir" : "Sair da luta"} onPress={() => void leave("menu")} />
+          {online ? <MetroButton label="Voltar à luta" onPress={() => setPause(false)} /> : null}
         </Overlay>
       ) : null}
 
       {opponentLeft && !result ? (
-        <Overlay title="OPONENTE SAIU">
-          <Text style={{ color: colors.inkSecondary }}>Vitória por abandono.</Text>
-          <ArcadeButton variant="primary" label="MENU" onPress={() => void leave("menu")} />
+        <Overlay t={t} title="OPONENTE SAIU">
+          <Text style={[TYPE.BODY, { color: t.text }]}>Vitória por abandono.</Text>
+          <MetroButton kind="primary" label="Menu" onPress={() => void leave("menu")} />
         </Overlay>
       ) : null}
 
       {result ? (
-        <Overlay title={result.winner === 2 ? "EMPATE" : won ? (arcadeDone ? "CAMPEÃO!" : "VITÓRIA!") : "DERROTA"}>
+        <Overlay t={t} title={result.winner === 2 ? "EMPATE" : won ? (arcadeDone ? "CAMPEÃO!" : "VITÓRIA!") : "DERROTA"}>
           {online && finished?.ratings ? (
-            <Text style={{ color: colors.inkSecondary }}>Novo rating: {finished.ratings[String(localSide)]}</Text>
+            <Text style={[TYPE.BODY, { color: t.text }]}>Novo rating: {finished.ratings[String(localSide)]}</Text>
           ) : null}
-          {online && finished?.disputed ? <Text style={{ color: colors.error }}>Resultado em disputa — não contou para o ranking.</Text> : null}
+          {online && finished?.disputed ? <Text style={[TYPE.BODY, { color: t.danger }]}>Resultado em disputa — não contou para o ranking.</Text> : null}
           {setup.mode === "arcade" ? (
             won && !arcadeDone ? (
-              <ArcadeButton variant="primary" label="PRÓXIMA LUTA" onPress={() => void leave("next")} />
+              <MetroButton kind="primary" label="Próxima luta" onPress={() => void leave("next")} />
             ) : !won ? (
               <>
-                <ArcadeButton variant="primary" label="CONTINUAR" sublabel={app.get().premium ? undefined : "Assista a um anúncio"} onPress={() => void continueWithAd()} />
-                <ArcadeButton label="DESISTIR" onPress={() => void leave("menu")} />
+                <MetroButton kind="primary" label={app.get().premium ? "Continuar" : "Continuar (assistir anúncio)"} onPress={() => void continueWithAd()} />
+                <MetroButton label="Desistir" onPress={() => void leave("menu")} />
               </>
             ) : (
-              <ArcadeButton variant="primary" label="MENU" onPress={() => void leave("menu")} />
+              <MetroButton kind="primary" label="Menu" onPress={() => void leave("menu")} />
             )
           ) : online ? (
             <>
-              <ArcadeButton variant="online" label="NOVA PARTIDA" onPress={() => void leave("select")} />
-              <ArcadeButton label="MENU" onPress={() => void leave("menu")} />
+              <MetroButton kind="primary" label="Nova partida" onPress={() => void leave("select")} />
+              <MetroButton label="Menu" onPress={() => void leave("menu")} />
             </>
           ) : (
             <>
-              <ArcadeButton variant="primary" label="REVANCHE" onPress={() => void leave("rematch")} />
-              <ArcadeButton label="TROCAR LUTADORES" onPress={() => void leave("select")} />
-              <ArcadeButton label="MENU" onPress={() => void leave("menu")} />
+              <MetroButton kind="primary" label="Revanche" onPress={() => void leave("rematch")} />
+              <MetroButton label="Trocar lutadores" onPress={() => void leave("select")} />
+              <MetroButton label="Menu" onPress={() => void leave("menu")} />
             </>
           )}
         </Overlay>
@@ -343,11 +345,14 @@ function emptyPicture(): SkPicture {
   return rec.finishRecordingAsPicture();
 }
 
-function Overlay({ title, children }: { title: string; children: React.ReactNode }) {
+/** Painel W10M sobre a luta: fundo escurecido 60%, 480 dp no centro, título leve à esquerda. */
+function Overlay({ t, title, children }: { t: Tokens; title: string; children: React.ReactNode }) {
   return (
-    <View style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.72)", alignItems: "center", justifyContent: "center" }}>
-      <View style={{ minWidth: 300, gap: spacing.sm, padding: spacing.xl, backgroundColor: colors.surface, borderRadius: 16, borderWidth: 2, borderColor: colors.border }}>
-        <Text style={{ color: colors.primary, fontSize: 30, fontWeight: "900", textAlign: "center", marginBottom: spacing.sm }}>{title}</Text>
+    <View style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0, backgroundColor: t.scrim, alignItems: "center", justifyContent: "center" }}>
+      <View accessibilityViewIsModal style={{ width: 480, maxWidth: "92%", gap: space.sm, padding: space.lg, backgroundColor: t.chrome }}>
+        <Text accessibilityRole="header" style={[TYPE.HEADER, { color: t.text, marginBottom: space.sm }]}>
+          {title.toLowerCase()}
+        </Text>
         {children}
       </View>
     </View>

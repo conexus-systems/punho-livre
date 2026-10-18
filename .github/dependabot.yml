@@ -1,19 +1,73 @@
-# Dependabot — CONEXUS canon (weekly America/Sao_Paulo).
+# Dependabot canônico CONEXUS (templates/dependabot.yml do platform-infra).
+# Docs: https://docs.github.com/code-security/dependabot
+#
+# Layout Expo: bundler em /web (API-only, sem npm/Vite — bloco npm /web do
+# template removido); npm Expo em /mobile; Actions na raiz /.
 version: 2
 updates:
+  - package-ecosystem: bundler
+    directory: /web
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 8
+    labels:
+      - dependencies
+      - ruby
+    groups:
+      rails-ecosystem:
+        patterns:
+          - "rails"
+          - "action*"
+          - "active*"
+          - "railties"
+      solid-stack:
+        patterns:
+          - "solid_*"
+          - "mission_control-jobs"
+      security-and-auth:
+        patterns:
+          - "devise*"
+          - "pundit*"
+          - "rack*"
+          - "nokogiri"
+          - "rexml"
+          - "loofah"
+          - "sanitize"
+
+  # Expo / mobile — path-filter EAS olha mobile/**
   - package-ecosystem: npm
     directory: /mobile
-    schedule: { interval: weekly, day: monday, time: "06:00", timezone: America/Sao_Paulo }
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/Sao_Paulo
     open-pull-requests-limit: 8
-    labels: [dependencies, javascript]
+    labels:
+      - dependencies
+      - javascript
+      - mobile
     groups:
       expo:
-        patterns: ["expo*", "@expo/*", "react-native*", "@react-native*", "react", "react-dom"]
-  - package-ecosystem: bundler
-    directory: /backend
-    schedule: { interval: weekly, day: monday, time: "06:00", timezone: America/Sao_Paulo }
-    open-pull-requests-limit: 8
-    labels: [dependencies, ruby]
+        patterns:
+          - "expo*"
+          - "@expo/*"
+          - "react-native*"
+          - "@react-native*"
+          - "react"
+          - "react-dom"
+
   - package-ecosystem: github-actions
     directory: /
-    schedule: { interval: weekly, day: monday, time: "06:00", timezone: America/Sao_Paulo }
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:30"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - github-actions

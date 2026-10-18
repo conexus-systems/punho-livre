@@ -53,7 +53,7 @@ async function persist(session: Session | null): Promise<void> {
 }
 
 export async function restoreSession(): Promise<void> {
-  const raw = await SecureStore.getItemAsync(STORE_KEY);
+  const raw = await SecureStore.getItemAsync(STORE_KEY).catch(() => null);
   if (!raw) return;
   try {
     app.set({ session: JSON.parse(raw) as Session });

@@ -21,7 +21,12 @@ export async function requestJson<T>(
     if (!token) throw new HttpError(401, "not_logged_in", "Faça login para continuar.");
     headers.Authorization = `Bearer ${token}`;
   }
-  const res = await fetch(url, { ...init, headers });
+  let res: Response;
+  try {
+    res = await fetch(url, { ...init, headers });
+  } catch {
+    throw new HttpError(0, "network", "Sem conexão com o servidor. Verifique a internet e tente de novo.");
+  }
   const text = await res.text();
   let body: unknown = null;
   try {

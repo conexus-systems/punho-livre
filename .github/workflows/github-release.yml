@@ -1,0 +1,103 @@
+# Release do app (padrão da stack W10M: conexus-launcher / multi-miner), adaptado ao Expo.
+#
+# Tag vX.Y.Z (igual à versão de mobile/package.json e mobile/app.config.ts) + docs/UPDATE_X.Y.Z.md
+# → testes do app → APK pelo EAS (perfil preview, espera terminar) → release no GitHub com APK,
+# SHA-256 e as notas do UPDATE. Play/App Store continuam pelo eas-build.yml (perfil production).
+#
+# Secrets: EXPO_TOKEN. Runner ubuntu-latest (como o eas-build.yml do platform-infra).
+name: GitHub release APK
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag a (re)construir, ex.: v0.1.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: github-release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Tag confere com a versão e as notas
+        run: |
+          set -euo pipefail
+          version="$(node -p 'require("./package.json").version')"
+          grep -q "version: \"$version\"" app.config.ts || { echo "app.config.ts não está em $version"; exit 1; }
+          [ "v$version" = "$TAG" ] || { echo "Tag $TAG não bate com a versão $version"; exit 1; }
+          [ -f "../docs/UPDATE_$version.md" ] || { echo "Falta docs/UPDATE_$version.md"; exit 1; }
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Require EXPO_TOKEN
+        run: |
+          if [ -z "${{ secrets.EXPO_TOKEN }}" ]; then
+            echo "::error::Secret EXPO_TOKEN ausente."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - uses: expo/expo-github-action@v9
+        with:
+          eas-version: 22.4.0
+          packager: npm
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+
+      - name: Testes, tipos e bundle
+        run: |
+          npm run test:ci
+          npx tsc --noEmit
+          npx expo export --platform android --output-dir /tmp/export
+
+      - name: APK pelo EAS (preview)
+        run: |
+          set -euo pipefail
+          eas build --platform android --profile preview --non-interactive --wait --json > build.json
+          url="$(node -p 'require("./build.json")[0].artifacts.buildUrl')"
+          apk="mugen-arena-$VERSION.apk"
+          curl -fsSL "$url" -o "$apk"
+          sha256sum "$apk" > "$apk.sha256"
+
+      - name: Publicar release no GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          apk="mugen-arena-$VERSION.apk"
+          {
+            echo "APK de teste (perfil preview do EAS). Instalação manual, fora da Play."
+            echo
+            echo "SHA-256: \`$(cut -d' ' -f1 "$apk.sha256")\`"
+            echo
+            cat "../docs/UPDATE_$VERSION.md"
+          } > notes.md
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$apk" "$apk.sha256" --clobber
+          else
+            gh release create "$TAG" "$apk" "$apk.sha256" --title "MUGEN Arena $VERSION" --notes-file notes.md --prerelease --verify-tag
+          fi

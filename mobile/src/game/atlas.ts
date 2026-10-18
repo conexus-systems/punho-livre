@@ -7,11 +7,15 @@ import { builtinAtlasModules, getPack } from "@/src/characters/registry";
 
 const cache = new Map<string, Promise<SkImage[]>>();
 
-async function imageFrom(src: string, moduleId?: number): Promise<SkImage | null> {
+async function imageFrom(src: string, moduleId?: unknown): Promise<SkImage | null> {
   try {
     let data;
     if (moduleId !== undefined) {
-      const uri = Image.resolveAssetSource(moduleId)?.uri;
+      // nativo: número do asset; web: string ou { uri }
+      const raw = moduleId as unknown;
+      const uri =
+        (typeof raw === "number" ? Image.resolveAssetSource(raw)?.uri : undefined) ??
+        (typeof raw === "string" ? raw : (raw as { uri?: string; default?: string } | null)?.uri ?? (raw as { default?: string } | null)?.default);
       if (!uri) return null;
       data = await Skia.Data.fromURI(uri);
     } else if (src.startsWith("data:")) {

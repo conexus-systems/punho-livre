@@ -1,0 +1,100 @@
+# Deploy padronizado da frota CONEXUS.
+# A logica vive em conexus-systems/platform-infra/.github/workflows/deploy-lke.yml
+# — nao copiar steps para ca; ajustar por inputs.
+#
+# Path-filter (recomendado): web/** + deploy/** + workflows de CI/Deploy.
+#   mobile/** → eas-build.yml (nao este Deploy LKE).
+#
+# Fluxo: Validate branch (main) → Testes em paralelo, uma coluna (ci-rails, sem needs entre eles)
+#        → Build & Push GHCR (ou skip_build) → Terraform.
+# Testes NAO rodam em pull_request — so neste deploy (main). Se o test falhar, nao faz deploy.
+# Apply so neste workflow. Nunca terraform apply na maquina.
+#
+# Caller Expo: working-directory/build_context/dockerfile sob web/;
+# terraform_dir permanece deploy/terraform/linode (raiz do repo).
+#
+#   gh workflow run "Deploy — Production" --ref main
+#   gh workflow run "Deploy — Production" --ref main -f skip_build=true
+name: Deploy — Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_build:
+        description: So terraform/rollout, sem rebuild GHCR
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy-production-mugen-arena
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Validate branch
+    # Fleet standard: every job runs self-hosted (no GitHub-hosted runners).
+    runs-on: conexus-lke
+    steps:
+      - name: Ensure running from main
+        run: |
+          if [ "${{ github.ref_name }}" != "main" ]; then
+            echo "::error::Deploy de producao so a partir de 'main' (recebido '${{ github.ref_name }}')."
+            exit 1
+          fi
+
+  test:
+    name: Test
+    needs: guard
+    uses: conexus-systems/platform-infra/.github/workflows/ci-rails.yml@v1
+    with:
+      working-directory: web
+      runner: conexus-lke-build
+      with-vite: false
+      with-brakeman: true
+    secrets: inherit
+
+  deploy:
+    name: Deploy
+    needs: [guard, test]
+    uses: conexus-systems/platform-infra/.github/workflows/deploy-lke.yml@v1
+    with:
+      mode: terraform
+      skip_build: ${{ github.event.inputs.skip_build == 'true' }}
+      namespace: mugen-arena
+      app_slug: mugen-arena
+      image_name: mugen-arena
+      build_runner: conexus-lke-build
+      deploy_runner: conexus-lke
+      # Solid Queue roda dentro do Puma (SOLID_QUEUE_IN_PUMA). Só com
+      # solid_queue_worker_enabled=true (job pesado) acrescente mugen-arena-worker:mugen-arena-worker.
+      deployments: |
+        mugen-arena-web:mugen-arena-web
+      working-directory: web
+      dockerfile: web/Dockerfile
+      build_context: web
+      terraform_dir: deploy/terraform/linode
+      terraform_vars: |
+        kubernetes_namespace=$NS
+        environment=$ENVIRONMENT
+        image_tag=$IMAGE_TAG
+        auth_provider=conexus
+        billing_provider=conexus
+        messaging_provider=conexus
+      terraform_secret_vars: |
+        database_host=TF_VAR_DATABASE_HOST
+        database_port=TF_VAR_DATABASE_PORT
+        database_username=TF_VAR_DATABASE_USERNAME
+        database_password=TF_VAR_DATABASE_PASSWORD
+        database_name=TF_VAR_DATABASE_NAME
+        conexus_api_webhook_secret=CONEXUS_API_WEBHOOK_SECRET
+        conexus_webhook_secret=CONEXUS_WEBHOOK_SECRET
+        secret_key_base=SECRET_KEY_BASE
+        admin_notify_emails=ADMIN_NOTIFY_EMAILS
+      # Namespace é criado pelo reusable via kubectl antes do TF: importa o que já existe.
+      terraform_import_script: deploy/terraform/linode/import.sh
+      smoke_url: https://mugen-arena.conexus-systems.com.br/up
+    secrets: inherit

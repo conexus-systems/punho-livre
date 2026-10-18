@@ -12,6 +12,9 @@ import { Text, useWindowDimensions, View, type GestureResponderEvent } from "rea
 import * as Haptics from "expo-haptics";
 
 import { Btn } from "@/src/engine/input";
+import { Glyph } from "@/src/ui/glyphs";
+import { TYPE } from "@/src/ui/type";
+import { useTokens } from "@/src/ui/theme";
 
 export interface AssistButton {
   id: string;
@@ -27,13 +30,14 @@ type Props = {
   readonly onPause: () => void;
 };
 
+// W10M: botões planos e quadrados; só o estado ativo usa a cor de destaque.
 const BUTTONS = [
-  { key: "x", bit: Btn.x, row: 0, col: 0, color: "#60A5FA" },
-  { key: "y", bit: Btn.y, row: 0, col: 1, color: "#FACC15" },
-  { key: "z", bit: Btn.z, row: 0, col: 2, color: "#F87171" },
-  { key: "a", bit: Btn.a, row: 1, col: 0, color: "#93C5FD" },
-  { key: "b", bit: Btn.b, row: 1, col: 1, color: "#FDE68A" },
-  { key: "c", bit: Btn.c, row: 1, col: 2, color: "#FCA5A5" },
+  { key: "x", bit: Btn.x, row: 0, col: 0 },
+  { key: "y", bit: Btn.y, row: 0, col: 1 },
+  { key: "z", bit: Btn.z, row: 0, col: 2 },
+  { key: "a", bit: Btn.a, row: 1, col: 0 },
+  { key: "b", bit: Btn.b, row: 1, col: 1 },
+  { key: "c", bit: Btn.c, row: 1, col: 2 },
 ] as const;
 
 const DEAD_ZONE = 14;
@@ -47,6 +51,7 @@ function dirFromDelta(dx: number, dy: number): number {
 
 export function TouchControls({ inputRef, assists, onAssist, haptics, onPause }: Props) {
   const { width, height } = useWindowDimensions();
+  const t = useTokens();
   const btnR = Math.min(34, height * 0.085);
   const gap = btnR * 0.35;
   const layout = useMemo(() => {
@@ -158,12 +163,12 @@ export function TouchControls({ inputRef, assists, onAssist, haptics, onPause }:
     >
       {/* direcional */}
       {stick ? (
-        <View pointerEvents="none" style={{ position: "absolute", left: stick.x - 50, top: stick.y - 50, width: 100, height: 100, borderRadius: 50, borderWidth: 2, borderColor: "rgba(255,255,255,0.35)", backgroundColor: "rgba(0,0,0,0.25)" }}>
-          <View style={{ position: "absolute", left: 50 - 22 + (knob?.dx ?? 0), top: 50 - 22 + (knob?.dy ?? 0), width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.55)" }} />
+        <View pointerEvents="none" style={{ position: "absolute", left: stick.x - 50, top: stick.y - 50, width: 100, height: 100, borderWidth: 2, borderColor: "rgba(255,255,255,0.5)", backgroundColor: "rgba(0,0,0,0.3)" }}>
+          <View style={{ position: "absolute", left: 50 - 20 + (knob?.dx ?? 0), top: 50 - 20 + (knob?.dy ?? 0), width: 40, height: 40, backgroundColor: stick.dir ? t.accent : "rgba(255,255,255,0.6)" }} />
         </View>
       ) : (
-        <View pointerEvents="none" style={{ position: "absolute", left: 40, top: height - 150, width: 100, height: 100, borderRadius: 50, borderWidth: 2, borderColor: "rgba(255,255,255,0.18)" }}>
-          <Text style={{ color: "rgba(255,255,255,0.35)", textAlign: "center", marginTop: 38, fontSize: 12 }}>mover</Text>
+        <View pointerEvents="none" style={{ position: "absolute", left: 40, top: height - 150, width: 100, height: 100, borderWidth: 2, borderColor: "rgba(255,255,255,0.25)" }}>
+          <Text style={[TYPE.CAPTION, { color: "rgba(255,255,255,0.5)", textAlign: "center", marginTop: 40 }]}>mover</Text>
         </View>
       )}
 
@@ -181,15 +186,14 @@ export function TouchControls({ inputRef, assists, onAssist, haptics, onPause }:
               top: b.cy - btnR,
               width: btnR * 2,
               height: btnR * 2,
-              borderRadius: btnR,
-              backgroundColor: on ? b.color : "rgba(0,0,0,0.35)",
+              backgroundColor: on ? t.accent : "rgba(0,0,0,0.4)",
               borderWidth: 2,
-              borderColor: b.color,
+              borderColor: on ? t.accent : "rgba(255,255,255,0.7)",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            <Text style={{ color: on ? "#111" : b.color, fontWeight: "900", fontSize: btnR * 0.7 }}>{b.key.toUpperCase()}</Text>
+            <Text style={{ color: "#FFFFFF", fontWeight: "300", fontSize: btnR * 0.8 }}>{b.key}</Text>
           </View>
         );
       })}
@@ -205,15 +209,14 @@ export function TouchControls({ inputRef, assists, onAssist, haptics, onPause }:
             top: a.y,
             width: a.w,
             height: a.h,
-            borderRadius: 8,
-            backgroundColor: a.enabled ? "rgba(250,204,21,0.25)" : "rgba(255,255,255,0.06)",
-            borderWidth: 1.5,
-            borderColor: a.enabled ? "#FACC15" : "rgba(255,255,255,0.2)",
+            backgroundColor: a.enabled ? t.accentSoft : "rgba(0,0,0,0.35)",
+            borderWidth: a.enabled ? 0 : 1,
+            borderColor: "rgba(255,255,255,0.25)",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <Text numberOfLines={1} style={{ color: a.enabled ? "#FEF08A" : "rgba(255,255,255,0.35)", fontSize: 11, fontWeight: "800" }}>
+          <Text numberOfLines={1} style={[TYPE.CAPTION, { color: a.enabled ? "#FFFFFF" : "rgba(255,255,255,0.4)" }]}>
             {a.label}
           </Text>
         </View>
@@ -221,13 +224,13 @@ export function TouchControls({ inputRef, assists, onAssist, haptics, onPause }:
 
       {/* pausa */}
       <View
-        style={{ position: "absolute", left: width / 2 - 22, top: height - 54, width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" }}
+        style={{ position: "absolute", left: width / 2 - 24, top: height - 56, width: 48, height: 48, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" }}
         onStartShouldSetResponder={() => true}
         onResponderRelease={onPause}
         accessibilityRole="button"
         accessibilityLabel="Pausar"
       >
-        <Text style={{ color: "#fff", fontSize: 18, fontWeight: "900" }}>II</Text>
+        <Glyph name="pause" color="#FFFFFF" />
       </View>
     </View>
   );

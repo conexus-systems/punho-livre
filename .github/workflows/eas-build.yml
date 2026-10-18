@@ -1,0 +1,110 @@
+# EAS Build — mobile/** caller (manual workflow_dispatch).
+#
+# Path-filter (recomendado nos apps):
+#   - Este workflow cobre mobile/** (EAS preview/production).
+#   - CI Rails (.github/workflows/ci.yml) deve filtrar web/** + deploy/**
+#     e NÃO disparar em push/PR só de mobile/**.
+#   - Deploy LKE (.github/workflows/deploy-production.yml) é web/** + terraform.
+#
+# versionCode: só incrementa no profile production (autoIncrement + appVersionSource remote).
+# Preview builds NÃO incrementam versionCode.
+#
+# Uso: Actions → EAS Build → Run workflow
+#
+# Secrets:
+#   EXPO_TOKEN — https://expo.dev/settings/access-tokens
+#
+# working-directory: mobile (repo monorepo Expo). Runner: ubuntu-latest (nunca conexus-lke).
+
+name: EAS Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Perfil EAS"
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - production
+      submit_play:
+        description: "Auto-submit Play (só production)"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: eas-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: mobile
+
+jobs:
+  android:
+    name: Android (${{ inputs.profile }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Require EXPO_TOKEN
+        run: |
+          if [ -z "${{ secrets.EXPO_TOKEN }}" ]; then
+            echo "::error::Secret EXPO_TOKEN ausente."
+            exit 1
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v9
+        with:
+          eas-version: 22.4.0
+          packager: npm
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Android preview
+        if: inputs.profile == 'preview'
+        run: |
+          eas build \
+            --platform android \
+            --profile preview \
+            --non-interactive \
+            --no-wait
+
+      - name: Build Android production
+        if: inputs.profile == 'production'
+        run: |
+          set -euo pipefail
+          echo "Remote Android version before build:"
+          eas build:version:get -p android -e production --json || eas build:version:get -p android --json
+          EXTRA=""
+          if [ "${{ inputs.submit_play }}" = "true" ]; then
+            EXTRA="--auto-submit"
+          fi
+          eas build \
+            --platform android \
+            --profile production \
+            --non-interactive \
+            --no-wait \
+            $EXTRA
+          echo "EAS remote version after queueing build (versionCode already bumped):"
+          eas build:version:get -p android -e production --json

@@ -55,7 +55,9 @@ export async function fetchCatalog(): Promise<CharacterSummary[]> {
 export async function fetchPackText(c: CharacterSummary): Promise<string> {
   const { accessToken } = await import("./auth");
   const token = c.premium ? await accessToken() : null;
-  const res = await fetch(c.pack_url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  const res = await fetch(c.pack_url, { headers: token ? { Authorization: `Bearer ${token}` } : {} }).catch(() => {
+    throw new Error("Sem conexão com o servidor. Verifique a internet e tente de novo.");
+  });
   if (res.status === 402) throw new Error("Personagem premium — assine para baixar.");
   if (!res.ok) throw new Error(`Falha ao baixar ${c.name} (${res.status})`);
   return res.text();

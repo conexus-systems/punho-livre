@@ -9,7 +9,13 @@ compatível com o formato de personagens do **MUGEN**, **luta online com rollbac
 |---|---|---|---|
 | ![](docs/screenshots/intro.png) | ![](docs/screenshots/soco.png) | ![](docs/screenshots/projetil.png) | ![](docs/screenshots/chute-alto.png) |
 
-*Capturas geradas pelo próprio renderizador do app (`npm run preview`, Skia/CanvasKit).*
+| Iniciar (W10M) | Seleção | Ajustes | Luta no app |
+|---|---|---|---|
+| ![](docs/screenshots/w10m-iniciar.png) | ![](docs/screenshots/w10m-selecao.png) | ![](docs/screenshots/w10m-ajustes.png) | ![](docs/screenshots/w10m-luta.png) |
+
+*Capturas geradas pelo próprio app: a luta pelo renderizador em Node (`npm run preview`, Skia/CanvasKit) e as
+telas pelo app rodando no navegador (`npm run preview:web`, react-native-web + Playwright). Não substituem
+teste em aparelho.*
 
 ## O que tem
 
@@ -45,8 +51,9 @@ mobile/    App Expo (Android/iOS) — engine, renderizador Skia, netcode, telas
   characters/        elenco nativo em formato MUGEN (.def/.air/.cmd/.cns + atlas)
   scripts/roster/    gerador do elenco (rig → sprites → arquivos MUGEN)
   scripts/mugen-pack.mjs  importador de personagens MUGEN (SFF v1/v2 → atlas)
-backend/   Rails 8 API — perfil, catálogo de personagens, matchmaking, relay online,
+web/       Rails 8 API — perfil, catálogo de personagens, matchmaking, relay online,
            webhooks CONEXUS, e-mails via bff-api
+deploy/terraform/linode/  Terraform do LKE (módulo rails-lke do platform-infra)
 docs/      PROTOCOL.md (contrato app ⇄ backend), CHARACTERS.md, screenshots
 ```
 
@@ -58,30 +65,64 @@ docs/      PROTOCOL.md (contrato app ⇄ backend), CHARACTERS.md, screenshots
 cd mobile
 cp .env.example .env          # URLs dos BFFs, client_id OAuth, IDs AdMob
 npm install
-npm run test:all              # jest (engine, rollback) + testes das ferramentas + tsc
+npm run test:all              # jest (engine, rollback, telas) + ferramentas + elenco + tsc
 npx expo run:android          # ou: npx expo run:ios  /  eas build --profile development
 ```
 
-**Backend** (ver [backend/README.md](backend/README.md)):
+**API Rails** (ver [web/README.md](web/README.md)):
 
 ```bash
-cd backend
+cd web
 cp .env.example .env
 bundle install && bin/rails db:prepare
 bin/dev                       # web + Solid Queue
 bundle exec rspec             # 104 exemplos
 ```
 
+## Stack
+
+Mesma stack de app da frota (conexus-launcher, multi-miner), adaptada a jogo multiplataforma:
+
+| Camada | Escolha |
+|---|---|
+| App | Expo / React Native (Android **e** iOS), expo-router, Skia (luta), Reanimated |
+| Visual | **Design system W10M** (Windows 10 Mobile): tokens em `mobile/src/ui/`, componentes em `mobile/components/metro/` — ver [docs/W10M_DESIGN_SYSTEM.md](docs/W10M_DESIGN_SYSTEM.md) |
+| Jogo | engine MUGEN determinística em TypeScript, rollback online, IA, macros de comando |
+| Monetização | AdMob (UMP + ATT) e Premium no bff-payment |
+| Servidor | Rails 8 API em `web/`, Solid Queue/Cable/Cache, Postgres compartilhado |
+| Infra | `platform-infra` (workflows reutilizáveis, GHCR, Terraform LKE em `deploy/terraform/linode`), EAS |
+| Processo | `AGENTS.md`, `HANDOFF.md`, `SKILL.md` + `agents/` + `templates/TASK.md`, `docs/UPDATE_X.Y.Z.md`, release por tag |
+
+Versão atual: **0.1.0** — notas em [docs/UPDATE_0.1.0.md](docs/UPDATE_0.1.0.md).
+
+## CI e deploy
+
+Callers do [`platform-infra`](https://github.com/conexus-systems/platform-infra) em
+`.github/workflows/` (layout produto Expo, só inputs — sem steps copiados):
+
+| Workflow | Quando | O quê |
+|---|---|---|
+| `mobile-ci.yml` | PR/push em `mobile/**` | `ci-mobile.yml@v1`: typecheck, lint, `npm run test:ci`, `expo export` |
+| `ci.yml` | manual / chamado pelo deploy | `ci-rails.yml@v1` em `web/` (RSpec, RuboCop, Brakeman) |
+| `deploy-production.yml` | manual em `main` | testes → imagem GHCR (`web/Dockerfile`) → Terraform `deploy/terraform/linode` |
+| `terraform-plan.yml` | manual | plan do mesmo Terraform |
+| `eas-build.yml` | manual | build EAS Android (`preview`/`production`) |
+| `github-release.yml` | tag `vX.Y.Z` | testes → APK pelo EAS → release no GitHub com SHA-256 e `docs/UPDATE_X.Y.Z.md` |
+
+```bash
+gh workflow run "Deploy — Production" --ref main
+```
+
 ## Integração CONEXUS (resumo)
 
 | BFF | Uso | Onde |
 |---|---|---|
-| `bff-auth` | Login OAuth2 + PKCE (cliente público), JWT RS256 verificado pelo backend via JWKS | `mobile/src/services/auth.ts`, `backend/app/services/auth/` |
-| `bff-payment` | `GET /v1/me/entitlements` (premium) e `POST /v1/me/checkouts` (checkout web); webhook `entitlement.changed` | `mobile/src/services/payments.ts`, `backend/app/controllers/concerns/conexus_webhook_handler.rb` |
-| `bff-api` | E-mails de personagem enviado/aprovado/recusado (`POST /webhooks/messages` assinado) | `backend/app/services/notifications/conexus_messenger.rb` |
+| `bff-auth` | Login OAuth2 + PKCE (cliente público), JWT RS256 verificado pelo backend via JWKS | `mobile/src/services/auth.ts`, `web/app/services/auth/` |
+| `bff-payment` | `GET /v1/me/entitlements` (premium) e `POST /v1/me/checkouts` (checkout web); webhook `entitlement.changed` | `mobile/src/services/payments.ts`, `web/app/controllers/concerns/conexus_webhook_handler.rb` |
+| `bff-api` | E-mails de personagem enviado/aprovado/recusado (`POST /webhooks/messages` assinado) | `web/app/services/notifications/conexus_messenger.rb` |
 
 Cadastro necessário nos BFFs (feito por quem opera a plataforma) — ver
-[backend/README.md](backend/README.md#registro-nos-bffs-conexus).
+[web/README.md](web/README.md#registro-nos-bffs-conexus).
 
 ## Limitações conhecidas
 

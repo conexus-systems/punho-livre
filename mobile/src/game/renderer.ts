@@ -46,15 +46,21 @@ interface Spark {
 }
 
 const fontFamily = Platform.select({ ios: "Helvetica Neue", default: "sans-serif-condensed" });
-let fonts: { small: SkFont; medium: SkFont; big: SkFont; huge: SkFont } | null = null;
-function getFonts(h: number) {
-  if (!fonts) {
-    fonts = {
-      small: matchFont({ fontFamily, fontSize: Math.round(h * 0.035), fontWeight: "bold" }),
-      medium: matchFont({ fontFamily, fontSize: Math.round(h * 0.05), fontWeight: "bold" }),
-      big: matchFont({ fontFamily, fontSize: Math.round(h * 0.075), fontWeight: "bold" }),
-      huge: matchFont({ fontFamily, fontSize: Math.round(h * 0.15), fontWeight: "bold" }),
-    };
+type Fonts = { small: SkFont; medium: SkFont; big: SkFont; huge: SkFont };
+let fonts: Fonts | null | undefined;
+/** Fontes do sistema para o HUD; null quando não há (ex.: navegador sem fontes do Skia) — o HUD desenha sem texto. */
+function getFonts(h: number): Fonts | null {
+  if (fonts === undefined) {
+    try {
+      fonts = {
+        small: matchFont({ fontFamily, fontSize: Math.round(h * 0.035), fontWeight: "bold" }),
+        medium: matchFont({ fontFamily, fontSize: Math.round(h * 0.05), fontWeight: "bold" }),
+        big: matchFont({ fontFamily, fontSize: Math.round(h * 0.075), fontWeight: "bold" }),
+        huge: matchFont({ fontFamily, fontSize: Math.round(h * 0.15), fontWeight: "bold" }),
+      };
+    } catch {
+      fonts = null;
+    }
   }
   return fonts;
 }
@@ -322,6 +328,11 @@ export class FightRenderer {
   private drawHud(c: SkCanvas, input: RenderInput): void {
     const { world: w, width: W, height: H } = input;
     const f = getFonts(H);
+    const text = (str: string, x: number, y: number, p: SkPaint, font: SkFont | undefined) => {
+      if (font) c.drawText(str, x, y, p, font);
+    };
+    const width = (str: string, font: SkFont | undefined) => (font ? font.measureText(str).width : 0);
+    const size = (font: SkFont | undefined) => (font ? font.getSize() : H * 0.035);
     const barW = W * 0.36;
     const barH = H * 0.05;
     const top = H * 0.05;
@@ -352,18 +363,18 @@ export class FightRenderer {
       c.drawRect(Skia.XYWHRect(i === 0 ? x0 + barW - lifeW : x0, top, lifeW, barH), life);
       // nome
       const name = input.names[i].toUpperCase();
-      const nameW = f.small.measureText(name).width;
-      c.drawText(name, i === 0 ? x0 : x0 + barW - nameW, top + barH + f.small.getSize() * 1.15, paint("#FFFFFF"), f.small);
+      const nameW = width(name, f?.small);
+      text(name, i === 0 ? x0 : x0 + barW - nameW, top + barH + size(f?.small) * 1.15, paint("#FFFFFF"), f?.small);
       // rounds vencidos
       for (let r = 0; r < w.roundsToWin; r++) {
         const cx = i === 0 ? x0 + barW - 8 - r * 14 : x0 + 8 + r * 14;
         const won = r < p.roundsWon;
-        c.drawCircle(cx, top + barH + f.small.getSize() * 0.75, 5, paint(won ? "#FACC15" : "#3F3F46"));
+        c.drawCircle(cx, top + barH + size(f?.small) * 0.75, 5, paint(won ? "#FACC15" : "#3F3F46"));
       }
       // barra de super (níveis de 1000)
       const pw = barW * 0.6;
       const px = i === 0 ? x0 : x0 + barW - pw;
-      const py = top + barH + f.small.getSize() * 1.6;
+      const py = top + barH + size(f?.small) * 1.6;
       c.drawRect(Skia.XYWHRect(px, py, pw, H * 0.018), paint("#0B0B12", 0.8));
       const pr = p.power / p.powerMax;
       const full = p.power >= 1000;
@@ -372,20 +383,20 @@ export class FightRenderer {
         paint(full && this.frame % 20 < 10 ? "#FFFFFF" : "#38BDF8"),
       );
       const lvl = `${Math.floor(p.power / 1000)}`;
-      c.drawText(lvl, i === 0 ? px + pw + 6 : px - 6 - f.small.measureText(lvl).width, py + H * 0.018, paint("#38BDF8"), f.small);
+      text(lvl, i === 0 ? px + pw + 6 : px - 6 - width(lvl, f?.small), py + H * 0.018, paint("#38BDF8"), f?.small);
       // combo
       const opp = w.fighters[i === 0 ? 1 : 0];
       if (opp.comboHits >= 2 && opp.moveType === "H") {
         const txt = `${opp.comboHits} HITS`;
-        c.drawText(txt, i === 0 ? margin : W - margin - f.big.measureText(txt).width, H * 0.38, paint("#FDE047"), f.big);
+        text(txt, i === 0 ? margin : W - margin - width(txt, f?.big), H * 0.38, paint("#FDE047"), f?.big);
       }
     });
 
     // relógio
     const time = w.timer < 0 ? "∞" : `${Math.ceil(w.timer / 60)}`;
-    const tw = f.big.measureText(time).width;
+    const tw = width(time, f?.big);
     c.drawRRect(Skia.RRectXY(Skia.XYWHRect(W / 2 - H * 0.07, top - 6, H * 0.14, barH + 18), 6, 6), paint("#0B0B12", 0.85));
-    c.drawText(time, W / 2 - tw / 2, top + barH + 2, paint("#FFFFFF"), f.big);
+    text(time, W / 2 - tw / 2, top + barH + 2, paint("#FFFFFF"), f?.big);
 
     // mensagens centrais
     let msg: string | null = input.banner ?? null;
@@ -400,12 +411,12 @@ export class FightRenderer {
       }
     }
     if (msg) {
-      const font = msg.length > 12 ? f.big : f.huge;
-      const mw = font.measureText(msg).width;
+      const font = msg.length > 12 ? f?.big : f?.huge;
+      const mw = width(msg, font);
       const y = H * 0.45;
       const shadow = paint("#000000", 0.7);
-      c.drawText(msg, W / 2 - mw / 2 + 3, y + 3, shadow, font);
-      c.drawText(msg, W / 2 - mw / 2, y, paint(msg === "K.O." ? "#EF4444" : "#FDE047"), font);
+      text(msg, W / 2 - mw / 2 + 3, y + 3, shadow, font);
+      text(msg, W / 2 - mw / 2, y, paint(msg === "K.O." ? "#EF4444" : "#FDE047"), font);
     }
   }
 }

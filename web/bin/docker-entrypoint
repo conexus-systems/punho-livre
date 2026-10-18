@@ -1,0 +1,19 @@
+#!/bin/bash -e
+
+# Enable jemalloc for reduced memory usage and latency.
+if [ -z "${LD_PRELOAD+x}" ] && [ -f /usr/local/lib/libjemalloc.so ]; then
+  export LD_PRELOAD=/usr/local/lib/libjemalloc.so
+fi
+
+# O módulo rails-lke (platform-infra) sobe o pod web com args ["web"].
+if [ "${1:-}" == "web" ]; then
+  shift
+  set -- ./bin/rails server -b 0.0.0.0 "$@"
+fi
+
+# Ao subir o servidor web, cria/migra o banco (inclui tabelas Solid Queue/Cache/Cable).
+if [ "${1:-}" == "./bin/rails" ] && [ "${2:-}" == "server" ]; then
+  ./bin/rails db:prepare
+fi
+
+exec "${@}"

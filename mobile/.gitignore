@@ -9,3 +9,4 @@ dist/
 /android
 *.pack.json
 coverage/
+/dist-web

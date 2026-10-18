@@ -1,23 +1,26 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Text, TextInput, View } from "react-native";
+import { Text, View } from "react-native";
 import { router } from "expo-router";
 
 import { AdBannerSlot } from "@/components/AdBannerSlot";
-import { ArcadeButton } from "@/components/ArcadeButton";
 import { CharacterPortrait } from "@/components/CharacterPortrait";
-import { Screen } from "@/components/Screen";
-import { colors, radii, spacing } from "@/constants/theme";
+import { MetroButton, MetroEmpty, MetroHeader, MetroPage, MetroPivot, MetroProgress, MetroTextField } from "@/components/metro";
 import { install, isInstalled, rosterEntries } from "@/src/characters/registry";
 import { matchSetup } from "@/src/match";
 import { cancelMatchmaking, findMatch, onlineStore } from "@/src/net/online";
 import { fetchCatalog } from "@/src/services/api";
 import { app } from "@/src/store";
+import { number } from "@/src/ui/formats";
+import { TYPE } from "@/src/ui/type";
+import { space, useTokens } from "@/src/ui/theme";
 
 export default function Online() {
+  const t = useTokens();
   const session = app.use((s) => s.session);
   const player = app.use((s) => s.player);
   const p1 = matchSetup.use((s) => s.p1);
   const phase = onlineStore.use((s) => s.phase);
+  const [pivot, setPivot] = useState(0);
   const [code, setCode] = useState("");
   const [sha, setSha] = useState<string | null>(null);
   const [preparing, setPreparing] = useState<string | null>(null);
@@ -50,87 +53,95 @@ export default function Online() {
     })();
   }, [phase]);
 
-  useEffect(() => () => {
-    const k = onlineStore.get().phase.kind;
-    if (k === "queued" || k === "room" || k === "connecting") cancelMatchmaking();
-  }, []);
+  useEffect(
+    () => () => {
+      const k = onlineStore.get().phase.kind;
+      if (k === "queued" || k === "room" || k === "connecting") cancelMatchmaking();
+    },
+    [],
+  );
 
   if (!session) {
     return (
-      <Screen>
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.md }}>
-          <Text style={{ color: colors.ink, fontSize: 22, fontWeight: "900" }}>Online precisa de login</Text>
-          <Text style={{ color: colors.inkSecondary, textAlign: "center", maxWidth: 420 }}>
-            Sua conta CONEXUS guarda rating, histórico e personagens enviados.
-          </Text>
-          <ArcadeButton variant="primary" label="ENTRAR" onPress={() => router.push("/profile")} />
-          <ArcadeButton label="VOLTAR" onPress={() => router.back()} />
-        </View>
-      </Screen>
+      <MetroPage>
+        <MetroHeader title="Online" />
+        <MetroEmpty
+          title="Online precisa da sua conta CONEXUS"
+          detail="Ela guarda rating, histórico e os personagens que você envia."
+          action={
+            <View style={{ flexDirection: "row", gap: space.sm }}>
+              <MetroButton kind="primary" label="Entrar" glyph="profile" onPress={() => router.push("/profile")} />
+              <MetroButton label="Voltar" glyph="back" onPress={() => router.back()} />
+            </View>
+          }
+        />
+      </MetroPage>
     );
   }
 
   const busy = phase.kind === "connecting" || phase.kind === "queued" || phase.kind === "room" || preparing !== null;
+  const ready = Boolean(p1 && sha);
   const start = (mode: "ranked" | "room", roomCode?: string) => {
     if (!p1 || !sha) return;
     void findMatch({ mode, roomCode, character: p1, sha256: sha });
   };
 
   return (
-    <Screen padded={false}>
-      <View style={{ flex: 1, flexDirection: "row", padding: spacing.lg, gap: spacing.xl }}>
-        <View style={{ width: 220, alignItems: "center", justifyContent: "center", gap: spacing.sm }}>
-          {p1 ? <CharacterPortrait id={p1} size={160} /> : <View style={{ width: 160, height: 160, borderRadius: radii.md, backgroundColor: colors.surface }} />}
-          <ArcadeButton compact label={p1 ? "TROCAR LUTADOR" : "ESCOLHER LUTADOR"} onPress={() => router.push("/select")} disabled={busy} />
-          <Text style={{ color: colors.inkSecondary }}>
-            {player?.display_name ?? session.name} · {player?.rating ?? "…"} pts
-          </Text>
+    <MetroPage footer={<AdBannerSlot />}>
+      <View style={{ flex: 1, flexDirection: "row", gap: space.lg }}>
+        <View style={{ width: 220, gap: space.sm }}>
+          <MetroHeader title="Online" subtitle={`${player?.display_name ?? session.name ?? ""} · ${player ? number(player.rating) : "…"} pts`} />
+          {p1 ? <CharacterPortrait id={p1} size={140} /> : null}
+          <MetroButton label={p1 ? "Trocar lutador" : "Escolher lutador"} glyph="characters" onPress={() => router.push("/select")} disabled={busy} />
+          <MetroButton kind="text" label="Voltar" onPress={() => router.back()} />
         </View>
 
-        <View style={{ flex: 1, justifyContent: "center", gap: spacing.md }}>
-          <Text style={{ color: colors.online, fontSize: 24, fontWeight: "900" }}>ONLINE</Text>
-
+        <View style={{ flex: 1, paddingTop: space.sm }}>
           {busy ? (
-            <View style={{ gap: spacing.sm, alignItems: "flex-start" }}>
-              <ActivityIndicator color={colors.online} />
-              <Text style={{ color: colors.ink, fontSize: 16 }}>
+            <View style={{ gap: space.md, paddingTop: space.lg }}>
+              <MetroProgress />
+              <Text style={[TYPE.SUBTITLE, { color: t.text }]}>
                 {preparing ??
-                  (phase.kind === "room"
-                    ? `Sala criada! Passe o código para seu amigo: ${phase.code}`
-                    : phase.kind === "queued"
-                      ? "Procurando oponente com rating parecido…"
-                      : "Conectando…")}
+                  (phase.kind === "room" ? "Sala criada. Passe o código:" : phase.kind === "queued" ? "Procurando oponente com rating parecido…" : "Conectando…")}
               </Text>
               {phase.kind === "room" ? (
-                <Text selectable style={{ color: colors.primary, fontSize: 40, fontWeight: "900", letterSpacing: 6 }}>
+                <Text selectable style={[TYPE.DISPLAY, { color: t.accentText, letterSpacing: 8 }]}>
                   {phase.code}
                 </Text>
               ) : null}
-              <ArcadeButton label="CANCELAR" onPress={cancelMatchmaking} />
+              <MetroButton label="Cancelar" onPress={cancelMatchmaking} style={{ alignSelf: "flex-start" }} />
             </View>
           ) : (
-            <>
-              {phase.kind === "error" ? <Text style={{ color: colors.error }}>{phase.message}</Text> : null}
-              <ArcadeButton variant="online" label="PARTIDA RANQUEADA" sublabel="Vale rating (Elo)" onPress={() => start("ranked")} disabled={!p1 || !sha} />
-              <ArcadeButton label="CRIAR SALA" sublabel="Gera um código para um amigo" onPress={() => start("room")} disabled={!p1 || !sha} />
-              <View style={{ flexDirection: "row", gap: spacing.sm, alignItems: "center" }}>
-                <TextInput
-                  value={code}
-                  onChangeText={(t) => setCode(t.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8))}
-                  placeholder="CÓDIGO"
-                  placeholderTextColor={colors.inkSecondary}
-                  autoCapitalize="characters"
-                  accessibilityLabel="Código da sala"
-                  style={{ flex: 1, minHeight: 44, borderRadius: radii.sm, borderWidth: 2, borderColor: colors.border, color: colors.ink, paddingHorizontal: spacing.md, fontSize: 18, fontWeight: "800", letterSpacing: 4 }}
-                />
-                <ArcadeButton label="ENTRAR NA SALA" onPress={() => start("room", code)} disabled={!p1 || !sha || code.length < 4} />
-              </View>
-              <ArcadeButton compact label="VOLTAR" onPress={() => router.back()} />
-            </>
+            <MetroPivot sections={["Ranqueada", "Sala"]} index={pivot} onChange={setPivot}>
+              {phase.kind === "error" ? <Text style={[TYPE.BODY, { color: t.danger, marginBottom: space.sm }]}>{phase.message}</Text> : null}
+              {pivot === 0 ? (
+                <View style={{ gap: space.md }}>
+                  <Text style={[TYPE.BODY, { color: t.muted }]}>
+                    Pareamento pelo rating (Elo). Vitória e derrota mudam sua posição no ranking. Netcode com rollback: o jogo prevê o
+                    oponente e corrige sem travar.
+                  </Text>
+                  <MetroButton kind="primary" label="Procurar partida" glyph="online" onPress={() => start("ranked")} disabled={!ready} style={{ alignSelf: "flex-start" }} />
+                  {!ready ? <Text style={[TYPE.CAPTION, { color: t.muted }]}>Escolha um lutador primeiro.</Text> : null}
+                </View>
+              ) : (
+                <View style={{ gap: space.md, maxWidth: 420 }}>
+                  <Text style={[TYPE.BODY, { color: t.muted }]}>Jogue com um amigo: crie a sala e passe o código, ou entre com o código dele. Salas não mudam o rating.</Text>
+                  <MetroButton kind="primary" label="Criar sala" glyph="room" onPress={() => start("room")} disabled={!ready} style={{ alignSelf: "flex-start" }} />
+                  <MetroTextField
+                    label="Código da sala"
+                    value={code}
+                    onChangeText={(v) => setCode(v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8))}
+                    autoCapitalize="characters"
+                    placeholder="ABCD12"
+                    clearable
+                  />
+                  <MetroButton label="Entrar na sala" onPress={() => start("room", code)} disabled={!ready || code.length < 4} style={{ alignSelf: "flex-start" }} />
+                </View>
+              )}
+            </MetroPivot>
           )}
         </View>
       </View>
-      <AdBannerSlot />
-    </Screen>
+    </MetroPage>
   );
 }

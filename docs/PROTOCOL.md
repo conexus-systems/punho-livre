@@ -1,6 +1,6 @@
 # MUGEN Arena — contrato cliente ⇄ backend
 
-Fonte da verdade entre `mobile/` (Expo) e `backend/` (Rails 8 API). Mudou aqui, muda nos dois lados.
+Fonte da verdade entre `mobile/` (Expo) e `web/` (Rails 8 API). Mudou aqui, muda nos dois lados.
 
 Identidade, cobrança e mensagens **não** são implementadas aqui: vêm dos BFFs CONEXUS
 (`bff-auth`, `bff-payment`, `bff-api`). Ver `CONEXUS.md`.

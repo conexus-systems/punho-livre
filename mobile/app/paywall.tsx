@@ -1,19 +1,21 @@
 import { useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 
-import { Screen } from "@/components/Screen";
-import { colors, minTouch, radii, spacing } from "@/constants/theme";
+import { MetroButton, MetroHeader, MetroPage, MetroProgress, MetroRow } from "@/components/metro";
 import { startCheckout } from "@/src/services/payments";
 import { app } from "@/src/store";
+import { TYPE } from "@/src/ui/type";
+import { space, useTokens } from "@/src/ui/theme";
 
 const PLANS = [
-  { slug: "premium-mensal", title: "Mensal", price: "Assinatura mensal", note: "Cancele quando quiser" },
-  { slug: "premium-anual", title: "Anual", price: "Assinatura anual", note: "Melhor custo" },
+  { slug: "premium-mensal", title: "Mensal", note: "Cancele quando quiser" },
+  { slug: "premium-anual", title: "Anual", note: "Melhor custo" },
 ];
 
 /** Paywall CONEXUS: checkout web do bff-payment (sem SDK de pagamento no app). */
 export default function Paywall() {
+  const t = useTokens();
   const session = app.use((s) => s.session);
   const premium = app.use((s) => s.premium);
   const [busy, setBusy] = useState(false);
@@ -37,36 +39,23 @@ export default function Paywall() {
   };
 
   return (
-    <Screen padded={false}>
-      <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.md }}>
-        <Text style={{ fontSize: 28, fontWeight: "900", color: colors.primary }}>MUGEN ARENA PREMIUM</Text>
-        <Text style={{ fontSize: 15, lineHeight: 22, color: colors.inkSecondary }}>
-          Sem anúncios · personagens exclusivos do catálogo · continues ilimitados no arcade.{"\n"}
-          Pagamento no site seguro da CONEXUS (Pix, cartão).
-        </Text>
-        {premium ? <Text style={{ color: colors.success, fontWeight: "800" }}>Você já é Premium.</Text> : null}
-        {busy ? <ActivityIndicator color={colors.primary} /> : null}
-        {message ? <Text style={{ color: colors.ink }}>{message}</Text> : null}
-        <View style={{ flexDirection: "row", gap: spacing.md }}>
+    <MetroPage>
+      <MetroHeader title="Premium" actions={<MetroButton kind="text" label="Continuar grátis" onPress={() => router.back()} />} />
+      <ScrollView contentContainerStyle={{ gap: space.sm, maxWidth: 640, paddingBottom: space.lg }}>
+        <MetroRow glyph="close" title="Sem anúncios" secondary="Nem banner nos menus, nem anúncio entre lutas." />
+        <MetroRow glyph="characters" title="Personagens exclusivos" secondary="Os marcados como premium no catálogo." />
+        <MetroRow glyph="arcade" title="Continues ilimitados no Arcade" secondary="Sem precisar assistir anúncio." />
+        <Text style={[TYPE.CAPTION, { color: t.muted }]}>Pagamento no site seguro da CONEXUS (Pix, cartão ou cripto).</Text>
+        {premium ? <Text style={[TYPE.SUBTITLE, { color: t.accentText }]}>Você já é Premium.</Text> : null}
+        {busy ? <MetroProgress /> : null}
+        {message ? <Text style={[TYPE.BODY, { color: t.text }]}>{message}</Text> : null}
+        <View style={{ flexDirection: "row", gap: space.sm, marginTop: space.sm }}>
           {PLANS.map((p) => (
-            <Pressable
-              key={p.slug}
-              accessibilityRole="button"
-              accessibilityLabel={`Assinar plano ${p.title} no site`}
-              disabled={busy || premium}
-              onPress={() => void buy(p.slug)}
-              style={{ flex: 1, borderWidth: 2, borderColor: colors.primary, backgroundColor: colors.surface, borderRadius: radii.sm, padding: spacing.card, minHeight: minTouch, opacity: premium ? 0.5 : 1 }}
-            >
-              <Text style={{ fontSize: 12, color: colors.inkSecondary }}>{p.title.toUpperCase()}</Text>
-              <Text style={{ fontSize: 22, fontWeight: "800", color: colors.ink }}>{p.price}</Text>
-              <Text style={{ fontSize: 12, color: colors.inkSecondary, marginTop: 4 }}>{p.note} · Assinar no site</Text>
-            </Pressable>
+            <MetroButton key={p.slug} kind="primary" label={`Assinar ${p.title.toLowerCase()} no site`} glyph="premium" disabled={busy || premium} onPress={() => void buy(p.slug)} />
           ))}
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Continuar grátis" onPress={() => router.back()} style={{ minHeight: minTouch, alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ color: colors.primary, fontWeight: "600" }}>Continuar grátis (com anúncios)</Text>
-        </Pressable>
+        <Text style={[TYPE.CAPTION, { color: t.muted }]}>{PLANS.map((p) => `${p.title}: ${p.note}`).join(" · ")}</Text>
       </ScrollView>
-    </Screen>
+    </MetroPage>
   );
 }
