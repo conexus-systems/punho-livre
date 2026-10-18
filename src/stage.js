@@ -56,6 +56,7 @@ class StageLogic {
     this.clearT = 0;
     this.startPhase(0);
     this.banner = { text: `Fase ${i + 1}`, t: 90 };
+    if (!m.net) { const pr = Save.progress; if (i > pr.storyBest) { pr.storyBest = i; Save.save(); } }
   }
 
   startPhase(p) {
@@ -113,6 +114,7 @@ class StageLogic {
         else {
           this.overAt = m.time;
           m.panel = this.heroes.map((c) => ({ ch: c, name: c.label }));
+          const pr = Save.progress; pr.storyClears++; pr.storyBest = STAGES.length - 1; Save.save();
           m.showSummary('Todas as fases concluídas!');
         }
       }

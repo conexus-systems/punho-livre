@@ -146,9 +146,28 @@ function drawSummary(ctx, m) {
   }
 }
 
-function drawPauseOverlay(ctx) {
-  ctx.fillStyle = 'rgba(5,8,20,0.55)';
-  ctx.fillRect(0, LF.HUD_H, LF.W, LF.H - LF.HUD_H);
-  title(ctx, 'PAUSA', LF.W / 2, LF.H / 2 - 10, 54, UI.amber);
-  text(ctx, 'F1 ou P continua · Esc sai da luta', LF.W / 2, LF.H / 2 + 30, { align: 'center', bold: false, color: UI.text });
+function drawPauseOverlay(ctx, m) {
+  ctx.fillStyle = 'rgba(5,8,20,0.7)';
+  ctx.fillRect(0, 0, LF.W, LF.H);
+  title(ctx, 'PAUSA', LF.W / 2, 118, 56, UI.amber);
+  const items = m.pauseItems();
+  drawMenuList(ctx, items, m.pauseSel || 0, 200, 46);
+}
+
+// treino: lista de golpes do lutador e a dica de como sair
+function drawTrainingHud(ctx, m) {
+  const me = m.characters().find((c) => c.player >= 0);
+  title(ctx, 'TREINO', LF.W / 2, LF.HUD_H + 22, 26, UI.amber);
+  if (!me) return;
+  const def = ROSTER.find((r) => r.id === me.id);
+  const list = def ? def.specials : [];
+  const cmds = { hit_Fa: 'D → A', hit_Ua: 'D ↑ A', hit_Da: 'D ↓ A', hit_Fj: 'D → J', hit_Uj: 'D ↑ J', hit_Dj: 'D ↓ J' };
+  const h = 20 + list.length * 18;
+  ctx.fillStyle = 'rgba(5,8,20,0.6)';
+  ctx.fillRect(8, LF.H - h - 8, 230, h);
+  list.forEach((s, i) => {
+    text(ctx, cmds[s.tag] || '', 18, LF.H - h + 12 + i * 18, { size: 12, color: UI.amber });
+    text(ctx, s.label, 80, LF.H - h + 12 + i * 18, { size: 12, color: UI.text });
+  });
+  text(ctx, Input.touchActive ? 'Esc: menu' : 'Esc: menu de pausa', LF.W - 12, LF.H - 14, { align: 'right', bold: false, size: 11, color: UI.muted });
 }

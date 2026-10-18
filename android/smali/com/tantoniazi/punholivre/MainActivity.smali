@@ -46,6 +46,18 @@
     invoke-virtual {v0, v1}, Landroid/webkit/WebView;->loadUrl(Ljava/lang/String;)V
 
     invoke-direct {p0}, Lcom/tantoniazi/punholivre/MainActivity;->hideBars()V
+
+    # Android 13+: registra o callback do botão voltar
+    sget v0, Landroid/os/Build$VERSION;->SDK_INT:I
+    const/16 v1, 0x21
+    if-lt v0, v1, :no_back_callback
+    invoke-virtual {p0}, Landroid/app/Activity;->getOnBackInvokedDispatcher()Landroid/window/OnBackInvokedDispatcher;
+    move-result-object v0
+    new-instance v1, Lcom/tantoniazi/punholivre/MainActivity$Back;
+    invoke-direct {v1, p0}, Lcom/tantoniazi/punholivre/MainActivity$Back;-><init>(Lcom/tantoniazi/punholivre/MainActivity;)V
+    const/4 v2, 0x0
+    invoke-interface {v0, v2, v1}, Landroid/window/OnBackInvokedDispatcher;->registerOnBackInvokedCallback(ILandroid/window/OnBackInvokedCallback;)V
+    :no_back_callback
     return-void
 .end method
 

@@ -127,6 +127,10 @@ canvas {
 #touch .btns .j { grid-column: 1; grid-row: 2; }
 #touch .btns .d { grid-column: 2; grid-row: 1; }
 
+/* tamanho e opacidade dos botões vêm de Ajustes (save.js) */
+#touch .dpad, #touch .btns, #touch .specials { zoom: var(--touch-scale, 1); opacity: var(--touch-opacity, 1); }
+#touch .sys { opacity: var(--touch-opacity, 1); }
+
 /* golpes especiais: um toque faz a sequência inteira */
 #touch .specials {
   display: grid;

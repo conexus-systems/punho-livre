@@ -126,19 +126,37 @@ const Input = {
     }
     for (let p = 0; p < 4; p++) {
       for (const a of KEY_ACTIONS) {
-        if (this.keys[p][a] === code || (p === 0 && TOUCH_KEYS[a] === code)) this.controllers[p].key(a, on);
+        if (this.keys[p][a] === code || (p === 0 && TOUCH_KEYS[a] === code) || code === `G${p}_${a}`) this.controllers[p].key(a, on);
       }
     }
   },
 
   // ação do jogador p apertada neste quadro (para os menus)
   hit(p, action) {
-    if (this.pressed.has(this.keys[p][action])) return true;
+    if (this.pressed.has(this.keys[p][action]) || this.pressed.has(`G${p}_${action}`)) return true;
     return p === 0 && this.pressed.has(TOUCH_KEYS[action]);
   },
   anyHit(action) { return [0, 1, 2, 3].some((p) => this.hit(p, action)); },
   code(c) { return this.pressed.has(c); },
   endFrame() { this.pressed.clear(); },
+
+  // Controles bluetooth/USB: o controle de índice i joga como o jogador i+1.
+  // A e Y atacam, B pula, X defende, Start pausa. Direcional ou analógico esquerdo movem.
+  pollPads() {
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (const pad of pads) {
+      if (!pad || !pad.connected || pad.index > 3) continue;
+      const b = (i) => !!(pad.buttons[i] && pad.buttons[i].pressed);
+      const ax = pad.axes[0] || 0, ay = pad.axes[1] || 0, dz = 0.5;
+      const want = {
+        left: b(14) || ax < -dz, right: b(15) || ax > dz, up: b(12) || ay < -dz, down: b(13) || ay > dz,
+        att: b(0) || b(3), jump: b(1), def: b(2) || b(4) || b(5) || b(6) || b(7),
+      };
+      for (const a of KEY_ACTIONS) this.setKey(`G${pad.index}_${a}`, want[a]);
+      this.setKey(`G${pad.index}_start`, b(9));
+      if (this.down.has(`G${pad.index}_start`) && this.pressed.has(`G${pad.index}_start`)) this.setKey('Escape', true), this.setKey('Escape', false);
+    }
+  },
 };
 
 function setupTouch() {

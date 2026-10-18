@@ -2,6 +2,9 @@
 // Uma partida: mantém os objetos vivos, processa cada TU (30 por segundo),
 // resolve colisões e desenha a cena, o painel e o resumo final.
 
+// teclas de teste só com ?dev na página
+const DEV = /[?&]dev\b/.test(location.search);
+
 const TYPE_ORDER = ['character', 'lightweapon', 'heavyweapon', 'drink', 'specialattack'];
 
 class Match {
@@ -203,21 +206,29 @@ class Match {
     this.bg.updateCamera(humans.length ? humans : chars.filter((c) => c.health.hp > 0), this.camBound);
     for (const ai of this.ais) if (ai.ch.uid >= 0 && this.time % ai.L.every === 0) ai.think();
     this.ais = this.ais.filter((ai) => ai.ch.uid >= 0);
+    if (this.mode === 'training') this.trainingTU();
     if (this.modeLogic) this.modeLogic.TU(this);
     else this.checkGameover();
     this.time++;
   }
 
-  // F1 pausa · F2 avança um TU · F4/Esc volta · F6 MP infinito · F7 recupera vida · F8 armas · F9 some com as armas
+  // Esc / botão voltar / F1 / P abrem o menu de pausa (fora do jogo em rede, que não para).
+  // As teclas de teste (F2, F6-F9) só existem com ?dev na página.
   functionKeys() {
-    // em rede as teclas de função mudariam a partida de um lado só
     if (this.net) {
       if (Input.code('Escape') || Input.code('F4')) this.end();
       return;
     }
-    if (Input.code('F1') || Input.code('KeyP')) this.paused = !this.paused;
+    if (this.demo) return;
+    const toggle = Input.code('Escape') || Input.code('F1') || Input.code('KeyP') || Input.code('F4');
+    if (!this.paused) {
+      if (toggle && !this.summary) { this.setPaused(true); Sound.play('m_ok'); }
+      else if (Input.code('Escape') && this.summary) this.end();
+    } else {
+      this.pauseMenu();
+    }
+    if (!DEV) return;
     if (Input.code('F2')) { this.paused = true; this.stepFrame = true; }
-    if (Input.code('Escape') || Input.code('F4')) { this.end(); return; }
     if (Input.code('F6')) this.f6 = !this.f6;
     if (Input.code('F7')) {
       for (const c of this.characters()) {
@@ -229,6 +240,44 @@ class Match {
     if (Input.code('F9')) for (const o of this.live) if (o instanceof Weapon) o.health.hp = 0;
   }
 
+  setPaused(on) {
+    this.paused = on;
+    this.pauseSel = 0;
+    Music.setDuck(on ? 0.3 : 1);
+    // teclas apertadas durante a pausa não podem virar golpes ao voltar
+    for (const c of this.characters()) if (c.con) c.con.clear();
+    if (this.opts.onPause) this.opts.onPause(on);
+  }
+
+  pauseMenu() {
+    const items = this.pauseItems();
+    if (Input.anyHit('up')) { this.pauseSel = (this.pauseSel + items.length - 1) % items.length; Sound.play('m_pass'); }
+    if (Input.anyHit('down')) { this.pauseSel = (this.pauseSel + 1) % items.length; Sound.play('m_pass'); }
+    for (const c of this.characters()) if (c.con) c.con.clear();
+    const back = Input.code('Escape') || Input.code('F1') || Input.code('KeyP') || Input.code('F4') || Input.anyHit('jump');
+    if (back) { this.setPaused(false); Sound.play('m_cancel'); return; }
+    if (Input.anyHit('att') || Input.code('Enter')) {
+      const it = items[this.pauseSel];
+      Sound.play('m_ok');
+      if (it.key === 'resume') this.setPaused(false);
+      else if (it.key === 'sound') { Save.settings.sfx = Save.settings.sfx ? 0 : 8; Save.settings.music = Save.settings.sfx ? 6 : 0; Save.save(); Save.apply(); }
+      else if (it.key === 'quit') this.end();
+    }
+  }
+
+  pauseItems() {
+    const muted = !Save.settings.sfx && !Save.settings.music;
+    return [{ key: 'resume', name: 'Continuar' }, { key: 'sound', name: muted ? 'Ligar o som' : 'Desligar o som' }, { key: 'quit', name: 'Sair da luta' }];
+  }
+
+  // treino: MP infinito e o boneco nunca cai de vez
+  trainingTU() {
+    for (const c of this.characters()) {
+      if (c.player >= 0) c.health.mp = c.health.mp_full;
+      else if (c.health.hp < c.health.hp_full * 0.4) { c.health.hp = c.health.hp_bound = c.health.hp_full; }
+    }
+  }
+
   aliveTeams() {
     const teams = new Set();
     for (const p of this.panel) if (p.ch.health.hp > 0) teams.add(p.ch.team);
@@ -236,6 +285,7 @@ class Match {
   }
 
   checkGameover() {
+    if (this.mode === 'training') return;
     if (this.aliveTeams().size < 2) {
       if (this.gameoverAt === null) this.gameoverAt = this.time;
       else if (this.time === this.gameoverAt + 30) this.showSummary();
@@ -256,15 +306,17 @@ class Match {
         const c = p.ch, alive = c.health.hp > 0;
         return { small: c.data.bmp.small, name: !p.name || p.name === c.name || p.name === 'COM' ? c.name : `${p.name} · ${c.name}`, kill: c.stat.kill, attack: Math.round(c.stat.attack),
           lost: Math.round(c.health.hp_lost), mp: Math.round(c.health.mp_usage), pick: c.stat.picking,
-          win: teams.has(c.team), alive };
+          win: teams.has(c.team), alive, human: p.player >= 0, charId: c.id };
       }),
     };
+    if (!this.net && !this.demo) Save.record(this.summary.rows, this.summary.time);
     Sound.play('m_end');
   }
 
   end() {
     if (this.ended) return;
     this.ended = true;
+    Music.setDuck(1);
     for (const o of this.live) if (o.destroy) o.destroy();
     if (this.opts.onEnd) this.opts.onEnd(this);
   }
@@ -305,7 +357,8 @@ class Match {
       title(ctx, 'DEMONSTRAÇÃO', LF.W / 2, LF.HUD_H + 26, 26, UI.amber);
       text(ctx, 'Aperte ATAQUE para voltar', LF.W / 2, LF.HUD_H + 50, { align: 'center', bold: false, size: 12, shadow: '#000' });
     }
-    if (this.paused) drawPauseOverlay(ctx);
+    if (this.mode === 'training') drawTrainingHud(ctx, this);
+    if (this.paused && !this.stepFrame) drawPauseOverlay(ctx, this);
     if (this.summary) drawSummary(ctx, this);
   }
 }

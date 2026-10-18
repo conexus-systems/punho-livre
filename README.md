@@ -26,8 +26,13 @@ repositório não tem arte nem áudio de terceiros.
   rebater bolas de energia, armas (bastão, cano, pedra e caixa: pegar, golpear,
   arremessar).
 - **Modos:** Versus (até 8 lutadores, times, computadores com 4 níveis), História
-  (5 fases com chefes), Demonstração e **Jogo em rede**. No Fácil e no Normal os
-  computadores reagem mais devagar e os jogadores levam menos dano.
+  (5 fases com chefes; cada fase vencida libera a próxima), Treino (boneco que não cai,
+  MP infinito), Demonstração e **Jogo em rede**. No Fácil e no Normal os computadores
+  reagem mais devagar e os jogadores levam menos dano.
+- **Acabamento:** tela de Ajustes (volumes, dificuldade, tamanho e opacidade dos botões,
+  vibração), Como jogar, Sobre com estatísticas, salvamento local, menu de pausa (Esc ou
+  botão voltar; o jogo pausa sozinho ao sair do app), trilha sonora sintetizada e suporte a
+  controle bluetooth/USB (A ataca, B pula, X defende, Start pausa).
 - **6 cenários:** Praia, Rua da Cidade, Floresta, Templo da Montanha, Porto e Dojô.
 - **Celular:** controles de toque com direcional de 8 direções; levar o dedo até a
   borda do direcional faz correr. Botões de golpe especial fazem a sequência inteira
@@ -50,7 +55,9 @@ Abra `index.html` no navegador ou rode o servidor (abaixo) e acesse
 | Defesa (D)  | `Z`             | `Ctrl dir.`  |
 
 Especiais: **Defesa, direção, Ataque/Pulo** em sequência (ex.: `Z D S` = D→A).
-As teclas podem ser trocadas em *Controles*. `M` liga e desliga o som.
+As teclas podem ser trocadas em *Ajustes → Teclas do teclado*. `M` liga e desliga o som.
+Teclas de teste (F2 passo a passo, F6 MP infinito, F7 vida cheia, F8/F9 armas) só
+funcionam abrindo a página com `?dev` no endereço.
 
 ## Jogo em rede
 
@@ -80,17 +87,23 @@ Endereços: `192.168.0.10:8080` (mesmo Wi-Fi, usa `ws://`), `meujogo.onrender.co
 O servidor também entrega os arquivos do jogo, então dá para jogar pelo navegador no
 mesmo endereço.
 
-## APK Android
+## APK e pacote da Play Store
 
 ```
-./android/build.sh
+./android/build.sh                 # APK para instalar direto (dist/punho-livre.apk)
+FORMAT=aab ./android/build.sh      # pacote .aab para enviar à Play Store
+FORMAT=both ./android/build.sh     # os dois
 ```
 
-Gera `dist/punho-livre.apk` (Android 7.0+) sem precisar do Android SDK. As ferramentas
-vêm do Maven Central (aapt2 do `apktool-lib`, `smali` e `apksig`). O app abre o jogo
-numa WebView em tela cheia e deitada, funciona offline e tem permissão de internet para
-o jogo em rede. Para publicar numa loja, assine com a sua própria chave (`KEYSTORE`,
-`KEYSTORE_PASS`, `KEY_ALIAS`).
+Gera os arquivos (Android 7.0+) sem precisar do Android SDK. As ferramentas vêm do Maven
+Central e do GitHub (aapt2 do `apktool-lib`, `smali`, `apksig` e `bundletool`). O app abre o
+jogo numa WebView em tela cheia e deitada, funciona offline e tem permissão de internet só
+para o jogo em rede. Variáveis: `TARGET_SDK` (padrão 36), `VERSION_CODE`, `VERSION_NAME` e
+`KEYSTORE`/`KEYSTORE_PASS`/`KEY_ALIAS` para assinar com a sua própria chave.
+
+A pasta `store/` tem tudo para a ficha da loja: textos em português, ícone 512, gráfico de
+recursos, capturas de tela, política de privacidade, checklist e pontos legais. Regere a
+arte com `node tools/store-assets.cjs`.
 
 ## Estrutura
 
@@ -101,6 +114,9 @@ src/content/moves.js    golpes e animações (poses, hitboxes, especiais)
 src/content/roster.js   elenco: aparência, atributos e especiais; armas
 src/content/scenes.js   cenários em camadas
 src/content/build.js    monta os dados e as folhas de sprites
+src/save.js             ajustes, progresso e estatísticas salvos no aparelho
+src/music.js            trilha sonora sintetizada
+src/settings.js         telas de Ajustes, Sobre e Como jogar
 src/global.js           constantes do motor (gravidade, quedas, defesa, combos...)
 src/logo.js             logo do Punho Livre
 src/assets.js           dados gerados, folhas de sprites e sons sintetizados
@@ -117,7 +133,9 @@ src/stage.js            modo História
 src/ui.js               telas: inicial, modos, seleção, controles
 src/net.js              jogo em rede: conexão, sala e partida em lockstep
 server/                 servidor de salas (Node + ws) e dos arquivos do jogo
-android/                app Android e build do APK
+android/                app Android e build do APK/AAB
+store/                  ficha da Play Store: textos, arte, privacidade, checklist
+tools/store-assets.cjs  gera a arte da loja a partir do jogo
 fonts/                  fonte Bangers (SIL Open Font License)
 ```
 

@@ -7,6 +7,8 @@
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
   Game.ctx = ctx;
+  Save.load();
+  Save.apply();
   Input.init();
   setupTouch();
   canvas.addEventListener('pointerdown', () => Sound.init());
@@ -17,6 +19,15 @@
   Promise.all([Assets.load((p) => { loading.p = p; }), font])
     .then(() => Game.setScreen(new TitleScreen()))
     .catch((e) => { loading.error = String(e.message || e); });
+
+  // ao sair do app a luta pausa sozinha e o som para
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      const m = Game.screen && Game.screen.match;
+      if (m && !m.net && !m.paused && !m.summary && !m.demo) m.setPaused(true);
+      Sound.suspend();
+    } else Sound.resume();
+  });
 
   const STEP = 1000 / LF.FPS;
   let last = performance.now(), acc = 0;

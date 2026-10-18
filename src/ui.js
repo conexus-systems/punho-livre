@@ -9,10 +9,12 @@ const Game = {
   setScreen(s) {
     this.screen = s;
     if (s.enter) s.enter();
+    if (!(s instanceof LoadingScreen)) Music.play(trackFor(s));
     TouchSpecials.update(s instanceof MatchScreen || s instanceof NetMatchScreen ? s.match : null);
   },
   update() {
     // nas partidas as teclas vão para os personagens (na de rede, para o envio)
+    Input.pollPads();
     const inMatch = this.screen instanceof MatchScreen || this.screen instanceof NetMatchScreen;
     if (!inMatch) for (const c of Input.controllers) c.fetch();
     else TouchSpecials.poll(this.screen instanceof NetMatchScreen ? Net.slot : 0);
@@ -43,6 +45,12 @@ function wrapText(ctx, s, x, y, w, lh, o) {
     if (ctx.measureText(t).width > w && line) { text(ctx, line, x, yy, o); line = word; yy += lh; } else line = t;
   }
   if (line) text(ctx, line, x, yy, o);
+}
+
+function setDifficulty(v) {
+  Game.difficulty = v;
+  Save.settings.difficulty = v;
+  Save.save();
 }
 
 function navVertical(n, sel) {
@@ -112,7 +120,7 @@ class LoadingScreen {
 
 // ---- tela inicial ----
 
-const TITLE_ITEMS = [{ name: 'Jogar' }, { name: 'Jogar em rede' }, { name: 'Controles' }];
+const TITLE_ITEMS = [{ name: 'Jogar' }, { name: 'Jogar em rede' }, { name: 'Ajustes' }, { name: 'Sobre' }];
 
 class TitleScreen {
   constructor() { this.sel = 0; this.t = 0; }
@@ -124,17 +132,18 @@ class TitleScreen {
       Sound.play('m_ok');
       if (this.sel === 0) Game.setScreen(new ModeScreen());
       else if (this.sel === 1) Game.setScreen(new NetScreen());
-      else Game.setScreen(new ControlsScreen());
+      else if (this.sel === 2) Game.setScreen(new SettingsScreen());
+      else Game.setScreen(new AboutScreen());
     }
   }
   draw(ctx) {
     menuBackdrop(ctx, this.t);
-    drawLogo(ctx, LF.W / 2, 140, 0.88, this.t);
-    drawMenuList(ctx, TITLE_ITEMS, this.sel, 300);
+    drawLogo(ctx, LF.W / 2, 124, 0.8, this.t);
+    drawMenuList(ctx, TITLE_ITEMS, this.sel, 262, 40);
     if (!Input.touchActive) {
       const k = Input.keys[0];
       text(ctx, `1P: ${keyName(k.up)} ${keyName(k.down)} ${keyName(k.left)} ${keyName(k.right)} move · ${keyName(k.att)} ataca · ${keyName(k.jump)} pula · ${keyName(k.def)} defende`,
-        LF.W / 2, 424, { align: 'center', bold: false, size: 12, color: UI.muted });
+        LF.W / 2, 446, { align: 'center', bold: false, size: 12, color: UI.muted });
     }
   }
 }
@@ -144,6 +153,8 @@ class TitleScreen {
 const MODES = [
   { key: 'vs', name: 'Versus', desc: 'Todos contra todos ou em times, até 8 lutadores.' },
   { key: 'stage', name: 'História', desc: 'Atravesse 5 fases enfrentando bandidos e chefes.' },
+  { key: 'training', name: 'Treino', desc: 'Pratique golpes num boneco, com MP infinito.' },
+  { key: 'howto', name: 'Como jogar', desc: 'Controles, golpes e dicas.' },
   { key: 'demo', name: 'Demonstração', desc: 'Assista aos computadores lutando.' },
   { key: 'back', name: 'Voltar', desc: '' },
 ];
@@ -159,14 +170,15 @@ class ModeScreen {
       const m = MODES[this.sel].key;
       if (m === 'back') Game.setScreen(new TitleScreen());
       else if (m === 'demo') startDemo();
+      else if (m === 'howto') Game.setScreen(new HowToScreen());
       else Game.setScreen(new SelectScreen(m));
     }
   }
   draw(ctx) {
     menuBackdrop(ctx, this.t);
-    drawLogo(ctx, LF.W / 2, 92, 0.5, this.t);
-    drawMenuList(ctx, MODES, this.sel, 210);
-    text(ctx, MODES[this.sel].desc, LF.W / 2, 400, { align: 'center', bold: false, color: UI.muted });
+    drawLogo(ctx, LF.W / 2, 76, 0.42, this.t);
+    drawMenuList(ctx, MODES, this.sel, 168, 40);
+    text(ctx, MODES[this.sel].desc, LF.W / 2, 438, { align: 'center', bold: false, color: UI.muted });
   }
 }
 
@@ -218,7 +230,8 @@ class SelectScreen {
     this.cells = this.chars.length + 1; // a última é "Aleatório"
     this.players = keep ? keep.players : [0, 1, 2, 3].map((p) => ({ p, state: 'off', cur: p, team: 0, pick: null }));
     this.settings = keep ? keep.settings : { cpus: mode === 'stage' ? 0 : 1, cpuTeam: 0, bg: -1, stage: 0 };
-    this.phase = keep ? 'settings' : 'pick';
+    this.phase = keep && mode !== 'training' ? 'settings' : 'pick';
+    if (keep && mode === 'training') for (const p of this.players) if (p.state === 'ready') p.state = 'char';
     this.sel = 0;
     this.msg = '';
   }
@@ -257,7 +270,7 @@ class SelectScreen {
           if (pl.p === 0 && this.joined().length === 1) { Game.setScreen(new ModeScreen()); return; }
           pl.state = 'off';
         } else if (pl.state === 'team') pl.state = 'char';
-        else pl.state = this.mode === 'stage' ? 'char' : 'team';
+        else pl.state = this.mode !== 'vs' ? 'char' : 'team';
         continue;
       }
       if (pl.state === 'char') {
@@ -265,7 +278,7 @@ class SelectScreen {
         if (P('right')) this.moveCursor(pl, 1, 0);
         if (P('up')) this.moveCursor(pl, 0, -1);
         if (P('down')) this.moveCursor(pl, 0, 1);
-        if (P('att')) { pl.state = this.mode === 'stage' ? 'ready' : 'team'; Sound.play('m_join'); }
+        if (P('att')) { pl.state = this.mode !== 'vs' ? 'ready' : 'team'; Sound.play('m_join'); }
       } else if (pl.state === 'team') {
         if (P('left')) { pl.team = (pl.team + 4) % 5; Sound.play('m_pass'); }
         if (P('right')) { pl.team = (pl.team + 1) % 5; Sound.play('m_pass'); }
@@ -274,6 +287,7 @@ class SelectScreen {
     }
     const j = this.joined();
     if (j.length && j.every((p) => p.state === 'ready')) {
+      if (this.mode === 'training') { this.fight(); return; }
       this.phase = 'settings';
       this.sel = 0;
       this.msg = '';
@@ -286,7 +300,9 @@ class SelectScreen {
     const items = [];
     if (this.mode === 'stage') {
       items.push({ k: 'cpus', label: 'Aliados (computador)', value: String(S.cpus), max: Math.min(3, 4 - humans) });
-      items.push({ k: 'stage', label: 'Começar na fase', value: String(S.stage + 1) });
+      const open = Math.min(STAGES.length, Save.progress.storyBest + 1);
+      S.stage = Math.min(S.stage, open - 1);
+      items.push({ k: 'stage', label: 'Começar na fase', value: `${S.stage + 1} de ${open} liberada${open > 1 ? 's' : ''}` });
     } else {
       items.push({ k: 'cpus', label: 'Computadores', value: String(S.cpus), max: 8 - humans });
       items.push({ k: 'cpuTeam', label: 'Time dos computadores', value: S.cpuTeam ? TEAM_LABELS[S.cpuTeam] : 'Cada um por si' });
@@ -309,14 +325,14 @@ class SelectScreen {
       if (it.k === 'cpus') S.cpus = Math.max(0, Math.min(it.max, S.cpus + d));
       if (it.k === 'cpuTeam') S.cpuTeam = (S.cpuTeam + d + 5) % 5;
       if (it.k === 'bg') { const n = Assets.backgrounds.length; S.bg = ((S.bg + 1 + d + n + 1) % (n + 1)) - 1; }
-      if (it.k === 'stage') S.stage = (S.stage + d + STAGES.length) % STAGES.length;
-      if (it.k === 'diff') Game.difficulty = (Game.difficulty + d + 4) % 4;
+      if (it.k === 'stage') { const open = Math.min(STAGES.length, Save.progress.storyBest + 1); S.stage = (S.stage + d + open) % open; }
+      if (it.k === 'diff') setDifficulty((Game.difficulty + d + 4) % 4);
     }
     if (backHit()) { this.unready(); return; }
     if (confirmHit()) {
       if (it.k === 'fight') this.fight();
       else if (it.k === 'back') this.unready();
-      else if (it.k === 'diff') Game.difficulty = (Game.difficulty + 1) % 4;
+      else if (it.k === 'diff') setDifficulty((Game.difficulty + 1) % 4);
     }
   }
 
@@ -330,6 +346,15 @@ class SelectScreen {
 
   fight() {
     const S = this.settings, humans = this.joined();
+    if (this.mode === 'training') {
+      const keep = { players: this.players, settings: S };
+      const players = humans.map((pl) => ({ id: (this.charAt(pl.cur) || this.chars[0]).id, team: 1, con: Input.controllers[pl.p], player: pl.p, name: `${pl.p + 1}P` }));
+      players.push({ id: 30, team: 2, con: new Controller(), name: 'Boneco', panel: true });
+      Sound.play('m_ok');
+      const bg = (Assets.backgrounds.find((b) => b.name === 'Dojô') || Assets.backgrounds[0]).id;
+      startMatch({ players, bg, mode: 'training', weapons: false, onEnd: () => Game.setScreen(new SelectScreen('training', keep)) });
+      return;
+    }
     const rnd = () => this.chars.filter((c) => c.id !== 30)[Math.floor(Math.random() * (this.chars.length - 1))];
     const players = humans.map((pl) => {
       const c = this.charAt(pl.cur) || rnd();
@@ -362,7 +387,7 @@ class SelectScreen {
   draw(ctx) {
     menuBackdrop(ctx, this.t);
     title(ctx, 'ESCOLHA SEU LUTADOR', 28, 26, 28, UI.text, 'left');
-    title(ctx, this.mode === 'stage' ? 'HISTÓRIA' : 'VERSUS', LF.W - 28, 26, 22, UI.amber, 'right');
+    title(ctx, { stage: 'HISTÓRIA', training: 'TREINO', vs: 'VERSUS' }[this.mode], LF.W - 28, 26, 22, UI.amber, 'right');
     this.drawGrid(ctx);
     for (let i = 0; i < 4; i++) this.drawCard(ctx, this.players[i], 22 + i * 190, 142, 180, 296);
     const hint = Input.touchActive ? 'A entra e confirma · J volta · direcional escolhe'
@@ -419,7 +444,7 @@ class SelectScreen {
     else title(ctx, '?', x + 44, y + 46, 56, UI.amber);
     title(ctx, c ? c.name : 'Aleatório', x + 88, y + 26, 22, UI.text, 'left');
     text(ctx, `${pl.p + 1}P`, x + 88, y + 50, { size: 12, color: col });
-    if (this.mode !== 'stage') {
+    if (this.mode === 'vs') {
       const choosing = pl.state === 'team';
       const tl = TEAM_LABELS[pl.team];
       text(ctx, choosing ? `◀ ${tl} ▶` : tl, x + 88, y + 70, { size: 12, color: choosing ? UI.amber : TEAM_COLORS[pl.team] });
@@ -465,18 +490,18 @@ class SelectScreen {
 // ---- controles ----
 
 class ControlsScreen {
-  constructor() { this.p = 0; this.a = 0; this.waiting = false; this.t = 0; }
+  constructor(back) { this.p = 0; this.a = 0; this.waiting = false; this.t = 0; this.back = back || (() => new TitleScreen()); }
   update() {
     this.t++;
     if (this.waiting) return;
     const n = KEY_ACTIONS.length + 1;
-    if (Input.code('Escape') || Input.anyHit('jump') && this.a === n - 1) { Input.save(); Game.setScreen(new TitleScreen()); return; }
+    if (Input.code('Escape') || Input.anyHit('jump') && this.a === n - 1) { Input.save(); Game.setScreen(this.back()); return; }
     if (Input.code('ArrowUp') || Input.hit(0, 'up')) this.a = (this.a + n - 1) % n;
     if (Input.code('ArrowDown') || Input.hit(0, 'down')) this.a = (this.a + 1) % n;
     if (Input.code('ArrowLeft') || Input.hit(0, 'left')) this.p = (this.p + 3) % 4;
     if (Input.code('ArrowRight') || Input.hit(0, 'right')) this.p = (this.p + 1) % 4;
     if (Input.code('Enter') || Input.hit(0, 'att')) {
-      if (this.a === n - 1) { Input.save(); Sound.play('m_ok'); Game.setScreen(new TitleScreen()); return; }
+      if (this.a === n - 1) { Input.save(); Sound.play('m_ok'); Game.setScreen(this.back()); return; }
       this.waiting = true;
       Input.listeners.push((code) => {
         Input.listeners.pop();

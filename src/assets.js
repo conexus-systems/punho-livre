@@ -62,7 +62,8 @@ const Sound = {
   ctx: null,
   buffers: {},
   muted: false,
-  volume: 0.55,
+  volume: 0.55,       // efeitos (0 a 1), ajustável em Ajustes
+  musicVolume: 0.4,   // música (0 a 1)
 
   init() {
     if (this.ctx) { this.resume(); return; }
@@ -72,13 +73,25 @@ const Sound = {
     this.gain = this.ctx.createGain();
     this.gain.gain.value = this.volume;
     this.gain.connect(this.ctx.destination);
+    this.musicGain = this.ctx.createGain();
+    this.musicGain.gain.value = this.musicVolume;
+    this.musicGain.connect(this.ctx.destination);
     for (const name in SOUNDS) this.buffers[name] = synth(this.ctx, ...SOUNDS[name]);
   },
 
   resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); },
+  suspend() { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend(); },
+
+  // sfx e music de 0 a 1
+  setVolumes(sfx, music) {
+    this.volume = sfx * 0.7;
+    this.musicVolume = music * 0.8;
+    if (this.gain) this.gain.gain.value = this.volume;
+    if (this.musicGain) this.musicGain.gain.value = this.musicVolume;
+  },
 
   play(name) {
-    if (!this.ctx || this.muted || !name) return;
+    if (!this.ctx || this.muted || !name || !this.volume) return;
     const buf = this.buffers[name];
     if (!buf) return;
     const src = this.ctx.createBufferSource();
