@@ -45,6 +45,13 @@ gerado como em qualquer personagem MUGEN.
 Especiais disponíveis: `projectile`, `rising`, `spin`, `dash`, `teleport`, `slam`,
 `cartwheel`, `divekick`. Supers: `rush`, `beam`.
 
+## 3. Arte de produção, hitbox e frame data
+
+Para sprites feitos fora do gerador (3D pré-renderizado ou pixel art), use o importador
+(`npm run import-sprites -- <pasta>`, entrada `manifest.json` + PNGs) e o editor de hitbox
+(`npm run editor`). A frame data do elenco é medida na engine por `npm run framedata` e fica em
+[framedata/](framedata/). Tudo descrito em [SPRITE_PIPELINE.md](SPRITE_PIPELINE.md).
+
 ## Compatibilidade da engine
 
 Suportado:

@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Editor de Hitbox</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;600&family=Barlow+Condensed:wght@700&display=swap">
+<style>
+  /* Ferramenta de desenvolvimento no padrão W10M: plano, quadrado, tipografia leve. */
+  :root {
+    --bg: #000000;
+    --chrome: #1a1a1a;
+    --surface: #2b2b2b;
+    --text: #ffffff;
+    --muted: #b8b8b8;
+    --edge: rgba(255, 255, 255, 0.16);
+    --accent: #e51400;
+    --clsn1: #ff3b30;
+    --clsn2: #2f8bff;
+    --axis: #ffd60a;
+    --ui: "Barlow", "Segoe UI", system-ui, sans-serif;
+    --num: "Barlow Condensed", "Arial Narrow", sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.35 var(--ui); overflow: hidden; }
+  button, select, input { font: inherit; color: inherit; }
+  button { background: var(--surface); border: 0; padding: 6px 10px; cursor: pointer; min-height: 32px; }
+  button:hover { background: #3a3a3a; }
+  button.primary { background: var(--accent); }
+  button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+  select, input[type=number], input[type=search] { background: var(--surface); border: 1px solid var(--edge); padding: 5px 8px; min-height: 32px; border-radius: 0; width: 100%; }
+  .kicker { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .app { display: grid; grid-template-columns: 250px 1fr 340px; height: 100vh; }
+  aside, .inspector { background: var(--chrome); display: flex; flex-direction: column; min-height: 0; }
+  aside { border-right: 1px solid var(--edge); }
+  .inspector { border-left: 1px solid var(--edge); overflow: auto; }
+  .block { padding: 12px 14px; border-bottom: 1px solid var(--edge); display: flex; flex-direction: column; gap: 8px; }
+  h1 { font-size: 22px; font-weight: 300; margin: 0; }
+  .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .row > * { flex: 1; }
+  .actions { flex: 1; overflow: auto; }
+  .actions button { display: flex; width: 100%; justify-content: space-between; gap: 8px; background: none; text-align: left; padding: 6px 14px; min-height: 30px; }
+  .actions button:hover { background: var(--surface); }
+  .actions button[aria-current=true] { background: var(--accent); }
+  .actions .n { font-family: var(--num); font-size: 16px; min-width: 44px; }
+  .actions .d { color: var(--muted); font-size: 12px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .actions button[aria-current=true] .d { color: var(--text); }
+  main { display: flex; flex-direction: column; min-width: 0; }
+  .toolbar { display: flex; gap: 6px; padding: 8px 10px; background: var(--chrome); border-bottom: 1px solid var(--edge); align-items: center; flex-wrap: wrap; }
+  .toolbar .sep { width: 1px; align-self: stretch; background: var(--edge); margin: 0 4px; }
+  .toolbar .info { margin-left: auto; color: var(--muted); font-size: 12px; }
+  .stage { flex: 1; position: relative; min-height: 0; }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
+  .timeline { display: flex; gap: 2px; padding: 8px 10px; background: var(--chrome); border-top: 1px solid var(--edge); overflow-x: auto; }
+  .timeline button { min-width: 54px; display: flex; flex-direction: column; align-items: center; padding: 4px 6px; background: var(--surface); }
+  .timeline button[aria-current=true] { background: var(--accent); }
+  .timeline .t { font-family: var(--num); font-size: 18px; }
+  .timeline .s { font-size: 11px; color: var(--muted); }
+  .timeline button[aria-current=true] .s { color: var(--text); }
+  .timeline .hit { box-shadow: inset 0 -3px 0 var(--clsn1); }
+  .legend { display: flex; gap: 12px; font-size: 12px; color: var(--muted); }
+  .sw { display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: -1px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  label.f { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); }
+  label.c { display: flex; align-items: center; gap: 6px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  th, td { padding: 3px 4px; text-align: right; border-bottom: 1px solid var(--edge); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; white-space: normal; }
+  th { color: var(--muted); font-weight: 600; }
+  tr.cur td { background: rgba(229, 20, 0, 0.35); }
+  .msg { font-size: 12px; color: var(--muted); }
+  .err { color: #ff8a80; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="block">
+      <div class="kicker">MUGEN Arena · ferramenta</div>
+      <h1>Editor de hitbox</h1>
+      <label class="f">Personagem
+        <select id="char"></select>
+      </label>
+      <div class="row">
+        <button id="open-folder" title="Pasta com manifest.json e PNGs (formato do importador)">Abrir pasta…</button>
+      </div>
+      <input id="folder" type="file" webkitdirectory multiple hidden>
+      <div id="load-msg" class="msg"></div>
+    </div>
+    <div class="block">
+      <input id="filter" type="search" placeholder="Filtrar ações (ex.: 200, pulo)" aria-label="Filtrar ações">
+    </div>
+    <nav class="actions" id="actions" aria-label="Ações"></nav>
+  </aside>
+  <main>
+    <div class="toolbar">
+      <button id="prev" title="Quadro anterior (←)">◀</button>
+      <button id="play" title="Tocar/pausar (espaço)">▶ Tocar</button>
+      <button id="next" title="Próximo quadro (→)">▶</button>
+      <span class="sep"></span>
+      <button id="add1" title="Nova Clsn1 (1)">+ Clsn1</button>
+      <button id="add2" title="Nova Clsn2 (2)">+ Clsn2</button>
+      <button id="del" title="Apagar a caixa selecionada (Delete)">Apagar caixa</button>
+      <button id="copy-prev" title="Copiar as caixas do quadro anterior">Caixas do anterior</button>
+      <span class="sep"></span>
+      <button id="zoom-out" title="Diminuir zoom (-)">−</button>
+      <button id="zoom-in" title="Aumentar zoom (+)">+</button>
+      <span class="info" id="info"></span>
+    </div>
+    <div class="stage" id="stage"><canvas id="view"></canvas></div>
+    <div class="timeline" id="timeline" aria-label="Quadros"></div>
+  </main>
+  <section class="inspector">
+    <div class="block">
+      <div class="kicker">Quadro</div>
+      <div class="grid2">
+        <label class="f">Ticks (−1 = infinito)<input id="ticks" type="number" min="-1" step="1"></label>
+        <label class="f">Sprite<input id="sprite" type="text" readonly></label>
+        <label class="c"><input id="flip" type="checkbox"> Espelhar (H)</label>
+        <label class="c"><input id="loop" type="checkbox"> Animação em loop</label>
+      </div>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--clsn1)"></i>Clsn1 ataque</span>
+        <span><i class="sw" style="background:var(--clsn2)"></i>Clsn2 corpo</span>
+        <span><i class="sw" style="background:var(--axis)"></i>eixo</span>
+      </div>
+    </div>
+    <div class="block">
+      <div class="kicker">Caixa selecionada <span id="box-unit"></span></div>
+      <div class="grid4" id="box-fields">
+        <label class="f">x1<input id="bx1" type="number" step="1"></label>
+        <label class="f">y1<input id="by1" type="number" step="1"></label>
+        <label class="f">x2<input id="bx2" type="number" step="1"></label>
+        <label class="f">y2<input id="by2" type="number" step="1"></label>
+      </div>
+      <div class="msg" id="box-msg">Clique numa caixa para selecionar; arraste o meio para mover e as bordas para redimensionar.</div>
+    </div>
+    <div class="block">
+      <div class="kicker">Exportar</div>
+      <div class="row">
+        <button id="export-air" class="primary">Baixar .air</button>
+        <button id="export-manifest">Baixar manifest.json</button>
+      </div>
+      <div class="msg" id="export-msg"></div>
+    </div>
+    <div class="block">
+      <div class="kicker">Frame data (medida na engine com as caixas atuais)</div>
+      <div id="fd-msg" class="msg"></div>
+      <div id="fd"></div>
+    </div>
+  </section>
+</div>
+<script src="./editor.js"></script>
+</body>
+</html>

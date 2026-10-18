@@ -111,3 +111,38 @@ export function parseAir(text: string): Record<number, Animation> {
 
   return anims;
 }
+
+const fmtNum = (v: number) => (Number.isInteger(v) ? `${v}` : `${Math.round(v * 1000) / 1000}`);
+const fmtBox = (b: Box) => `${fmtNum(b.x1)}, ${fmtNum(b.y1)}, ${fmtNum(b.x2)}, ${fmtNum(b.y2)}`;
+
+/**
+ * Escreve animações no formato .air (inverso de `parseAir`). Cada quadro leva as
+ * próprias caixas (`Clsn2: n` / `Clsn1: n`), sem `Clsn2Default`, para o arquivo
+ * poder ser editado quadro a quadro. `header` vira comentário no topo.
+ */
+export function serializeAir(anims: Record<number, Animation>, header?: string): string {
+  const out: string[] = [];
+  if (header) {
+    for (const line of header.split("\n")) out.push(`; ${line}`.trimEnd());
+    out.push("");
+  }
+  for (const id of Object.keys(anims).map(Number).sort((a, b) => a - b)) {
+    const a = anims[id];
+    out.push(`[Begin Action ${id}]`);
+    a.frames.forEach((f, i) => {
+      if (i === a.loopStart && a.loopStart > 0) out.push("Loopstart");
+      if (f.clsn2.length) {
+        out.push(`Clsn2: ${f.clsn2.length}`);
+        f.clsn2.forEach((b, j) => out.push(` Clsn2[${j}] = ${fmtBox(b)}`));
+      }
+      if (f.clsn1.length) {
+        out.push(`Clsn1: ${f.clsn1.length}`);
+        f.clsn1.forEach((b, j) => out.push(` Clsn1[${j}] = ${fmtBox(b)}`));
+      }
+      const flags = `${f.flipH ? "H" : ""}${f.flipV ? "V" : ""}`;
+      out.push(`${f.group}, ${f.index}, ${fmtNum(f.ox)}, ${fmtNum(f.oy)}, ${f.time}${flags ? `, ${flags}` : ""}`);
+    });
+    out.push("");
+  }
+  return out.join("\n");
+}
