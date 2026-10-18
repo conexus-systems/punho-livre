@@ -190,14 +190,6 @@ triggerall = statetype != A
 trigger1 = ctrl
 trigger2 = stateno = [200, 2999] && movecontact
 
-[State -1, Chute do Falcão]
-type = ChangeState
-value = 1000
-triggerall = command = "chg_du_k"
-triggerall = statetype != A
-trigger1 = ctrl
-trigger2 = stateno = [200, 499] && movecontact
-
 [State -1, Mergulho]
 type = ChangeState
 value = 1100
@@ -209,6 +201,14 @@ trigger1 = ctrl
 type = ChangeState
 value = 1200
 triggerall = command = "qcb_k"
+triggerall = statetype != A
+trigger1 = ctrl
+trigger2 = stateno = [200, 499] && movecontact
+
+[State -1, Chute do Falcão]
+type = ChangeState
+value = 1000
+triggerall = command = "chg_du_k"
 triggerall = statetype != A
 trigger1 = ctrl
 trigger2 = stateno = [200, 499] && movecontact

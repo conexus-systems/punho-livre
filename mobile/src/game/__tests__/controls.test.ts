@@ -68,14 +68,17 @@ describe("modo simples: kit derivado do personagem", () => {
     expect(Object.fromEntries(SLOTS.map((s) => [s, kitOf("sombra").specials[s]?.cmd]))).toEqual({ neutral: "qcf_k", forward: "qcf_p", back: "qcb_p", down: "dd_k" });
   });
 
-  it("golpe que nunca sai (comando engolido por outro no .cmd) fica de fora; vaga vazia cai no neutro", () => {
-    // Titã: a meia-volta B, DB, D, DF, F + soco também completa a meia-lua (qcf_p), listada antes no [Statedef -1]
-    expect(reachable(roster.tita, "hcf_p")).toBe(false);
+  it("meia-volta (agarrão) vem antes da meia-lua no .cmd e entra no kit", () => {
+    // Titã: B, DB, D, DF, F + soco também completa a meia-lua (qcf_p); o gerador lista a meia-volta antes
+    expect(reachable(roster.tita, "hcf_p")).toBe(true);
     expect(reachable(roster.tita, "qcf_p")).toBe(true);
-    expect(Object.fromEntries(SLOTS.map((s) => [s, kitOf("tita").specials[s]?.cmd ?? null]))).toEqual({ neutral: "dp_p", forward: "qcf_p", back: null, down: "dd_p" });
-    const ctl = new SimpleController(roster.tita, kitOf("tita"));
+    const kit = kitOf("tita");
+    expect(SLOTS.map((s) => kit.specials[s]?.cmd)).toContain("hcf_p");
+    const ctl = new SimpleController(roster.tita, kit);
     for (let f = 0; f < 3; f++) ctl.step(Btn.L | SimpleBtn.special, { facing: 1, power: 0, ctrl: true, stateNo: 0, moveContact: 0, hitPause: 0, air: false });
-    expect(ctl.lastFired).toBe("dp_p");
+    // Especial + trás (olhando para a direita) solta o agarrão
+    expect(kit.specials.back?.cmd).toBe("hcf_p");
+    expect(ctl.lastFired).toBe("hcf_p");
   });
 
   it("especiais aéreos (statetype = A) ficam no kit do ar", () => {

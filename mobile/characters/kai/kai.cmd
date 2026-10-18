@@ -198,14 +198,6 @@ triggerall = statetype != A
 trigger1 = ctrl
 trigger2 = stateno = [200, 499] && movecontact
 
-[State -1, Guarda Fechada]
-type = ChangeState
-value = 1100
-triggerall = command = "dd_p"
-triggerall = statetype != A
-trigger1 = ctrl
-trigger2 = stateno = [200, 499] && movecontact
-
 [State -1, Baiana]
 type = ChangeState
 value = 1200
@@ -218,6 +210,14 @@ trigger2 = stateno = [200, 499] && movecontact
 type = ChangeState
 value = 1300
 triggerall = command = "dp_p"
+triggerall = statetype != A
+trigger1 = ctrl
+trigger2 = stateno = [200, 499] && movecontact
+
+[State -1, Guarda Fechada]
+type = ChangeState
+value = 1100
+triggerall = command = "dd_p"
 triggerall = statetype != A
 trigger1 = ctrl
 trigger2 = stateno = [200, 499] && movecontact

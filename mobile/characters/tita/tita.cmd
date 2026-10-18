@@ -190,12 +190,11 @@ triggerall = statetype != A
 trigger1 = ctrl
 trigger2 = stateno = [200, 2999] && movecontact
 
-[State -1, Terremoto]
+[State -1, Abraço de Titã]
 type = ChangeState
-value = 1000
-triggerall = command = "dd_p"
+value = 1300
+triggerall = command = "hcf_p"
 triggerall = statetype != A
-triggerall = NumProjID(1000) = 0
 trigger1 = ctrl
 trigger2 = stateno = [200, 499] && movecontact
 
@@ -215,11 +214,12 @@ triggerall = statetype != A
 trigger1 = ctrl
 trigger2 = stateno = [200, 499] && movecontact
 
-[State -1, Abraço de Titã]
+[State -1, Terremoto]
 type = ChangeState
-value = 1300
-triggerall = command = "hcf_p"
+value = 1000
+triggerall = command = "dd_p"
 triggerall = statetype != A
+triggerall = NumProjID(1000) = 0
 trigger1 = ctrl
 trigger2 = stateno = [200, 499] && movecontact
 

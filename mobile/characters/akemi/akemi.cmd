@@ -190,14 +190,6 @@ triggerall = statetype != A
 trigger1 = ctrl
 trigger2 = stateno = [200, 2999] && movecontact
 
-[State -1, Kote Gaeshi]
-type = ChangeState
-value = 1000
-triggerall = command = "dd_p"
-triggerall = statetype != A
-trigger1 = ctrl
-trigger2 = stateno = [200, 499] && movecontact
-
 [State -1, Irimi Nage]
 type = ChangeState
 value = 1100
@@ -219,6 +211,14 @@ trigger2 = stateno = [200, 499] && movecontact
 type = ChangeState
 value = 1300
 triggerall = command = "dp_p"
+triggerall = statetype != A
+trigger1 = ctrl
+trigger2 = stateno = [200, 499] && movecontact
+
+[State -1, Kote Gaeshi]
+type = ChangeState
+value = 1000
+triggerall = command = "dd_p"
 triggerall = statetype != A
 trigger1 = ctrl
 trigger2 = stateno = [200, 499] && movecontact

@@ -198,14 +198,6 @@ triggerall = statetype != A
 trigger1 = ctrl
 trigger2 = stateno = [200, 499] && movecontact
 
-[State -1, Cem Tapas]
-type = ChangeState
-value = 1100
-triggerall = command = "dd_p"
-triggerall = statetype != A
-trigger1 = ctrl
-trigger2 = stateno = [200, 499] && movecontact
-
 [State -1, Shiko]
 type = ChangeState
 value = 1200
@@ -219,6 +211,14 @@ trigger2 = stateno = [200, 499] && movecontact
 type = ChangeState
 value = 1300
 triggerall = command = "qcf_p"
+triggerall = statetype != A
+trigger1 = ctrl
+trigger2 = stateno = [200, 499] && movecontact
+
+[State -1, Cem Tapas]
+type = ChangeState
+value = 1100
+triggerall = command = "dd_p"
 triggerall = statetype != A
 trigger1 = ctrl
 trigger2 = stateno = [200, 499] && movecontact

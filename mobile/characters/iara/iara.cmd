@@ -192,18 +192,18 @@ triggerall = statetype = A
 triggerall = NumProjID(1100) = 0
 trigger1 = ctrl
 
-[State -1, Correnteza]
-type = ChangeState
-value = 1200
-triggerall = command = "dd_k"
-triggerall = statetype != A
-trigger1 = ctrl
-trigger2 = stateno = [200, 499] && movecontact
-
 [State -1, Redemoinho]
 type = ChangeState
 value = 1300
 triggerall = command = "dp_p"
+triggerall = statetype != A
+trigger1 = ctrl
+trigger2 = stateno = [200, 499] && movecontact
+
+[State -1, Correnteza]
+type = ChangeState
+value = 1200
+triggerall = command = "dd_k"
 triggerall = statetype != A
 trigger1 = ctrl
 trigger2 = stateno = [200, 499] && movecontact

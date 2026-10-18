@@ -190,6 +190,22 @@ triggerall = statetype != A
 trigger1 = ctrl
 trigger2 = stateno = [200, 2999] && movecontact
 
+[State -1, Cem Chutes]
+type = ChangeState
+value = 1200
+triggerall = command = "qcf_k"
+triggerall = statetype != A
+trigger1 = ctrl
+trigger2 = stateno = [200, 499] && movecontact
+
+[State -1, Pétala de Fogo]
+type = ChangeState
+value = 1300
+triggerall = command = "qcf_p"
+triggerall = statetype = A
+triggerall = NumProjID(1300) = 0
+trigger1 = ctrl
+
 [State -1, Palma do Dragão]
 type = ChangeState
 value = 1000
@@ -206,22 +222,6 @@ triggerall = command = "chg_du_k"
 triggerall = statetype != A
 trigger1 = ctrl
 trigger2 = stateno = [200, 499] && movecontact
-
-[State -1, Cem Chutes]
-type = ChangeState
-value = 1200
-triggerall = command = "qcf_k"
-triggerall = statetype != A
-trigger1 = ctrl
-trigger2 = stateno = [200, 499] && movecontact
-
-[State -1, Pétala de Fogo]
-type = ChangeState
-value = 1300
-triggerall = command = "qcf_p"
-triggerall = statetype = A
-triggerall = NumProjID(1300) = 0
-trigger1 = ctrl
 
 [State -1, Corrida]
 type = ChangeState

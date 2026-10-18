@@ -702,7 +702,11 @@ function cmdFile(ch, specials, superDef, super2) {
 
   if (super2) entry(super2.name, 3100, [`command = "${super2.cmd}"`, "power >= 2000", "statetype != A"], ["ctrl", "stateno = [200, 2999] && movecontact"]);
   entry(superDef.name, 3000, [`command = "${superDef.cmd}"`, "power >= 1000", "statetype != A"], ["ctrl", "stateno = [200, 2999] && movecontact"]);
-  specials.forEach((sp, i) => {
+  // movimento mais longo primeiro: a meia-volta (hcf) também completa a meia-lua (qcf) e, na ordem do
+  // .cmd, a primeira entrada que casa vence
+  const motion = (sp) => CMD_SEQ[sp.cmd][0].split(",").length;
+  const ordered = specials.map((sp, i) => ({ sp, i })).sort((a, b) => motion(b.sp) - motion(a.sp) || a.i - b.i);
+  ordered.forEach(({ sp, i }) => {
     const base = 1000 + i * 100;
     const air = AIR_KINDS.has(sp.kind);
     entry(sp.name, base, [`command = "${sp.cmd}"`, air ? "statetype = A" : "statetype != A", ...(sp.triggerAll ?? [])], air ? ["ctrl"] : ["ctrl", "stateno = [200, 499] && movecontact"]);
