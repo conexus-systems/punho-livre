@@ -11,6 +11,8 @@ import Profile from "@/app/profile";
 import RosterScreen from "@/app/roster";
 import Select from "@/app/select";
 import Settings from "@/app/settings";
+import ControlsEditor from "@/app/controls";
+import { DEFAULT_LAYOUTS } from "@/src/game/controlLayout";
 import Start from "@/app/index";
 
 global.fetch = jest.fn(async () => ({ ok: true, status: 200, text: async () => JSON.stringify({ characters: [], players: [], matches: [] }) })) as unknown as typeof fetch;
@@ -89,6 +91,36 @@ describe("telas W10M montam sem erro", () => {
     const mugen = await render(<TouchControls {...props} layout="mugen" />);
     expect(labels(mugen)).toEqual(expect.arrayContaining(["Botão x", "Botão y", "Botão z", "Botão a", "Botão b", "Botão c"]));
     mugen.unmount();
+    const simple = await render(<TouchControls {...props} layout="simple" stickMode="fixed" superReady={false} />);
+    expect(labels(simple)).toEqual(expect.arrayContaining(["Botão Soco", "Botão Chute", "Botão Especial", "Botão Super"]));
+    // sem barra o Super aparece apagado (desabilitado para o leitor de tela)
+    expect(simple.root.findAll((n) => n.props.accessibilityLabel === "Botão Super")[0].props.accessibilityState).toEqual({ disabled: true });
+    expect(simple.root.findAll((n) => n.props.accessibilityLabel === "Direcional").length).toBeGreaterThan(0);
+    simple.unmount();
+  });
+
+  it("editor de layout: escolhe, redimensiona pela acessibilidade, salva e restaura", async () => {
+    const r = await render(<ControlsEditor />);
+    expect(texts(r)).toContain("Editar layout");
+    const item = () => r.root.findAll((n) => typeof n.props.accessibilityLabel === "string" && n.props.accessibilityLabel.startsWith("Soco,") && n.props.onAccessibilityAction)[0];
+    const before = item().props.accessibilityLabel;
+    await act(async () => item().props.onAccessibilityAction({ nativeEvent: { actionName: "increment" } }));
+    expect(item().props.accessibilityLabel).not.toBe(before);
+    expect(texts(r)).toContain("Tamanho · Soco");
+    const press = async (label: string) => {
+      const btn = r.root.findAll((n) => n.props.accessibilityLabel === label && typeof n.props.onPress === "function")[0];
+      await act(async () => btn.props.onPress());
+    };
+    await press("Salvar");
+    const saved = app.get().settings.controls.layouts.simple?.find((i) => i.id === "punch");
+    expect(saved?.size).toBe(DEFAULT_LAYOUTS.simple.find((i) => i.id === "punch")!.size + 4);
+    await press("Restaurar padrão");
+    expect(item().props.accessibilityLabel).toBe(before);
+    // alvos de pelo menos 48 dp nas abas do editor
+    for (const tab of r.root.findAll((n) => n.props.accessibilityRole === "tab" && typeof n.props.onPress === "function")) {
+      expect(tab.props.style.minHeight).toBeGreaterThanOrEqual(48);
+    }
+    r.unmount();
   });
 
   it("Personagens, Perfil, Ajustes e Premium", async () => {

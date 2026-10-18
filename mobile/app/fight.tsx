@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Text, useWindowDimensions, View } from "react-native";
 import { router } from "expo-router";
 import { Canvas, Picture, Skia, type SkImage, type SkPicture } from "@shopify/react-native-skia";
+import * as Haptics from "expo-haptics";
 import { useSharedValue } from "react-native-reanimated";
 
 import { MetroButton, MetroProgress } from "@/components/metro";
@@ -13,10 +14,13 @@ import { BUILTIN } from "@/src/characters/builtin.generated";
 import { getCharacter, rosterFor } from "@/src/characters/registry";
 import type { Roster } from "@/src/engine/fighter";
 import { Btn } from "@/src/engine/input";
-import type { WorldState } from "@/src/engine/types";
+import type { GameEvent, WorldState } from "@/src/engine/types";
 import { createWorld, stepWorld } from "@/src/engine/world";
 import { CpuController } from "@/src/game/ai";
 import { loadAtlases } from "@/src/game/atlas";
+import { layoutFor, schemeOf } from "@/src/game/controlLayout";
+import { HapticGate, hitFeel } from "@/src/game/feedback";
+import { SimpleController, simpleContextOf, simpleKit } from "@/src/game/simpleMode";
 import { loadStageArt } from "@/src/game/stageArt";
 import type { StageImages } from "@/src/game/stages";
 import { findCommand, macroFromCommand, MacroPlayer, motionCommands } from "@/src/game/macros";
@@ -88,6 +92,8 @@ export default function Fight() {
   const picture = useSharedValue<SkPicture>(emptyPicture());
   const inputRef = useRef(0);
   const macro = useRef(new MacroPlayer());
+  const simple = useRef<SimpleController | null>(null);
+  const hapticGate = useRef(new HapticGate());
   const renderer = useRef(new FightRenderer());
   const worldRef = useRef<WorldState | null>(null);
   const sessionRef = useRef<RollbackSession | null>(null);
@@ -115,9 +121,25 @@ export default function Fight() {
   const opponentLeft = onlineStore.use((s) => s.opponentLeft);
   const ping = onlineStore.use((s) => s.ping);
 
+  const controls = settings.controls;
+  const scheme = schemeOf(controls, settings.buttons);
+  const simpleMode = scheme === "simple";
+  const controlItems = useMemo(() => layoutFor(scheme, controls.layouts), [scheme, controls.layouts]);
   const assists = useMemo(() => assistsFor(localChar), [localChar]);
+  // modo simples: o kit (especiais por direção, super, auto-combo) muda com o lutador em campo
+  useEffect(() => {
+    if (!simpleMode) {
+      simple.current = null;
+      return;
+    }
+    const ch = roster[localChar];
+    const kit = simpleKit(ch, BUILTIN[localChar]?.meta);
+    if (simple.current) simple.current.setCharacter(ch, kit);
+    else simple.current = new SimpleController(ch, kit);
+  }, [simpleMode, localChar, roster]);
   const assistButtons: AssistButton[] = [
-    ...(settings.assist ? assists.map((a) => ({ id: a.id, label: a.label, enabled: !a.isSuper || power >= (a.cost ?? 1000) })) : []),
+    // no modo simples os especiais já estão no botão Especial; fica só o MAX
+    ...(settings.assist && !simpleMode ? assists.map((a) => ({ id: a.id, label: a.label, enabled: !a.isSuper || power >= (a.cost ?? 1000) })) : []),
     // MAX (A+B+C) num toque: gasta 1 estoque
     { id: "max", label: "MAX", enabled: maxReady },
   ];
@@ -184,24 +206,52 @@ export default function Fight() {
   }, []);
 
   // ------------------------------------------------------------ loop
+  const feel = useCallback(
+    (events: readonly GameEvent[]) => {
+      if (!app.get().settings.controls.hitHaptics) return;
+      const f = hitFeel(events, localSide);
+      if (!f || !hapticGate.current.allow(Date.now())) return;
+      const style = f === "hurt" ? Haptics.ImpactFeedbackStyle.Heavy : f === "hit" ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light;
+      void Haptics.impactAsync(style).catch(() => undefined);
+    },
+    [localSide],
+  );
+
+  /** Entrada local do frame: atalho em andamento, senão o toque (traduzido no modo simples). */
+  const localInput = useCallback(
+    (w: WorldState): number => {
+      const raw = inputRef.current;
+      let base = raw;
+      if (simple.current) {
+        // modo simples: vira entrada normal aqui, antes da engine e da rede
+        const me = w.fighters[localSide];
+        base = simple.current.step(raw, simpleContextOf(me));
+      }
+      return macro.current.next() ?? base;
+    },
+    [localSide],
+  );
+
   const tick = useCallback(() => {
-    const local = macro.current.next() ?? inputRef.current;
     const session = sessionRef.current;
     if (session) {
       // se estivermos muito à frente do oponente, segura um frame de vez em quando
       if (session.framesAhead > 6 && session.world.frame % 4 === 0) return;
-      session.advance(local);
+      session.advance(localInput(session.world));
       renderer.current.addEvents(session.events, session.world, roster);
       audio.update(session.world, session.events, roster);
+      feel(session.events);
       return;
     }
     const w = worldRef.current;
     if (!w || pausedRef.current) return;
+    const local = localInput(w);
     const p2Input = cpu.current ? cpu.current.next(w) : 0;
     stepWorld(w, [local, p2Input], roster);
     renderer.current.addEvents(w.events, w, roster);
     audio.update(w, w.events, roster);
-  }, [roster]);
+    feel(w.events);
+  }, [roster, localInput, feel]);
 
   useEffect(() => {
     if (loading) return;
@@ -346,7 +396,12 @@ export default function Fight() {
           onAssist={onAssist}
           haptics={settings.vibration}
           onPause={() => setPause(true)}
-          layout={settings.buttons}
+          layout={scheme}
+          items={controlItems}
+          opacity={controls.opacity}
+          stickMode={controls.stick}
+          deadZone={controls.deadZone}
+          superReady={power >= 1000}
         />
       )}
 

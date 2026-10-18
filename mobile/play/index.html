@@ -120,7 +120,18 @@
   .pad .b { width: 56px; height: 56px; border: 2px solid rgba(255, 255, 255, 0.7); background: rgba(0, 0, 0, 0.4); display: grid; place-items: center; font-size: 26px; font-weight: 300; }
   .pad .b.on { background: var(--accent); border-color: var(--accent); }
   .pad .b.combo { width: 44px; height: 44px; margin: 6px; font-size: 14px; border-width: 1px; }
-  .pad .b:nth-child(n+4) { transform: translateX(14px); }
+  .pad:not(.simple) .b:nth-child(n+4) { transform: translateX(14px); }
+  /* modo simples: Especial e Super em cima, Chute e Soco (maior) embaixo */
+  .pad.simple { grid-template-columns: 64px 76px; grid-template-areas: "special super" "kick punch"; align-items: end; justify-items: center; }
+  .pad.simple .b { font-size: 13px; font-weight: 400; }
+  .pad.simple [data-id="punch"] { grid-area: punch; width: 76px; height: 76px; font-size: 15px; }
+  .pad.simple [data-id="kick"] { grid-area: kick; width: 64px; height: 64px; }
+  .pad.simple [data-id="special"] { grid-area: special; width: 64px; height: 64px; }
+  .pad.simple [data-id="super"] { grid-area: super; width: 56px; height: 56px; }
+  .pad .b.off { opacity: 0.4; }
+  #fight-tools { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 96px); left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 3; }
+  #fight-tools button { min-height: 44px; min-width: 44px; padding: 0 12px; background: rgba(0, 0, 0, 0.5); font-size: 13px; }
+  #pad-status { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 146px); left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 12px; color: var(--muted); z-index: 3; text-shadow: 0 1px 2px #000; }
   .move-hint { position: absolute; left: 40px; bottom: calc(env(safe-area-inset-bottom, 0px) + 40px); width: 100px; height: 100px; border: 2px solid rgba(255,255,255,0.25); display: grid; place-items: center; font-size: 12px; color: rgba(255,255,255,0.5); pointer-events: none; }
 
   #overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); display: grid; place-items: center; z-index: 4; }
@@ -214,18 +225,20 @@
   <div id="touch">
     <div class="move-hint">mover</div>
     <div id="stick" hidden><div id="stick-knob"></div></div>
-    <!-- padrão SNK: C e D fortes em cima, A e B fracos embaixo; atalhos de dois botões à esquerda -->
-    <div class="pad">
-      <div class="b combo" data-bit="576" aria-label="C+D">C+D</div><div class="b" data-bit="512">C</div><div class="b" data-bit="64">D</div>
-      <div class="b combo" data-bit="144" aria-label="A+B">A+B</div><div class="b" data-bit="128">A</div><div class="b" data-bit="16">B</div>
-    </div>
+    <!-- botões do modo atual (main.ts › renderPad): clássico SNK (C D em cima, A B embaixo, atalhos à esquerda) ou simples -->
+    <div class="pad" id="pad"></div>
   </div>
   <div id="assists"></div>
   <button id="pause-btn" type="button" aria-label="Pausar">
     <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="1.7"><path d="M8 5v14M16 5v14"/></svg>
   </button>
   <div id="arcade-step"></div>
-  <div id="keys-hint">mover: setas/WASD · A U · B J · C I · D K · rolar O (A+B) · blowback L (C+D) · MAX M · especiais e supers 1–6 · som N · pausa Esc</div>
+  <div id="fight-tools">
+    <button id="mode-btn" type="button" title="Trocar modo de controle (T)">modo: simples</button>
+    <button id="help-btn" type="button" aria-label="Como jogar (H)" title="Como jogar (H)">?</button>
+  </div>
+  <div id="pad-status" aria-live="polite"></div>
+  <div id="keys-hint"></div>
   <div id="overlay" hidden>
     <div class="panel" role="dialog" aria-modal="true" aria-labelledby="panel-title">
       <h2 class="header" id="panel-title">pausa</h2>
@@ -251,8 +264,13 @@
       <tr><td>1 a 6</td><td>especiais e supers em um toque (super com 1 estoque, super 2 com 2)</td></tr>
       <tr><td>Esc / P</td><td>pausa · no treino, B mostra as caixas de colisão</td></tr>
       <tr><td>N</td><td>liga/desliga música e efeitos</td></tr>
-      <tr><td>Celular</td><td>direcional na metade esquerda, A B C D e os atalhos à direita; aparelho deitado</td></tr>
+      <tr><td>Celular</td><td>direcional na metade esquerda (aparece onde o polegar toca), botões à direita; aparelho deitado</td></tr>
+      <tr><td>T</td><td>troca modo <b>simples</b> / <b>clássico</b> (também pelo botão “modo” na luta)</td></tr>
+      <tr><td>Modo simples</td><td>U soco (toques seguidos = combo curto) · J chute · I especial (+ direção escolhe qual) · K super (baixo + K = super 2)</td></tr>
+      <tr><td>Controle</td><td>Gamepad padrão: X/□ = A ou Soco · A/✕ = B ou Chute · Y/△ = C ou Especial · B/○ = D ou Super · LB A+B · RB C+D · LT MAX · Start pausa · Select troca o modo</td></tr>
     </table>
+    <h3 class="kicker" id="simple-moves-title">modo simples</h3>
+    <table><tbody id="simple-moves"></tbody></table>
     <button class="btn primary" id="help-close" type="button">Entendi</button>
   </div>
 </div>

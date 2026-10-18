@@ -12,7 +12,11 @@ import { Btn } from "@/src/engine/input";
 import type { CharacterData, WorldState } from "@/src/engine/types";
 import { createWorld, stepWorld } from "@/src/engine/world";
 import { CpuController } from "@/src/game/ai";
+import { BUTTONS } from "@/src/game/controlLayout";
+import { DEFAULT_PAD, DirectionalPad } from "@/src/game/dpad";
+import { GamepadReader, PAD_SELECT, PAD_START, type PadSnapshot } from "@/src/game/gamepad";
 import { findCommand, macroFromCommand, MacroPlayer } from "@/src/game/macros";
+import { KEY_NAME, SIMPLE_MASK, SimpleBtn, SimpleController, simpleContextOf, simpleKit, SLOT_LABEL, SLOTS } from "@/src/game/simpleMode";
 import { FightRenderer } from "@/src/game/renderer";
 import { STAGES } from "@/src/game/stages";
 import { STAGE_ART } from "@/src/game/stages.generated";
@@ -159,8 +163,8 @@ function startMode(mode: Mode) {
 document.querySelectorAll<HTMLButtonElement>("[data-mode]").forEach((b) => {
   b.addEventListener("click", () => startMode(b.dataset.mode as Mode));
 });
-$("help-open").addEventListener("click", () => ($("help").hidden = false));
-$("help-close").addEventListener("click", () => ($("help").hidden = true));
+$("help-open").addEventListener("click", () => openHelp());
+$("help-close").addEventListener("click", () => closeHelp());
 
 // ---------------------------------------------------------- seleção
 
@@ -294,30 +298,56 @@ $("select-back").addEventListener("click", () => {
 
 // ------------------------------------------------------------ controles
 
-// padrão SNK: A = x, B = a, C = z, D = c (ver src/engine/snk.ts)
-const KEYMAP: Record<string, number> = {
+// modo de controle (docs/CONTROLS.md): simples (Especial + direção, auto-combo) ou clássico
+type ControlMode = "simple" | "classic";
+let controlMode: ControlMode = "simple";
+try {
+  controlMode = localStorage.getItem("mugen-arena.controls") === "classic" ? "classic" : "simple";
+} catch {
+  // sem armazenamento: modo simples
+}
+
+const DIR_KEYS: Record<string, number> = {
   ArrowUp: Btn.U, KeyW: Btn.U,
   ArrowDown: Btn.D, KeyS: Btn.D,
   ArrowLeft: Btn.L, KeyA: Btn.L,
   ArrowRight: Btn.R, KeyD: Btn.R,
+};
+// padrão SNK: A = x, B = a, C = z, D = c (ver src/engine/snk.ts)
+const KEYMAP_CLASSIC: Record<string, number> = {
+  ...DIR_KEYS,
   KeyU: Btn.x, KeyJ: Btn.a,
   KeyI: Btn.z, KeyK: Btn.c,
   KeyO: Btn.x | Btn.a, KeyL: Btn.z | Btn.c,
   KeyM: Btn.x | Btn.a | Btn.z,
 };
+// simples: U soco, J chute, I especial, K super (os atalhos O, L e M continuam)
+const KEYMAP_SIMPLE: Record<string, number> = {
+  ...KEYMAP_CLASSIC,
+  KeyU: SimpleBtn.punch, KeyJ: SimpleBtn.kick,
+  KeyI: SimpleBtn.special, KeyK: SimpleBtn.super,
+};
+const keymap = () => (controlMode === "simple" ? KEYMAP_SIMPLE : KEYMAP_CLASSIC);
 const held = new Set<string>();
 let touchBits = 0;
 
 window.addEventListener("keydown", (e) => {
+  if (!$("help").hidden) {
+    if (e.code === "Escape" || e.code === "KeyH") closeHelp();
+    return;
+  }
   if ($("fight").hidden) {
+    if (e.code === "KeyH") openHelp();
     if (!$("select").hidden && (e.code === "Enter" || e.code === "Space")) confirmPick();
     return;
   }
-  if (e.code in KEYMAP) {
+  if (e.code in keymap()) {
     held.add(e.code);
     e.preventDefault();
   }
   if (/^Digit[1-9]$/.test(e.code)) assist(Number(e.code.slice(5)) - 1);
+  if (e.code === "KeyT") setControlMode(controlMode === "simple" ? "classic" : "simple");
+  if (e.code === "KeyH") openHelp();
   if (e.code === "Escape" || e.code === "KeyP") togglePause();
   if (e.code === "KeyN") setSound(!soundOn);
   if (e.code === "KeyB" && fight?.mode === "training") debugBoxes = !debugBoxes;
@@ -327,28 +357,140 @@ window.addEventListener("blur", () => held.clear());
 
 function keyboardBits(): number {
   let bits = 0;
-  for (const k of held) bits |= KEYMAP[k] ?? 0;
-  return bits | touchBits;
+  const map = keymap();
+  for (const k of held) bits |= map[k] ?? 0;
+  return bits | touchBits | padBits;
+}
+
+// controle físico (Gamepad API, mapeamento standard; ver src/game/gamepad.ts)
+const gamepad = new GamepadReader();
+let padBits = 0;
+let padName: string | null = null;
+
+function readGamepad() {
+  const pads = typeof navigator.getGamepads === "function" ? Array.from(navigator.getGamepads()) : [];
+  const live = pads.filter((p): p is Gamepad => !!p && p.connected);
+  const gp = live.find((p) => p.mapping === "standard") ?? live[0];
+  if (!gp) {
+    padBits = 0;
+    if (padName) setPadName(null);
+    return;
+  }
+  if (padName !== gp.id) setPadName(gp.id);
+  const snap: PadSnapshot = { buttons: gp.buttons.map((b) => b.pressed), axes: gp.axes };
+  const edges = gamepad.pressed(snap);
+  padBits = gamepad.bits(snap, controlMode);
+  if (edges.has(PAD_START)) togglePause();
+  if (edges.has(PAD_SELECT)) setControlMode(controlMode === "simple" ? "classic" : "simple");
+}
+
+function setPadName(name: string | null) {
+  padName = name;
+  $("pad-status").textContent = name ? `controle: ${name.replace(/\s*\(.*$/, "").slice(0, 40)}` : "";
+}
+
+function setControlMode(mode: ControlMode) {
+  controlMode = mode;
+  try {
+    localStorage.setItem("mugen-arena.controls", mode);
+  } catch {
+    // ignora
+  }
+  held.clear();
+  pointers.clear();
+  touchBits = 0;
+  fight?.simple.reset();
+  renderPad();
+  renderAssists();
+  updateHints();
+}
+
+function updateHints() {
+  const simple = controlMode === "simple";
+  $("mode-btn").textContent = simple ? "modo: simples" : "modo: clássico";
+  $("mode-btn").setAttribute("aria-label", `Modo de controle: ${simple ? "simples" : "clássico"}. Tecla T troca.`);
+  $("keys-hint").textContent = simple
+    ? "mover: setas/WASD · soco U (toques seguidos = combo) · chute J · especial I (+ direção) · super K (↓ + K = super 2) · rolar O · blowback L · MAX M · modo T · ajuda H · som N · pausa Esc"
+    : "mover: setas/WASD · A U · B J · C I · D K · rolar O (A+B) · blowback L (C+D) · MAX M · especiais e supers 1–6 · modo T · ajuda H · som N · pausa Esc";
+  renderMoves();
+}
+
+/** Tabela "Especial + direção → golpe" do lutador do P1 (ajuda). */
+function renderMoves() {
+  const box = $("simple-moves");
+  box.replaceChildren();
+  const id = fight?.world.fighters[0].charId ?? state.p1 ?? state.cursor;
+  const kit = simpleKit(roster[id], BUILTIN[id]?.meta);
+  const rows: [string, string][] = SLOTS.map((s) => [s === "neutral" ? "Especial" : `${SLOT_LABEL[s]} + Especial`, kit.specials[s]?.name ?? "—"]);
+  if (kit.super) rows.push(["Super (1 estoque)", kit.super.name]);
+  if (kit.super2) rows.push(["baixo + Super (2 estoques)", kit.super2.name]);
+  rows.push(["Soco, soco, soco…", kit.combo.length ? kit.combo.map((c) => (c.kind === "button" ? KEY_NAME[c.key] : (SLOTS.map((sl) => kit.specials[sl]).find((m) => m?.cmd === c.cmd)?.name ?? "especial"))).join(" → ") : "soco"]);
+  $("simple-moves-title").textContent = `modo simples · ${BUILTIN[id]?.meta.name ?? id}`;
+  for (const [k, v] of rows) {
+    const tr = document.createElement("tr");
+    const a = document.createElement("td");
+    const b = document.createElement("td");
+    a.textContent = k;
+    b.textContent = v;
+    tr.append(a, b);
+    box.append(tr);
+  }
+}
+
+let helpPaused = false;
+function openHelp() {
+  renderMoves();
+  $("help").hidden = false;
+  if (fight && !paused && !fight.over && !$("fight").hidden) {
+    helpPaused = true;
+    paused = true;
+    audio.duck(true);
+  }
+  $<HTMLButtonElement>("help-close").focus();
+}
+function closeHelp() {
+  $("help").hidden = true;
+  if (helpPaused) {
+    helpPaused = false;
+    paused = false;
+    audio.duck(false);
+  }
+}
+
+/** Botões touch do modo atual (clássico SNK ou simples). */
+function renderPad() {
+  const pad = $("pad");
+  pad.replaceChildren();
+  pad.classList.toggle("simple", controlMode === "simple");
+  const defs = controlMode === "simple" ? BUTTONS.simple : BUTTONS.snk;
+  for (const d of defs) {
+    const b = document.createElement("div");
+    b.className = d.small ? "b combo" : "b";
+    b.dataset.bit = String(d.bit);
+    b.dataset.id = d.id;
+    b.setAttribute("role", "button");
+    b.setAttribute("aria-label", d.a11y);
+    b.textContent = d.label;
+    pad.append(b);
+  }
 }
 
 // toque: direcional flutuante à esquerda, botões à direita (pointer events, multitoque)
 const touchLayer = $("touch");
 const stickBase = $("stick");
 const stickKnob = $("stick-knob");
-const pointers = new Map<number, { x: number; y: number; ox: number; oy: number; kind: "stick" | "button"; bit: number }>();
-
-function dirFrom(dx: number, dy: number): number {
-  if (Math.hypot(dx, dy) < 14) return 0;
-  const oct = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) & 7;
-  return [Btn.R, Btn.R | Btn.D, Btn.D, Btn.D | Btn.L, Btn.L, Btn.L | Btn.U, Btn.U, Btn.U | Btn.R][oct];
-}
+const moveHint = document.querySelector<HTMLElement>(".move-hint")!;
+// cada dedo no direcional tem o seu (zona morta + 8 direções com histerese, src/game/dpad.ts)
+type Pointer = { x: number; y: number; ox: number; oy: number; kind: "stick" | "button"; bit: number; pad: DirectionalPad | null; dir: number };
+const pointers = new Map<number, Pointer>();
 
 function updateTouch() {
   let bits = 0;
-  let stick: { ox: number; oy: number; x: number; y: number } | null = null;
+  let stick: Pointer | null = null;
   for (const p of pointers.values()) {
-    if (p.kind === "stick") {
-      bits |= dirFrom(p.x - p.ox, p.y - p.oy);
+    if (p.kind === "stick" && p.pad) {
+      p.dir = p.pad.update(p.x - p.ox, p.y - p.oy);
+      bits |= p.dir;
       stick = p;
     } else bits |= p.bit;
   }
@@ -358,10 +500,11 @@ function updateTouch() {
     el.classList.toggle("on", (bits & bit) === bit);
   });
   stickBase.hidden = !stick;
+  moveHint.hidden = !!stick;
   if (stick) {
     stickBase.style.left = `${stick.ox - 50}px`;
     stickBase.style.top = `${stick.oy - 50}px`;
-    const d = dirFrom(stick.x - stick.ox, stick.y - stick.oy);
+    const d = stick.dir;
     const dx = d & Btn.R ? 26 : d & Btn.L ? -26 : 0;
     const dy = d & Btn.D ? 26 : d & Btn.U ? -26 : 0;
     stickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
@@ -377,9 +520,9 @@ touchLayer.addEventListener("pointerdown", (e) => {
   }
   touchLayer.setPointerCapture(e.pointerId);
   if (target?.dataset.bit) {
-    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, ox: 0, oy: 0, kind: "button", bit: Number(target.dataset.bit) });
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, ox: 0, oy: 0, kind: "button", bit: Number(target.dataset.bit), pad: null, dir: 0 });
   } else if (e.clientX < window.innerWidth * 0.45) {
-    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, ox: e.clientX, oy: e.clientY, kind: "stick", bit: 0 });
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, ox: e.clientX, oy: e.clientY, kind: "stick", bit: 0, pad: new DirectionalPad(DEFAULT_PAD), dir: 0 });
   }
   updateTouch();
   e.preventDefault();
@@ -421,6 +564,8 @@ interface Fight {
   world: WorldState;
   cpu: CpuController | null;
   macro: MacroPlayer;
+  /** Modo simples do P1: traduz Soco/Chute/Especial/Super em entradas normais. */
+  simple: SimpleController;
   renderer: FightRenderer;
   /** Nomes no HUD; nas equipes fica a cargo do renderizador (o lutador muda). */
   names?: [string, string];
@@ -438,6 +583,8 @@ let debugBoxes = false;
 
 function assistsOf(charId: string): Assist[] {
   const meta = BUILTIN[charId].meta;
+  // no modo simples os especiais e o super já estão nos botões; fica só o MAX
+  if (controlMode === "simple") return [{ label: "MAX", cmd: "", kind: "max" }];
   return [
     ...meta.specials.map((s) => ({ label: s.name, cmd: s.cmd, kind: "special" as const })),
     { label: "Super", cmd: meta.super.cmd, kind: "super" },
@@ -449,6 +596,7 @@ function assistsOf(charId: string): Assist[] {
 /** Botões de atalho do P1 (refeitos quando o lutador muda nas equipes). */
 function renderAssists() {
   if (!fight) return;
+  fight.assists = assistsOf(fight.assistsFor);
   const assistBox = $("assists");
   assistBox.replaceChildren();
   fight.assists.forEach((a, i) => {
@@ -485,6 +633,7 @@ function startFight() {
     ),
     cpu: training ? null : new CpuController(1, roster, level),
     macro: new MacroPlayer(),
+    simple: new SimpleController(roster[p1], simpleKit(roster[p1], BUILTIN[p1].meta)),
     renderer: new FightRenderer(),
     names: team ? undefined : [roster[p1].displayName, roster[p2].displayName],
     assistsFor: p1,
@@ -496,6 +645,7 @@ function startFight() {
   $("overlay").hidden = true;
   $("arcade-step").textContent = state.mode === "arcade" ? `luta ${state.stageNo} de ${state.stageNo + state.ladder.length}` : "";
   renderAssists();
+  updateHints();
   show("fight");
   resize();
   webAudio.unlock();
@@ -518,6 +668,7 @@ function startBench(n = 0, prev?: Fight["bench"]) {
     world: b.world,
     cpu: b.cpus[1],
     macro: new MacroPlayer(),
+    simple: new SimpleController(roster[p1], simpleKit(roster[p1], BUILTIN[p1].meta)),
     renderer: new FightRenderer(),
     names: [roster[p1].displayName, roster[p2].displayName],
     assistsFor: p1,
@@ -590,6 +741,10 @@ function togglePause() {
 }
 
 $("pause-btn").addEventListener("click", togglePause);
+$("mode-btn").addEventListener("click", () => setControlMode(controlMode === "simple" ? "classic" : "simple"));
+$("help-btn").addEventListener("click", () => openHelp());
+window.addEventListener("gamepadconnected", (e) => setPadName((e as GamepadEvent).gamepad.id));
+window.addEventListener("gamepaddisconnected", () => setPadName(null));
 
 function showPanel(kind: "pause" | "result" | null, title = "", quote: { name: string; text: string } | null = null) {
   const overlay = $("overlay");
@@ -696,6 +851,7 @@ let lastUi = 0;
 
 function frame(t: number) {
   requestAnimationFrame(frame);
+  readGamepad();
   if (!fight || $("fight").hidden) {
     last = t;
     return;
@@ -718,7 +874,14 @@ function frame(t: number) {
   while (acc >= STEP && steps < 4) {
     if (!paused) {
       const w = fight.world;
-      const local = bench ? bench.cpu0.next(w) : (fight.macro.next() ?? keyboardBits());
+      const me = w.fighters[0];
+      const raw = keyboardBits();
+      // modo simples: vira entrada normal aqui, antes da engine (como no app); bits virtuais nunca chegam nela
+      const base =
+        controlMode === "simple"
+          ? fight.simple.step(raw, simpleContextOf(me))
+          : raw & ~SIMPLE_MASK;
+      const local = bench ? bench.cpu0.next(w) : (fight.macro.next() ?? base);
       const cpu = fight.cpu ? fight.cpu.next(w) : 0;
       stepWorld(w, [local, cpu], roster);
       fight.renderer.addEvents(w.events, w, roster);
@@ -753,10 +916,11 @@ function frame(t: number) {
     const me = fight.world.fighters[0];
     if (me.charId !== fight.assistsFor) {
       fight.assistsFor = me.charId;
-      fight.assists = assistsOf(me.charId);
+      fight.simple.setCharacter(roster[me.charId], simpleKit(roster[me.charId], BUILTIN[me.charId].meta));
       renderAssists();
     }
     const ready = me.power >= 1000;
+    $("pad").querySelector<HTMLElement>('[data-id="super"]')?.classList.toggle("off", !ready);
     document.querySelectorAll<HTMLButtonElement>(".assist").forEach((b, i) => {
       const kind = fight!.assists[i]?.kind;
       b.disabled = (kind === "super" && !ready) || (kind === "super2" && me.power < 2000) || (kind === "max" && (!ready || me.maxTime > 0));
@@ -788,6 +952,8 @@ window.addEventListener("touchstart", () => document.body.classList.add("touch")
 Promise.all([atlasReady, stagesReady]).then(() => {
   document.querySelectorAll<HTMLCanvasElement>("canvas[data-hero]").forEach((c) => drawPortrait(c, c.dataset.hero!, c.dataset.flip === "1"));
   $("loading").hidden = true;
+  renderPad();
+  updateHints();
   if (perfRequested) mountPerfLabel($("fight"), perf);
   if (benchRequested) startBench();
   else show("menu");
