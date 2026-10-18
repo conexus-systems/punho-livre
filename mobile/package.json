@@ -19,7 +19,11 @@
     "bench": "node scripts/bench.mjs",
     "test:ci": "jest --ci --forceExit && node --test scripts/__tests__/*.test.mjs && node scripts/check-roster.mjs",
     "preview:web": "node scripts/preview-web.mjs",
-    "play:build": "node play/build.mjs"
+    "play:build": "node play/build.mjs",
+    "framedata": "node scripts/framedata/generate.mjs",
+    "import-sprites": "node scripts/sprites/import.mjs",
+    "editor": "node tools/editor/build.mjs",
+    "editor:check": "node tools/editor/build.mjs && node tools/editor/check.mjs"
   },
   "dependencies": {
     "@expo/metro-runtime": "~58.0.14",
