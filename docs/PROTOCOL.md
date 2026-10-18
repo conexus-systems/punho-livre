@@ -30,15 +30,44 @@ Erros seguem `{ "error": "<code>", "message": "..." }`:
 | POST | `/api/v1/characters` | sim | body `{ pack: Pack }` → `201 { character: CharacterSummary }` status `pending` |
 | GET | `/api/v1/admin/characters?status=pending` | admin | `{ characters: [CharacterSummary] }` |
 | PATCH | `/api/v1/admin/characters/:slug` | admin | body `{ status: "approved"\|"rejected", premium?: bool, reason?: string }` |
-| GET | `/api/v1/leaderboard` | não | `{ players: [{ display_name, rating, wins, losses }] }` (top 100) |
-| GET | `/api/v1/matches` | sim | `{ matches: [{ id, opponent, my_character, opponent_character, result: "win"\|"loss"\|"draw"\|"abandoned", rating_delta, finished_at }] }` |
+| GET | `/api/v1/leaderboard[?season=N]` | não | `{ season: Season, players: [{ display_name, rating, wins, losses, league }] }` (top 100 da temporada, só quem terminou a colocação; temporada inexistente → 404) |
+| GET | `/api/v1/ranked` | sim | `RankedStanding` (temporada atual) |
+| GET | `/api/v1/matches` | sim | `{ matches: [{ id, opponent, my_character, opponent_character, result: "win"\|"loss"\|"draw"\|"abandoned"\|"void", rating_delta, finished_at }] }` |
+| GET | `/api/v1/matches/:id/replay` | participante ou admin | `{ replay: Replay }` (403 para os demais) |
+| GET | `/api/v1/admin/match_reviews?status=open` | admin | `{ reviews: [MatchReview] }` (`open`\|`resolved`\|`dismissed`) |
+| PATCH | `/api/v1/admin/match_reviews/:id` | admin | body `{ status: "resolved"\|"dismissed", note?: string }` → `{ review: MatchReview }` |
 | POST | `/conexus/webhooks` | HMAC | webhooks do bff-auth e bff-payment |
 
 `player`:
 ```json
 { "id": 1, "conexus_user_id": "uuid", "display_name": "Ryo", "email": "a@b.c",
-  "rating": 1000, "wins": 0, "losses": 0, "premium": false, "admin": false }
+  "rating": 1500, "wins": 0, "losses": 0, "premium": false, "admin": false }
 ```
+`rating` = rating exibido da temporada atual (Glicko-2, arredondado); `wins`/`losses` = vida toda.
+
+`Season`: `{ "number": 1, "name": "Temporada 1", "starts_at": "<iso8601>", "ends_at": "<iso8601>" }`
+
+`RankedStanding`:
+```json
+{ "season": Season, "rating": 1562, "deviation": 120, "peak_rating": 1600,
+  "league": { "key": "ouro", "name": "Ouro", "min_rating": 1550, "next_min_rating": 1700 },
+  "placement_remaining": 0, "rank": 2, "wins": 3, "losses": 1, "draws": 1 }
+```
+Ligas (`league.key`): `placement` (menos de 5 partidas na temporada; `min_rating`/`next_min_rating` nulos),
+`bronze` (< 1400), `prata` (1400), `ouro` (1550), `platina` (1700), `diamante` (1850), `mestre` (2000, `next_min_rating` nulo).
+`rank` é nulo em colocação. Desenho em `docs/ONLINE.md`.
+
+`Replay` (entradas registradas pelo `input_log`; índice 0 = quadro 1):
+```json
+{ "match_id": 7, "status": "finished", "mode": "ranked", "seed": 12345, "engine_version": "0.4.0+net2",
+  "characters": ["kaze", "ryu"], "pack_sha256": ["<hex>", "<hex>"], "winner_side": 0, "frames": 5400,
+  "inputs": [[0, 0, 16], [0, 0, 4]], "checksums": [[60, 0, 123456, 987654]] }
+```
+`checksums` = `[frame, side, value, inputs_hash]`. Replays de partidas sem revisão aberta são apagados após
+`REPLAY_RETENTION_DAYS` (30).
+
+`MatchReview`: `{ id, reason: "state_mismatch"|"inputs_mismatch"|"replay_mismatch"|"result_mismatch", status, details, note,
+created_at, match: { id, status, mode, engine_version, players: [{ id, display_name }], replay_url } }`
 
 `CharacterSummary`:
 ```json
@@ -83,37 +112,64 @@ usados pelos estados (PlaySnd, hitsound, guardsound). Packs sem esse campo conti
 URL: `wss://<host>/cable?token=<access_token>` (conexão recusada sem JWT válido).
 
 ### `MatchmakingChannel`
-Params de subscribe: `{ mode: "ranked" | "room", room_code?: string, character: slug, pack_sha256: hex }`
+Params de subscribe: `{ mode: "ranked" | "room", room_code?: string, character: slug, pack_sha256: hex, engine_version: string }`
+
+`engine_version` (obrigatório, `/\A[0-9A-Za-z.+_-]{1,40}\z/`) = `<versão do app>+net<protocolo>` (`mobile/src/net/version.ts`).
+O servidor só junta a mesma `engine_version`: versões diferentes da engine dessincronizam. Sem ela → assinatura recusada.
 
 Servidor → cliente (`transmit`):
-- `{ type: "queued" }` — entrou na fila ranked.
+- `{ type: "queued", rating, league }` — entrou na fila ranked (rating/liga da temporada atual).
 - `{ type: "room_created", room_code: "ABCD12" }` — `mode: "room"` sem código.
-- `{ type: "matched", match_id, side: 0|1, seed: <int32>, input_delay: 2,
-     opponent: { display_name, rating, character, pack_sha256 } }`
-- `{ type: "error", error: "room_not_found" | "room_full" | "already_queued" }`
+- `{ type: "matched", match_id, side: 0|1, seed: <int32>, input_delay: 2, engine_version,
+     opponent: { display_name, rating, league, character, pack_sha256 } }`
+- `{ type: "error", error: "room_not_found" | "room_full" | "already_queued" | "version_mismatch" }`
 
 Ação cliente: `cancel` (sai da fila / fecha sala). Unsubscribe também sai.
-Ranked pareia o mais antigo da fila com rating mais próximo (janela ±200, abre +50 a cada 10 s).
+Ranked pareia o mais antigo da fila (mesma `engine_version`) com rating da temporada dentro da janela, que alarga com
+a espera (vale a maior dos dois): ±100, +50 a cada 5 s, e qualquer rating a partir de 30 s.
 
 ### `MatchChannel`
-Params: `{ match_id }` — só os dois participantes. Servidor faz `stream_for match`.
+Params: `{ match_id, resume?: true, from?: <primeiro quadro remoto que falta> }` — só os dois participantes, partida
+`waiting` ou `active`. Servidor faz `stream_for match`. Cada assinatura vira a conexão vigente daquele lado.
 
 Ações cliente → servidor (relay para os dois; cada cliente ignora mensagens com o próprio `side`):
 - `ready` → quando ambos: broadcast `{ type: "start", at: <epoch ms> }`
-- `input { frames: [[frame, bits], ...], ack: <último frame remoto recebido> }` → broadcast `{ type: "input", side, frames, ack }`
-- `checksum { frame, value }` → broadcast `{ type: "checksum", side, frame, value }`
-- `result { winner_side: 0|1|null }` → quando os dois relatos batem: grava resultado, Elo (K=32; salas privadas
-  só contam se `RATED_ROOM_MATCHES=true`),
-  broadcast `{ type: "finished", winner_side, ratings: { "0": n, "1": n } }`; se divergirem: status `disputed`,
-  broadcast `{ type: "finished", winner_side: null, disputed: true }`
-- `ping { t }` → `transmit` só ao remetente `{ type: "pong", t }`
+- `input { frames: [[frame, bits], ...], ack: <último frame remoto contíguo recebido> }` → broadcast
+  `{ type: "input", side, frames, ack }`. O cliente reenvia tudo desde `ack + 1` do oponente (mensagens podem se
+  perder ou chegar fora de ordem; repetidas são ignoradas).
+- `checksum { frame, value, inputs_hash }` → broadcast `{ type: "checksum", side, frame, value, inputs_hash }` e
+  grava. A cada 60 quadros confirmados: `value` = hash FNV-1a 32 bits do estado (bits exatos dos números,
+  `mobile/src/net/hash.ts`), `inputs_hash` = FNV-1a 32 das entradas dos dois lados nos quadros 1..frame (bits do
+  lado 0 e do lado 1, 16 bits little endian cada). Os dois lados com valores diferentes no mesmo quadro → partida
+  `void` (anulada), revisão aberta e broadcast `{ type: "voided", reason: "state_mismatch" | "inputs_mismatch" }`.
+- `input_log { from, bits: [...] }` — registro das próprias entradas (blocos contíguos a partir do quadro 1, ≤ 600
+  por bloco, cada `bits` 0..2047; o app manda ~1 bloco/s). Repetição/sobreposição é aparada. Bloco depois de um
+  buraco não é gravado: `transmit` só ao remetente `{ type: "input_log_gap", next }` e o cliente reenvia desde `next`.
+- `result { winner_side: 0|1|null }` (o app manda o último `input_log` antes) → quando os dois relatos batem:
+  confere o replay (hash das entradas registradas até o último quadro com checksum dos dois lados = `inputs_hash`
+  relatado); se bater, grava resultado e aplica Glicko-2 da temporada (salas privadas só contam se
+  `RATED_ROOM_MATCHES=true`) e broadcast `{ type: "finished", winner_side, ratings: { "0": n, "1": n } }`; se não
+  bater, `void` + `{ type: "voided", reason: "replay_mismatch" }`. Relatos divergentes: status `disputed`, revisão
+  aberta, broadcast `{ type: "finished", winner_side: null, disputed: true }`.
+- `ping { t }` → `transmit` só ao remetente `{ type: "pong", t }` (o app pinga a cada 1 s na luta)
+- `leave` → desistência: partida `active` vira `abandoned` na hora (quem saiu perde), broadcast
+  `{ type: "opponent_left", side }`.
 
-Servidor → clientes: `{ type: "opponent_left" }` quando o outro desconecta com a partida ativa
-(partida vira `abandoned`, quem saiu perde rating). Quem sai **depois de relatar** o resultado não conta como
-abandono; se o outro lado nunca relatar, a faxina encerra a partida com o relato existente após 2 min.
-O cliente espera o `finished` (até 4 s) antes de sair do canal.
+Queda e reconexão (desenho em `docs/ONLINE.md`):
+- Unsubscribe sem `leave` com a partida `active` (e vindo da conexão vigente daquele lado): o lado fica
+  desconectado e broadcast `{ type: "opponent_disconnected", side, grace_ms: 10000 }`
+  (`RECONNECT_GRACE_SECONDS`). Se não voltar no prazo: `abandoned`, quem caiu perde, broadcast
+  `{ type: "opponent_left", side }`. Se os dois estiverem fora no fim do prazo: `abandoned` sem vencedor e sem rating.
+- Nova assinatura com `resume: true, from` (ou qualquer assinatura de um lado marcado como desconectado):
+  `transmit` `{ type: "resume", status, from, frames: [bits...], log_next }` — `frames` = entradas registradas do
+  oponente a partir de `from` (índice 0 = `from`), `log_next` = próximo quadro que o servidor espera no
+  `input_log` deste lado — e broadcast `{ type: "resync", side, from }`: o oponente reenvia as próprias entradas
+  desde `from`. A queda de uma conexão antiga percebida depois da reconexão é ignorada.
+- Unsubscribe com a partida `waiting`: `abandoned` sem rating + `{ type: "opponent_left", side }`.
+- Quem sai **depois de relatar** o resultado não conta como queda nem abandono; se o outro lado nunca relatar, a
+  faxina encerra a partida com o relato existente após 2 min. O cliente espera o `finished` (até 4 s) antes de sair.
 
-Em `/api/v1/matches`, `opponent` = `{ display_name, rating }` e partida `disputed` aparece como `draw`.
+Em `/api/v1/matches`, `opponent` = `{ display_name, rating }`, partida `disputed` aparece como `draw` e `void` como `void`.
 
 `bits` de input (inteiro): `U=1 D=2 L=4 R=8 a=16 b=32 c=64 x=128 y=256 z=512 s=1024`.
 

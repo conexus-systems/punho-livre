@@ -124,7 +124,7 @@ variable "admin_notify_emails" {
 }
 
 variable "rated_room_matches" {
-  description = "Partidas de sala privada contam para o Elo?"
+  description = "Partidas de sala privada contam para o rating?"
   type        = bool
   default     = false
 }

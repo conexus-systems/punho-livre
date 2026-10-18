@@ -8,9 +8,10 @@ import { MetroButton, MetroEmpty, MetroHeader, MetroPage, MetroPivot, MetroProgr
 import { install, isInstalled, rosterEntries } from "@/src/characters/registry";
 import { matchSetup } from "@/src/match";
 import { cancelMatchmaking, findMatch, onlineStore } from "@/src/net/online";
-import { fetchCatalog } from "@/src/services/api";
+import { leagueName, nextLeague } from "@/src/net/leagues";
+import { fetchCatalog, fetchRanked, type RankedStanding } from "@/src/services/api";
 import { app } from "@/src/store";
-import { number } from "@/src/ui/formats";
+import { count, number, shortDate } from "@/src/ui/formats";
 import { TYPE } from "@/src/ui/type";
 import { space, useTokens } from "@/src/ui/theme";
 
@@ -24,6 +25,11 @@ export default function Online() {
   const [code, setCode] = useState("");
   const [sha, setSha] = useState<string | null>(null);
   const [preparing, setPreparing] = useState<string | null>(null);
+  const [standing, setStanding] = useState<RankedStanding | null>(null);
+
+  useEffect(() => {
+    if (session) void fetchRanked().then((s) => setStanding(s?.season && s?.league ? s : null)).catch(() => setStanding(null));
+  }, [session]);
 
   useEffect(() => {
     if (!p1) return;
@@ -102,7 +108,7 @@ export default function Online() {
               <MetroProgress />
               <Text style={[TYPE.SUBTITLE, { color: t.text }]}>
                 {preparing ??
-                  (phase.kind === "room" ? "Sala criada. Passe o código:" : phase.kind === "queued" ? "Procurando oponente com rating parecido…" : "Conectando…")}
+                  (phase.kind === "room" ? "Sala criada. Passe o código:" : phase.kind === "queued" ? "Procurando oponente com rating parecido (a faixa abre com a espera)…" : "Conectando…")}
               </Text>
               {phase.kind === "room" ? (
                 <Text selectable style={[TYPE.DISPLAY, { color: t.accentText, letterSpacing: 8 }]}>
@@ -116,8 +122,26 @@ export default function Online() {
               {phase.kind === "error" ? <Text style={[TYPE.BODY, { color: t.danger, marginBottom: space.sm }]}>{phase.message}</Text> : null}
               {pivot === 0 ? (
                 <View style={{ gap: space.md }}>
+                  {standing ? (
+                    <View style={{ gap: space.xs }}>
+                      <Text style={[TYPE.CAPTION, { color: t.muted }]}>
+                        {standing.season.name} · até {shortDate(new Date(standing.season.ends_at))}
+                      </Text>
+                      <Text style={[TYPE.TITLE, { color: t.accentText }]}>{standing.league.name}</Text>
+                      <Text style={[TYPE.BODY, { color: t.text }]}>
+                        {number(standing.rating)} pts
+                        {standing.placement_remaining > 0
+                          ? ` · faltam ${count(standing.placement_remaining, "partida", "partidas")} de colocação`
+                          : standing.league.next_min_rating
+                            ? ` · ${leagueName(nextLeague(standing.league.key))} em ${number(standing.league.next_min_rating)}`
+                            : ""}
+                        {standing.rank ? ` · ${standing.rank}º lugar` : ""}
+                      </Text>
+                    </View>
+                  ) : null}
                   <Text style={[TYPE.BODY, { color: t.muted }]}>
-                    Pareamento pelo rating (Elo). Vitória e derrota mudam sua posição no ranking. Netcode com rollback: o jogo prevê o
+                    Pareamento pelo rating da temporada (Glicko-2): a faixa abre com a espera e, depois de 30 s, vale qualquer oponente.
+                    O resultado só conta quando os dois aparelhos relatam o mesmo vencedor. Netcode com rollback: o jogo prevê o
                     oponente e corrige sem travar.
                   </Text>
                   <MetroButton kind="primary" label="Procurar partida" glyph="online" onPress={() => start("ranked")} disabled={!ready} style={{ alignSelf: "flex-start" }} />

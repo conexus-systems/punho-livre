@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 module Matches
-  # Um lado saiu (unsubscribe do MatchChannel) com a partida em aberto.
-  # - `active`: vira `abandoned`, quem saiu perde (Elo como derrota);
+  # Um lado saiu com a partida em aberto (ação `leave`, fim da tolerância de
+  # reconexão, ou faxina).
+  # - `active`: vira `abandoned`, quem saiu perde (Glicko-2 como derrota);
   # - `waiting` (ninguém lutou ainda): vira `abandoned` sem mexer em rating.
   # Devolve true se a partida foi abandonada agora (→ broadcast opponent_left).
   module Abandon
@@ -25,6 +26,18 @@ module Matches
           attrs[:winner_side] = winner
         end
         match.update!(attrs)
+        true
+      end
+    end
+
+    # Os dois lados caíram e nenhum voltou: encerra sem vencedor e sem rating
+    # (provável falha de rede/servidor, não fuga de um jogador).
+    def both_gone(match_id:)
+      Match.transaction do
+        match = Match.lock.find_by(id: match_id)
+        return false unless match&.active? && match.p1_disconnected_at && match.p2_disconnected_at
+
+        match.update!(status: "abandoned", abandoned_by_side: nil, winner_side: nil, finished_at: Time.current)
         true
       end
     end

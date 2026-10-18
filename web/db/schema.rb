@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_18_000014) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_18_000020) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -43,6 +43,41 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_000014) do
     t.index ["event_id"], name: "index_conexus_webhook_events_on_event_id", unique: true
   end
 
+  create_table "match_checksums", force: :cascade do |t|
+    t.bigint "match_id", null: false
+    t.integer "side", null: false
+    t.integer "frame", null: false
+    t.bigint "value", null: false
+    t.bigint "inputs_hash"
+    t.datetime "created_at", null: false
+    t.index ["match_id", "frame", "side"], name: "index_match_checksums_on_match_id_and_frame_and_side", unique: true
+  end
+
+  create_table "match_input_chunks", force: :cascade do |t|
+    t.bigint "match_id", null: false
+    t.integer "side", null: false
+    t.integer "from_frame", null: false
+    t.integer "to_frame", null: false
+    t.jsonb "bits", default: [], null: false
+    t.datetime "created_at", null: false
+    t.index ["match_id", "side", "from_frame"], name: "index_match_input_chunks_on_match_id_and_side_and_from_frame", unique: true
+  end
+
+  create_table "match_reviews", force: :cascade do |t|
+    t.bigint "match_id", null: false
+    t.string "reason", null: false
+    t.jsonb "details", default: {}, null: false
+    t.string "status", default: "open", null: false
+    t.text "note"
+    t.bigint "resolved_by_id"
+    t.datetime "resolved_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["match_id"], name: "index_match_reviews_on_match_id"
+    t.index ["resolved_by_id"], name: "index_match_reviews_on_resolved_by_id"
+    t.index ["status", "created_at"], name: "index_match_reviews_on_status_and_created_at"
+  end
+
   create_table "matches", force: :cascade do |t|
     t.string "status", default: "waiting", null: false
     t.string "mode", default: "ranked", null: false
@@ -65,9 +100,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_000014) do
     t.datetime "finished_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "season_id"
+    t.string "engine_version"
+    t.datetime "p1_disconnected_at"
+    t.datetime "p2_disconnected_at"
+    t.string "p1_connection"
+    t.string "p2_connection"
+    t.string "void_reason"
     t.index ["player1_id"], name: "index_matches_on_player1_id"
     t.index ["player2_id"], name: "index_matches_on_player2_id"
     t.index ["room_code", "created_at"], name: "index_matches_on_room_code_and_created_at"
+    t.index ["season_id"], name: "index_matches_on_season_id"
     t.index ["status", "created_at"], name: "index_matches_on_status_and_created_at"
   end
 
@@ -81,6 +124,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_000014) do
     t.string "token", null: false
     t.datetime "heartbeat_at", null: false
     t.datetime "created_at", null: false
+    t.string "engine_version", default: "", null: false
     t.index ["mode", "created_at"], name: "index_matchmaking_tickets_on_mode_and_created_at"
     t.index ["player_id"], name: "index_matchmaking_tickets_on_player_id", unique: true
     t.index ["room_code"], name: "index_matchmaking_tickets_on_room_code", unique: true, where: "(room_code IS NOT NULL)"
@@ -93,7 +137,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_000014) do
     t.boolean "display_name_customized", default: false, null: false
     t.string "email"
     t.string "avatar_url"
-    t.integer "rating", default: 1000, null: false
+    t.integer "rating", default: 1500, null: false
     t.integer "wins", default: 0, null: false
     t.integer "losses", default: 0, null: false
     t.boolean "premium", default: false, null: false
@@ -101,6 +145,35 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_000014) do
     t.datetime "updated_at", null: false
     t.index ["conexus_user_id"], name: "index_players_on_conexus_user_id", unique: true
     t.index ["rating", "wins"], name: "index_players_on_rating_and_wins"
+  end
+
+  create_table "season_ratings", force: :cascade do |t|
+    t.bigint "season_id", null: false
+    t.bigint "player_id", null: false
+    t.float "rating", default: 1500.0, null: false
+    t.float "deviation", default: 350.0, null: false
+    t.float "volatility", default: 0.06, null: false
+    t.float "peak_rating", default: 1500.0, null: false
+    t.integer "wins", default: 0, null: false
+    t.integer "losses", default: 0, null: false
+    t.integer "draws", default: 0, null: false
+    t.datetime "last_match_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["player_id"], name: "index_season_ratings_on_player_id"
+    t.index ["season_id", "player_id"], name: "index_season_ratings_on_season_id_and_player_id", unique: true
+    t.index ["season_id", "rating"], name: "index_season_ratings_on_season_id_and_rating"
+  end
+
+  create_table "seasons", force: :cascade do |t|
+    t.integer "number", null: false
+    t.string "name", null: false
+    t.datetime "starts_at", null: false
+    t.datetime "ends_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["number"], name: "index_seasons_on_number", unique: true
+    t.index ["starts_at", "ends_at"], name: "index_seasons_on_starts_at_and_ends_at"
   end
 
   create_table "solid_cable_messages", force: :cascade do |t|
@@ -275,9 +348,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_000014) do
   end
 
   add_foreign_key "characters", "players", column: "submitted_by_id"
+  add_foreign_key "match_checksums", "matches", on_delete: :cascade
+  add_foreign_key "match_input_chunks", "matches", on_delete: :cascade
+  add_foreign_key "match_reviews", "matches"
+  add_foreign_key "match_reviews", "players", column: "resolved_by_id"
   add_foreign_key "matches", "players", column: "player1_id"
   add_foreign_key "matches", "players", column: "player2_id"
+  add_foreign_key "matches", "seasons"
   add_foreign_key "matchmaking_tickets", "players"
+  add_foreign_key "season_ratings", "players"
+  add_foreign_key "season_ratings", "seasons"
   add_foreign_key "solid_queue_batch_executions", "solid_queue_batches", column: "batch_id", on_delete: :cascade
   add_foreign_key "solid_queue_batch_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

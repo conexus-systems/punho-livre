@@ -60,7 +60,10 @@ bin/ci                          # tudo acima em sequência
 | `CONEXUS_AUTH_CLIENT_ID` / `_SECRET` | reservado (o app mobile é cliente público; a API não troca código) |
 | `ADMIN_GROUPS` | claim `groups` com acesso admin (padrão `mugen-arena-admin,admin`) |
 | `ADMIN_NOTIFY_EMAILS` | moderadores avisados de novas submissões |
-| `RATED_ROOM_MATCHES` | `true` para salas privadas mexerem no Elo (padrão `false`) |
+| `RATED_ROOM_MATCHES` | `true` para salas privadas mexerem no rating (padrão `false`) |
+| `SEASON_LENGTH_DAYS` | duração de cada temporada da ranqueada (padrão `56`); a próxima abre sozinha |
+| `RECONNECT_GRACE_SECONDS` | tolerância para um lado voltar depois de cair no meio da luta (padrão `10`) |
+| `REPLAY_RETENTION_DAYS` | dias que o replay (entradas + checksums) fica guardado sem revisão aberta (padrão `30`) |
 | `DATABASE_HOST/PORT/NAME/USERNAME/PASSWORD`, `PGSSLMODE` | Postgres (nunca `DATABASE_URL`) |
 | `DATABASE_IDLE_TIMEOUT` / `DATABASE_REAPING_FREQUENCY` | pool do Postgres compartilhado (padrão `60`/`30` s) |
 | `RAILS_MAX_THREADS` | threads do Puma (padrão `3`); o pool do AR é `RAILS_MAX_THREADS + JOB_THREADS` |
@@ -85,14 +88,19 @@ Erros: `{ "error": "<code>", "message": "..." }` — `401 invalid_token`, `403 f
 | POST | `/api/v1/characters` | Bearer (`{ pack }` → `201`, status `pending`) |
 | GET | `/api/v1/admin/characters?status=pending` | admin |
 | PATCH | `/api/v1/admin/characters/:slug` | admin (`{ status, premium?, reason? }`) |
-| GET | `/api/v1/leaderboard` | — (top 100) |
+| GET | `/api/v1/leaderboard[?season=N]` | — (top 100 da temporada) |
+| GET | `/api/v1/ranked` | Bearer (rating, liga e posição na temporada) |
 | GET | `/api/v1/matches` | Bearer |
+| GET | `/api/v1/matches/:id/replay` | Bearer (participantes ou admin) |
+| GET / PATCH | `/api/v1/admin/match_reviews` | admin (fila de partidas anuladas/disputadas) |
 | POST | `/conexus/webhooks` | HMAC `X-Conexus-Signature` |
 | WS | `/cable?token=<access_token>` | JWT (conexão recusada sem token válido) |
 
-Canais: `MatchmakingChannel` (fila ranked ±200 de rating, +50 a cada 10 s; salas com código de 6
-caracteres) e `MatchChannel` (relay de `input`/`checksum`, `ready` → `start`, `result` com Elo K=32,
-`ping` → `pong`, `opponent_left` quando alguém sai). Detalhes em `docs/PROTOCOL.md`.
+Canais: `MatchmakingChannel` (fila ranked pela faixa de rating da temporada que alarga com a espera —
+±100, +50 a cada 5 s, qualquer um após 30 s —, só com a mesma `engine_version`; salas com código de 6
+caracteres) e `MatchChannel` (relay de `input`/`checksum`, `input_log`, `ready` → `start`, `result` com
+consenso + Glicko-2, `leave`, `ping` → `pong`, reconexão com `resume`/`resync`). Detalhes em
+`docs/PROTOCOL.md`; desenho e números em `docs/ONLINE.md`.
 
 ### Notas de implementação
 
@@ -106,8 +114,13 @@ caracteres) e `MatchChannel` (relay de `input`/`checksum`, `ready` → `start`, 
 - **Matchmaking**: tickets em `matchmaking_tickets`, pareados com `FOR UPDATE SKIP LOCKED` (seguro
   entre pods). Cada assinatura re-tenta o pareamento a cada 3 s e mantém heartbeat; o job
   recorrente `MatchmakingCleanupJob` remove tickets órfãos e encerra partidas que ninguém iniciou.
-- **Partidas**: inputs não tocam o banco; `ready`/`result`/abandono usam lock da linha da partida.
-  Sair de partida `active` = derrota (Elo) para quem saiu.
+- **Partidas**: o relay de `input` não toca o banco; o registro de entradas (`input_log`, ~1 bloco/s
+  por lado) e os checksums (~1/s por lado) sim. `ready`/`result`/abandono usam lock da linha da partida.
+  `leave` = derrota na hora; queda sem `leave` abre a tolerância de reconexão
+  (`MatchReconnectTimeoutJob`); checksum, entradas ou replay divergentes anulam a partida (`void`) e
+  abrem `match_reviews`.
+- **Ranqueada**: Glicko-2 por temporada (`season_ratings`, `Ratings::Glicko2`), ligas em
+  `Ranked::Leagues`, `players.rating` = rating exibido da temporada atual.
 - **E-mails**: `CharacterSubmittedNotificationJob` (um e-mail para o 1º de `ADMIN_NOTIFY_EMAILS`
   com cópia para os demais, chave `character-submitted-<id>`) e
   `CharacterReviewedNotificationJob` (chave `character-reviewed-<id>-<status>`). Sem

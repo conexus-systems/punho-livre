@@ -2,10 +2,10 @@
 
 # Fila ranked e salas privadas (docs/PROTOCOL.md → MatchmakingChannel).
 #
-# subscribe { mode: "ranked"|"room", room_code?, character, pack_sha256 }
-#   → { type: "queued" } | { type: "room_created", room_code } |
+# subscribe { mode: "ranked"|"room", room_code?, character, pack_sha256, engine_version }
+#   → { type: "queued", rating, league } | { type: "room_created", room_code } |
 #     { type: "matched", match_id, side, seed, input_delay, opponent } |
-#     { type: "error", error: "room_not_found"|"room_full"|"already_queued" }
+#     { type: "error", error: "room_not_found"|"room_full"|"already_queued"|"version_mismatch" }
 # ação `cancel` (ou unsubscribe) → sai da fila / fecha a sala.
 #
 # Cada assinatura escuta um stream próprio ("matchmaking:<token>"): quem
@@ -25,6 +25,7 @@ class MatchmakingChannel < ApplicationCable::Channel
       mode: params[:mode].to_s,
       character: params[:character],
       pack_sha256: params[:pack_sha256],
+      engine_version: params[:engine_version],
       room_code: params[:room_code]
     )
     handle(result)
@@ -53,7 +54,8 @@ class MatchmakingChannel < ApplicationCable::Channel
   def handle(result)
     case result.type
     when :queued
-      transmit({ type: "queued" })
+      standing = SeasonRating.for!(current_player)
+      transmit({ type: "queued", rating: standing.display_rating, league: standing.league.key })
     when :room_created
       transmit({ type: "room_created", room_code: result.room_code })
     when :error

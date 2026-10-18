@@ -9,16 +9,21 @@ module Matchmaking
   # "se cruza" (ambos entram ao mesmo tempo) é resolvido no próximo
   # `try_pair!` periódico do canal.
   #
-  # Ranked: pareia o ticket mais antigo cujo rating esteja dentro da janela
-  # (±200, +50 a cada 10 s de espera; vale a maior janela dos dois).
+  # Ranked: pareia o ticket mais antigo cujo rating (da temporada) esteja
+  # dentro da janela, que alarga com a espera (vale a maior janela dos dois):
+  # ±100, +50 a cada 5 s, e qualquer rating depois de 30 s (meta da fila:
+  # ≤ 30 s). Só pareia a mesma `engine_version` (versões diferentes da engine
+  # dessincronizam).
   class Queue
-    BASE_WINDOW = 200
+    BASE_WINDOW = 100
     WINDOW_STEP = 50
-    STEP_SECONDS = 10
+    STEP_SECONDS = 5
+    OPEN_AFTER_SECONDS = 30
     INPUT_DELAY = 2
     ROOM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".chars.freeze
     ROOM_CODE_LENGTH = 6
     SHA256_FORMAT = /\A\h{64}\z/
+    ENGINE_VERSION_FORMAT = /\A[0-9A-Za-z.+_-]{1,40}\z/
 
     class InvalidParams < StandardError; end
 
@@ -31,7 +36,10 @@ module Matchmaking
     end
 
     class << self
+      # Diferença máxima de rating aceita depois de `waited_seconds` na fila.
       def window_for(waited_seconds)
+        return Float::INFINITY if waited_seconds.to_f >= OPEN_AFTER_SECONDS
+
         BASE_WINDOW + (WINDOW_STEP * (waited_seconds.to_f / STEP_SECONDS).floor)
       end
 
@@ -44,23 +52,31 @@ module Matchmaking
           side: side,
           seed: match.seed,
           input_delay: INPUT_DELAY,
+          engine_version: match.engine_version,
           opponent: {
             display_name: opponent.display_name,
             rating: opponent.rating,
+            league: league_key(match, opponent),
             character: match.character_on(other),
             pack_sha256: other.zero? ? match.p1_pack_sha256 : match.p2_pack_sha256
           }
         }
       end
+
+      def league_key(match, player)
+        record = match.season && SeasonRating.find_by(season: match.season, player: player)
+        record ? record.league.key : Ranked::Leagues::PLACEMENT.key
+      end
     end
 
     # Entrada pelo subscribe do MatchmakingChannel. `token` é o stream do canal.
-    def join(player:, token:, mode:, character:, pack_sha256:, room_code: nil)
-      validate!(mode, character, pack_sha256)
+    def join(player:, token:, mode:, character:, pack_sha256:, engine_version:, room_code: nil)
+      validate!(mode, character, pack_sha256, engine_version)
       MatchmakingTicket.stale.where(player: player).delete_all
       return Result.build(:error, error: "already_queued") if MatchmakingTicket.exists?(player: player)
 
-      entry = { player: player, token: token, character: character, pack_sha256: pack_sha256 }
+      entry = { player: player, token: token, character: character, pack_sha256: pack_sha256,
+                engine_version: engine_version }
       if mode == "ranked"
         join_ranked(**entry)
       elsif room_code.present?
@@ -83,7 +99,7 @@ module Matchmaking
         return nil unless me.mode == "ranked"
 
         candidate = ranked_candidate(player_id: me.player_id, rating: me.rating, since: me.created_at,
-                                     exclude_id: me.id)
+                                     engine_version: me.engine_version, exclude_id: me.id)
         return nil unless candidate
 
         first, second = [ me, candidate ].sort_by { |t| [ t.created_at, t.id ] }
@@ -103,33 +119,37 @@ module Matchmaking
 
     private
 
-    def validate!(mode, character, pack_sha256)
+    def validate!(mode, character, pack_sha256, engine_version)
       raise InvalidParams, "mode must be ranked or room" unless MatchmakingTicket::MODES.include?(mode)
       raise InvalidParams, "character must be a slug" unless character.is_a?(String) && character.match?(Character::SLUG_FORMAT)
       raise InvalidParams, "pack_sha256 must be hex sha256" unless pack_sha256.is_a?(String) && pack_sha256.match?(SHA256_FORMAT)
+      unless engine_version.is_a?(String) && engine_version.match?(ENGINE_VERSION_FORMAT)
+        raise InvalidParams, "engine_version must be a version string"
+      end
     end
 
-    def join_ranked(player:, token:, character:, pack_sha256:)
+    def join_ranked(player:, token:, character:, pack_sha256:, engine_version:)
+      rating = SeasonRating.for!(player).display_rating
       MatchmakingTicket.transaction do
         now = Time.current
-        candidate = ranked_candidate(player_id: player.id, rating: player.rating, since: now)
+        candidate = ranked_candidate(player_id: player.id, rating: rating, since: now, engine_version: engine_version)
+        ticket = new_ticket(player, token, "ranked", character, pack_sha256, engine_version, rating, now)
         if candidate
-          match = create_match(candidate, new_ticket(player, token, "ranked", character, pack_sha256, now), mode: "ranked")
+          match = create_match(candidate, ticket, mode: "ranked")
           candidate.delete
           return Result.build(:matched, match: match, side: 1, notify: [ candidate.token ])
         end
 
-        ticket = new_ticket(player, token, "ranked", character, pack_sha256, now)
         ticket.save!
         Result.build(:queued, ticket: ticket)
       end
     end
 
-    def create_room(player:, token:, character:, pack_sha256:)
+    def create_room(player:, token:, character:, pack_sha256:, engine_version:)
       attempts = 0
       begin
         attempts += 1
-        ticket = new_ticket(player, token, "room", character, pack_sha256, Time.current)
+        ticket = new_ticket(player, token, "room", character, pack_sha256, engine_version, player.rating, Time.current)
         ticket.room_code = generate_room_code
         ticket.save!
         Result.build(:room_created, ticket: ticket, room_code: ticket.room_code)
@@ -141,14 +161,15 @@ module Matchmaking
       end
     end
 
-    def join_room(room_code:, player:, token:, character:, pack_sha256:)
+    def join_room(room_code:, player:, token:, character:, pack_sha256:, engine_version:)
       MatchmakingTicket.transaction do
         host = MatchmakingTicket.where(mode: "room", room_code: room_code).fresh
                                 .lock("FOR UPDATE SKIP LOCKED").first
         return Result.build(:error, error: room_missing_error(room_code)) unless host
         return Result.build(:error, error: "already_queued") if host.player_id == player.id
+        return Result.build(:error, error: "version_mismatch") if host.engine_version != engine_version
 
-        joiner = new_ticket(player, token, "room", character, pack_sha256, Time.current)
+        joiner = new_ticket(player, token, "room", character, pack_sha256, engine_version, player.rating, Time.current)
         match = create_match(host, joiner, mode: "room", room_code: room_code)
         host.delete
         Result.build(:matched, match: match, side: 1, notify: [ host.token ])
@@ -163,24 +184,25 @@ module Matchmaking
       taken ? "room_full" : "room_not_found"
     end
 
-    def ranked_candidate(player_id:, rating:, since:, exclude_id: nil)
+    def ranked_candidate(player_id:, rating:, since:, engine_version:, exclude_id: nil)
       now = Time.current
       # Janela = a maior entre a do candidato (tempo dele na fila) e a minha.
       waited = "GREATEST(EXTRACT(EPOCH FROM (CAST(:now AS timestamp) - created_at)), :mine)"
-      condition = "ABS(rating - :rating) <= :base + :step * FLOOR(#{waited} / :every)"
+      condition = "(#{waited} >= :open_after OR ABS(rating - :rating) <= :base + :step * FLOOR(#{waited} / :every))"
 
-      scope = MatchmakingTicket.fresh.where(mode: "ranked").where.not(player_id: player_id)
+      scope = MatchmakingTicket.fresh.where(mode: "ranked", engine_version: engine_version).where.not(player_id: player_id)
       scope = scope.where.not(id: exclude_id) if exclude_id
       scope.where(condition, now: now, mine: (now - since).to_f, rating: rating, base: BASE_WINDOW,
-                             step: WINDOW_STEP, every: STEP_SECONDS)
+                             step: WINDOW_STEP, every: STEP_SECONDS, open_after: OPEN_AFTER_SECONDS)
            .order(:created_at, :id)
            .lock("FOR UPDATE SKIP LOCKED")
            .first
     end
 
-    def new_ticket(player, token, mode, character, pack_sha256, now)
+    def new_ticket(player, token, mode, character, pack_sha256, engine_version, rating, now)
       MatchmakingTicket.new(player: player, token: token, mode: mode, character: character,
-                            pack_sha256: pack_sha256, rating: player.rating, created_at: now, heartbeat_at: now)
+                            pack_sha256: pack_sha256, engine_version: engine_version, rating: rating,
+                            created_at: now, heartbeat_at: now)
     end
 
     # O ticket mais antigo (quem esperava / dono da sala) é o lado 0.
@@ -189,6 +211,8 @@ module Matchmaking
         status: "waiting",
         mode: mode,
         room_code: room_code,
+        season: Season.current,
+        engine_version: side0.engine_version,
         player1_id: side0.player_id,
         player2_id: side1.player_id,
         p1_character: side0.character,

@@ -23,7 +23,7 @@ import { FightRenderer } from "@/src/game/renderer";
 import { STAGES } from "@/src/game/stages";
 import { audio } from "@/src/audio";
 import { matchSetup } from "@/src/match";
-import { joinMatch, onlineStore, type OnlineMatchHandle } from "@/src/net/online";
+import { joinMatch, onlineBanner, onlineStore, type OnlineMatchHandle } from "@/src/net/online";
 import type { RollbackSession } from "@/src/net/rollback";
 import { onMatchFinished, showRewarded } from "@/src/services/ads";
 import { fetchMe } from "@/src/services/api";
@@ -106,6 +106,8 @@ export default function Fight() {
   const finished = onlineStore.use((s) => s.finished);
   const opponentLeft = onlineStore.use((s) => s.opponentLeft);
   const ping = onlineStore.use((s) => s.ping);
+  const voided = onlineStore.use((s) => s.voided);
+  const connectionLost = onlineStore.use((s) => s.connectionLost);
 
   const assists = useMemo(() => assistsFor(localChar), [localChar]);
   const assistButtons: AssistButton[] = [
@@ -170,8 +172,8 @@ export default function Fight() {
     const local = macro.current.next() ?? inputRef.current;
     const session = sessionRef.current;
     if (session) {
-      // se estivermos muito à frente do oponente, segura um frame de vez em quando
-      if (session.framesAhead > 6 && session.world.frame % 4 === 0) return;
+      // se estivermos muito à frente do oponente, segura um tick de vez em quando
+      if (session.syncSkip()) return;
       session.advance(local);
       renderer.current.addEvents(session.events, session.world, roster);
       audio.update(session.world, session.events, roster);
@@ -215,7 +217,7 @@ export default function Fight() {
         width,
         height,
         debugBoxes,
-        banner: sessionRef.current?.stats.desync ? "DESSINCRONIA" : null,
+        banner: online ? onlineBanner(sessionRef.current) : null,
       });
       picture.value = rec.finishRecordingAsPicture();
 
@@ -225,14 +227,16 @@ export default function Fight() {
         setPower(me.power);
         setMaxReady(me.power >= 1000 && me.maxTime === 0 && me.ctrl);
         setLocalChar(me.charId);
-        if (w.matchWinner >= 0 && w.roundStateTime > 120 && !reported.current) {
+        // online: só o estado confirmado (o previsto ainda pode mudar com rollback)
+        const rw = sessionRef.current?.confirmedWorld ?? w;
+        if (rw.matchWinner >= 0 && rw.roundStateTime > 120 && !reported.current) {
           reported.current = true;
-          if (w.matchWinner === 0 || w.matchWinner === 1) {
-            const char = w.fighters[w.matchWinner].charId;
+          if (rw.matchWinner === 0 || rw.matchWinner === 1) {
+            const char = rw.fighters[rw.matchWinner].charId;
             setWinner({ char, quote: pickQuote(char) });
           }
-          onlineRef.current?.reportResult(w.matchWinner === 2 ? null : w.matchWinner);
-          setResult({ winner: w.matchWinner });
+          onlineRef.current?.reportResult(rw.matchWinner === 2 ? null : rw.matchWinner);
+          setResult({ winner: rw.matchWinner });
         }
       }
     };
@@ -351,6 +355,17 @@ export default function Fight() {
       {opponentLeft && !result ? (
         <Overlay t={t} title="OPONENTE SAIU">
           <Text style={[TYPE.BODY, { color: t.text }]}>Vitória por abandono.</Text>
+          <MetroButton kind="primary" label="Menu" onPress={() => void leave("menu")} />
+        </Overlay>
+      ) : null}
+
+      {online && (voided || connectionLost) && !opponentLeft ? (
+        <Overlay t={t} title={voided ? "PARTIDA ANULADA" : "CONEXÃO PERDIDA"}>
+          <Text style={[TYPE.BODY, { color: t.text }]}>
+            {voided
+              ? "Os dois aparelhos divergiram (checksum). A partida não conta e foi enviada para revisão."
+              : "Não deu para reconectar a tempo: derrota por abandono."}
+          </Text>
           <MetroButton kind="primary" label="Menu" onPress={() => void leave("menu")} />
         </Overlay>
       ) : null}

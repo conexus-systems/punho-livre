@@ -11,5 +11,6 @@ FactoryBot.define do
     p1_pack_sha256 { "a" * 64 }
     p2_pack_sha256 { "b" * 64 }
     seed { 12_345 }
+    engine_version { "0.4.0+net2" }
   end
 end

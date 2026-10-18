@@ -5,6 +5,6 @@ FactoryBot.define do
     conexus_user_id { SecureRandom.uuid }
     sequence(:display_name) { |n| "Lutador #{n}" }
     sequence(:email) { |n| "lutador#{n}@example.com" }
-    rating { 1000 }
+    rating { 1500 }
   end
 end
