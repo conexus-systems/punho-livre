@@ -3,7 +3,7 @@ import type { ExpoConfig } from "expo/config";
 const config: ExpoConfig = {
   name: "MUGEN Arena",
   slug: "mugen-arena",
-  version: "0.4.0",
+  version: "0.5.0",
   orientation: "landscape",
   userInterfaceStyle: "dark",
   scheme: ["br.com.conexus.mugenarena", "mugenarena"],
