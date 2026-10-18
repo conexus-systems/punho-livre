@@ -27,10 +27,10 @@ teste em aparelho.*
   pulo curto, corrida, rolamento (A+B), blowback (C+D), arremesso com escape, guard cancel, Just Defend,
   contra-ataque, guard crush, 3 estoques de power, modo MAX e super turbinado, e **equipes 3×3**.
   Determinístico, vale no online. Ver [docs/UPDATE_0.2.0.md](docs/UPDATE_0.2.0.md).
-- **8 personagens originais** (sem IP de terceiros): Kaze, Brasa, Titã, Yuki, Volt, Sombra, Kenshi
-  (espadachim) e Lua (muay thai), cada um com 14 golpes normais, 3 especiais, 1 super e as animações do
-  sistema, escritos no formato MUGEN (`mobile/characters/<id>/`), com sprites pintados com Skia a partir de um rig esquelético (`scripts/roster/paint.mjs`).
-- **3 cenários pintados em camadas com paralaxe** (dojo ao entardecer, Pelourinho, metrópole à noite), com plateia — `scripts/stages/paint-stages.mjs`.
+- **20 personagens originais** (sem IP de terceiros), cada um com 14 golpes normais, 4 especiais,
+  2 supers e as animações do sistema, escritos no formato MUGEN (`mobile/characters/<id>/`), com sprites pintados com Skia a partir de um rig esquelético (`scripts/roster/paint.mjs`).
+- **8 cenários pintados em camadas com paralaxe** (dojo, Pelourinho, metrópole, praia, ruínas da Amazônia,
+  heliponto, templo na neve, octógono), com plateia, e **som gerado por código** (efeitos e uma trilha por cenário) — `scripts/stages/paint-stages.mjs`.
 - **Adicionar personagens**: `npm run pack` converte uma pasta de personagem MUGEN
   (incluindo `.sff` v1/v2 e paleta `.act`) num pack e envia ao backend; após aprovação
   de um admin ele aparece no catálogo do app para download. Ver [docs/CHARACTERS.md](docs/CHARACTERS.md).
@@ -106,7 +106,7 @@ Mesma stack de app da frota (conexus-launcher, multi-miner), adaptada a jogo mul
 | Infra | `platform-infra` (workflows reutilizáveis, GHCR, Terraform LKE em `deploy/terraform/linode`), EAS |
 | Processo | `AGENTS.md`, `HANDOFF.md`, `SKILL.md` + `agents/` + `templates/TASK.md`, `docs/UPDATE_X.Y.Z.md`, release por tag |
 
-Versão atual: **0.3.1** (arte nova, animação e impacto) — notas em [docs/UPDATE_0.3.0.md](docs/UPDATE_0.3.0.md) e [docs/UPDATE_0.2.0.md](docs/UPDATE_0.2.0.md) (sistema SNK).
+Versão atual: **0.4.0** (20 lutadores, 8 cenários, som e compatibilidade MUGEN ampliada) — notas em [docs/UPDATE_0.4.0.md](docs/UPDATE_0.4.0.md); antes: arte nova — notas em [docs/UPDATE_0.3.0.md](docs/UPDATE_0.3.0.md) e [docs/UPDATE_0.2.0.md](docs/UPDATE_0.2.0.md) (sistema SNK).
 
 ## CI e deploy
 
@@ -139,8 +139,8 @@ Cadastro necessário nos BFFs (feito por quem opera a plataforma) — ver
 
 ## Limitações conhecidas
 
-- Compatibilidade MUGEN é um **subconjunto**: sem Helpers, Explods visuais, sons (.snd),
-  arremessos com `p2stateno`/Target*, juggle points e cenários/screenpacks do MUGEN.
+- Compatibilidade MUGEN é um **subconjunto** (já com Helper, Explod, sons `.snd` e arremessos com
+  `p2stateno`/Target*); faltam juggle points, AfterImage, PalFX e cenários/screenpacks do MUGEN.
   Controladores não suportados são ignorados e listados ao carregar. Detalhes em
   [docs/CHARACTERS.md](docs/CHARACTERS.md).
 - O app não foi executado em aparelho/emulador neste ambiente: a engine, o rollback,

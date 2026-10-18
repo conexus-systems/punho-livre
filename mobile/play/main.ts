@@ -17,6 +17,9 @@ import { FightRenderer } from "@/src/game/renderer";
 import { STAGES } from "@/src/game/stages";
 import { STAGE_ART } from "@/src/game/stages.generated";
 
+import { AudioDirector } from "@/src/audio/director";
+import { WebAudio } from "@/src/audio/web";
+
 import { Canvas2D } from "./skia-canvas2d";
 
 type Mode = "arcade" | "versus" | "training" | "team";
@@ -90,6 +93,30 @@ function drawPortrait(canvas: HTMLCanvasElement, id: string, flip = false) {
   ctx.restore();
 }
 
+// ------------------------------------------------------------- áudio
+
+const webAudio = new WebAudio();
+let soundOn = true;
+try {
+  soundOn = localStorage.getItem("mugen-arena.sound") !== "off";
+} catch {
+  // sem armazenamento: som ligado
+}
+const audio = new AudioDirector(webAudio, { music: soundOn, sfx: soundOn });
+// o navegador só libera o áudio depois de um toque/tecla
+for (const ev of ["pointerdown", "keydown"]) window.addEventListener(ev, () => webAudio.unlock(), { passive: true });
+
+function setSound(on: boolean) {
+  soundOn = on;
+  audio.setPrefs({ music: on, sfx: on });
+  try {
+    localStorage.setItem("mugen-arena.sound", on ? "on" : "off");
+  } catch {
+    // ignora
+  }
+  if (on && fight) audio.startMusic(fight.world.stageId);
+}
+
 // ------------------------------------------------------------ estado
 
 const state = {
@@ -107,6 +134,7 @@ const state = {
 };
 
 function show(screen: "menu" | "select" | "fight") {
+  if (screen !== "fight") audio.stopMusic();
   $("menu").hidden = screen !== "menu";
   $("select").hidden = screen !== "select";
   $("fight").hidden = screen !== "fight";
@@ -287,6 +315,7 @@ window.addEventListener("keydown", (e) => {
   }
   if (/^Digit[1-9]$/.test(e.code)) assist(Number(e.code.slice(5)) - 1);
   if (e.code === "Escape" || e.code === "KeyP") togglePause();
+  if (e.code === "KeyN") setSound(!soundOn);
   if (e.code === "KeyB" && fight?.mode === "training") debugBoxes = !debugBoxes;
 });
 window.addEventListener("keyup", (e) => held.delete(e.code));
@@ -463,6 +492,9 @@ function startFight() {
   renderAssists();
   show("fight");
   resize();
+  webAudio.unlock();
+  audio.stopMusic();
+  audio.startMusic(stageId);
 }
 
 const MAX_MACRO = [Btn.x | Btn.a | Btn.z, Btn.x | Btn.a | Btn.z, Btn.x | Btn.a | Btn.z, 0];
@@ -484,6 +516,7 @@ function assist(i: number) {
 function togglePause() {
   if (!fight || fight.over) return;
   paused = !paused;
+  audio.duck(paused);
   showPanel(paused ? "pause" : null);
 }
 
@@ -515,6 +548,10 @@ function showPanel(kind: "pause" | "result" | null, title = "", quote: { name: s
   $("panel-title").textContent = kind === "pause" ? "pausa" : title.toLowerCase();
   if (kind === "pause") {
     add("Continuar", true, togglePause).focus();
+    add(soundOn ? "Som: ligado" : "Som: desligado", false, () => {
+      setSound(!soundOn);
+      showPanel("pause");
+    });
     if (fight.mode === "training") add(debugBoxes ? "Esconder caixas" : "Mostrar caixas", false, () => {
       debugBoxes = !debugBoxes;
       togglePause();
@@ -606,6 +643,7 @@ function frame(t: number) {
       const cpu = fight.cpu ? fight.cpu.next(w) : 0;
       stepWorld(w, [local, cpu], roster);
       fight.renderer.addEvents(w.events, w, roster);
+      audio.update(w, w.events, roster);
     }
     acc -= STEP;
     steps++;

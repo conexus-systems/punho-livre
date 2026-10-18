@@ -53,6 +53,8 @@ export default function Settings() {
                 onChange={(v) => setSetting("assist", v)}
               />
               <MetroToggle label="Vibração" description="Toque nos botões da luta." value={settings.vibration} onChange={(v) => setSetting("vibration", v)} />
+              <MetroToggle label="Música" description="Uma trilha para cada cenário." value={settings.music} onChange={(v) => setSetting("music", v)} />
+              <MetroToggle label="Efeitos sonoros" description="Golpes, defesa, K.O. e anúncios." value={settings.sfx} onChange={(v) => setSetting("sfx", v)} />
               <MetroGroup title="Botões" />
               <MetroCheck
                 kind="radio"
@@ -116,7 +118,7 @@ export default function Settings() {
                 title="Sistema de luta"
                 secondary="Inspirado nos jogos da SNK: rolamento, blowback, arremesso com escape, guard cancel, Just Defend, guard crush, modo MAX e equipes 3×3. Personagens e arte originais."
               />
-              <MetroRow title="Elenco nativo" secondary="Kaze, Brasa, Titã, Yuki, Volt, Sombra, Kenshi e Lua — personagens originais da CONEXUS." />
+              <MetroRow title="Elenco nativo" secondary="20 lutadores originais da CONEXUS, de Kaze a Kai." />
               <MetroRow title="Conta, pagamentos e mensagens" secondary="Plataforma CONEXUS (bff-auth, bff-payment, bff-api)." />
               <MetroRow title="Anúncios" secondary="Google AdMob. Premium remove os anúncios." />
             </>

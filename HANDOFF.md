@@ -1,6 +1,6 @@
 # Handoff — MUGEN Arena
 
-Data: 18/10/2026. Versão **0.3.1** (arte nova + animação e impacto, `docs/UPDATE_0.3.0.md`; sistema SNK em `docs/UPDATE_0.2.0.md`). Branch de trabalho: `ccr-0c9af399-ubmxeu` em `tantoniazi/mugen`
+Data: 18/10/2026. Versão **0.4.0** (`docs/UPDATE_0.4.0.md`: 20 lutadores, 8 cenários, som, compatibilidade MUGEN). Branch de trabalho: `ccr-0c9af399-ubmxeu` em `tantoniazi/mugen`
 (privado). O repositório definitivo deve ser `conexus-systems/mugen-arena` (privado) — a criação na org foi
 negada à integração e precisa ser feita por um admin.
 

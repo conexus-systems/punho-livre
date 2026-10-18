@@ -7,6 +7,7 @@ import * as WebBrowser from "expo-web-browser";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { MetroProgress } from "@/components/metro";
+import { initAudio } from "@/src/audio";
 import { initRegistry } from "@/src/characters/registry";
 import { fetchMe } from "@/src/services/api";
 import { initAds } from "@/src/services/ads";
@@ -28,6 +29,7 @@ export default function RootLayout() {
     (async () => {
       await Promise.all([bootSkia(), loadTheme(), loadSettings(), restoreSession(), initRegistry()]);
       setBooted(true);
+      void initAudio();
       if (app.get().session) {
         // perfil (backend) e premium (bff-payment) em paralelo; falha de rede não bloqueia o jogo offline
         await Promise.allSettled([fetchMe(), refreshEntitlements()]);

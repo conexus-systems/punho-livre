@@ -73,6 +73,9 @@ Suportado:
   substitutas (agachado para o rolamento, 240/250 para o blowback, 640/630 no ar, 800 para o arremesso).
   A entrada vem de `src/engine/snk.ts`: A = x, B = a, C = z, D = c.
 
-Ainda não suportado: Helper, Explod visível, sons `.snd`, arremessos próprios do personagem (`p2stateno`,
-TargetState, TargetBind), juggle points, AssertSpecial com efeito, cenários/screenpacks
+Suportado desde a 0.4.0: Helper (com DestroySelf, BindToParent, ParentVar*), Explod (Remove/Modify), PlaySnd e
+sons do `.snd` (convertidos pelo `npm run pack`), arremessos com `p2stateno`/estados personalizados, ChangeAnim2,
+SelfState e Target* (State, Bind, LifeAdd, Facing, VelSet/Add, PowerAdd, Drop).
+
+Ainda não suportado: juggle points, AfterImage, PalFX, EnvShake, AssertSpecial com efeito, cenários/screenpacks
 do MUGEN, paletas além da escolhida no pack.

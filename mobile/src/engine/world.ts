@@ -7,6 +7,7 @@
 import { advanceAnim, contactPoint, currentFrame, overlap, resetAnim, worldBox } from "./anim";
 import { getAnim } from "./character";
 import {
+  GROUND_Y,
   GUARD_MAX,
   GUARD_REGEN_DELAY,
   INTRO_FRAMES,
@@ -25,6 +26,7 @@ import {
   advanceFighterAnim,
   buildHitDef,
   changeAnim,
+  animCharOf,
   changeState,
   emptyGetHit,
   faceOpponent,
@@ -55,6 +57,7 @@ import type {
   Box,
   CharacterData,
   Controller,
+  ExplodState,
   FighterState,
   HitDefState,
   MatchConfig,
@@ -115,6 +118,13 @@ function createFighter(side: 0 | 1, ch: CharacterData): FighterState {
     guardMeter: GUARD_MAX,
     guardRegenDelay: 0,
     throwDir: 0,
+    customOwner: -1,
+    animOwner: -1,
+    hasTarget: false,
+    bindTime: 0,
+    bindX: 0,
+    bindY: 0,
+    helper: null,
   };
 }
 
@@ -146,6 +156,9 @@ export function createWorld(cfg: MatchConfig, roster: Roster): WorldState {
     events: [],
     stageId: cfg.stageId,
     teams: teams ? [{ members: teams[0], index: 0 }, { members: teams[1], index: 0 }] : null,
+    explods: [],
+    helpers: [],
+    nextUid: 1,
   };
   return w;
 }
@@ -185,7 +198,150 @@ function makeRunner(w: WorldState, roster: Roster): StateRunner {
       resetAnim(pr, anim, ch.anims[anim]);
       w.projectiles.push(pr);
     },
+
+    spawnHelper(p: FighterState, c: Controller, ctx: FighterCtx) {
+      if (w.helpers.filter((h) => h.side === p.side).length >= MAX_HELPERS) return;
+      const ch = roster[p.charId];
+      const h = createFighter(p.side, ch);
+      const root = w.fighters[p.side];
+      h.helper = { id: paramValue(c, "id", ctx, 0, 0), uid: w.nextUid++ };
+      const at = place(w, p, (c.raw["postype"] ?? "p1").trim().toLowerCase(), paramValue(c, "pos", ctx, 0, 0), paramValue(c, "pos", ctx, 1, 0));
+      h.x = at.x;
+      h.y = at.y;
+      h.facing = (paramValue(c, "facing", ctx, 0, 1) >= 0 ? p.facing : -p.facing) as 1 | -1;
+      h.life = root.life;
+      h.lifeMax = root.lifeMax;
+      h.ctrl = false;
+      w.helpers.push(h);
+      changeState(h, w, roster, paramValue(c, "stateno", ctx, 0, 0));
+    },
+
+    spawnExplod(p: FighterState, c: Controller, ctx: FighterCtx) {
+      const raw = (c.raw["anim"] ?? "").trim();
+      if (!raw || /^f/i.test(raw)) return; // animações comuns do fight.def: não temos
+      if (w.explods.length >= MAX_EXPLODS) return;
+      const ch = roster[p.charId];
+      const anim = paramValue(c, "anim", ctx, 0, -1);
+      if (!ch.anims[anim]) return;
+      const postype = (c.raw["postype"] ?? "p1").trim().toLowerCase();
+      const offX = paramValue(c, "pos", ctx, 0, 0);
+      const offY = paramValue(c, "pos", ctx, 1, 0);
+      const at = place(w, p, postype, offX, offY);
+      const facing = (paramValue(c, "facing", ctx, 0, 1) >= 0 ? p.facing : -p.facing) as 1 | -1;
+      const bindTo = postype === "p2" ? opponentOf(w, p).side : postype === "p1" ? p.side : -1;
+      const trans = (c.raw["trans"] ?? "").trim().toLowerCase();
+      const e: ExplodState = {
+        uid: w.nextUid++,
+        id: paramValue(c, "id", ctx, 0, -1),
+        owner: p.side,
+        charId: p.charId,
+        anim,
+        animElem: 0,
+        animElemTime: 0,
+        animTick: 0,
+        x: at.x,
+        y: at.y,
+        vx: paramValue(c, "vel", ctx, 0, 0) * facing,
+        vy: paramValue(c, "vel", ctx, 1, 0),
+        ax: paramValue(c, "accel", ctx, 0, 0) * facing,
+        ay: paramValue(c, "accel", ctx, 1, 0),
+        facing,
+        bindTo,
+        bindTime: bindTo >= 0 ? paramValue(c, "bindtime", ctx, 0, 0) : 0,
+        offX: offX * (postype === "p2" ? opponentOf(w, p).facing : p.facing),
+        offY,
+        removeTime: paramValue(c, "removetime", ctx, 0, -2),
+        age: 0,
+        onTop: paramValue(c, "ontop", ctx, 0, 0) !== 0 || paramValue(c, "sprpriority", ctx, 0, 0) > 0,
+        scaleX: paramValue(c, "scale", ctx, 0, 1),
+        scaleY: paramValue(c, "scale", ctx, 1, 1),
+        removeOnGetHit: paramValue(c, "removeongethit", ctx, 0, 0) !== 0,
+        additive: trans.startsWith("add"),
+      };
+      resetAnim(e, anim, ch.anims[anim]);
+      w.explods.push(e);
+    },
   };
+}
+
+const MAX_HELPERS = 24;
+const MAX_EXPLODS = 64;
+
+/** Posição de um Explod/Helper pelo `postype` do MUGEN. */
+function place(w: WorldState, p: FighterState, postype: string, x: number, y: number): { x: number; y: number } {
+  const half = SCREEN_W / 2;
+  switch (postype) {
+    case "p2": {
+      const o = opponentOf(w, p);
+      return { x: o.x + x * o.facing, y: o.y + y };
+    }
+    case "front":
+      return { x: (p.facing === 1 ? w.cameraX + half : w.cameraX - half) + x * p.facing, y: -GROUND_Y + y };
+    case "back":
+      return { x: (p.facing === 1 ? w.cameraX - half : w.cameraX + half) + x * p.facing, y: -GROUND_Y + y };
+    case "left":
+      return { x: w.cameraX - half + x, y: -GROUND_Y + y };
+    case "right":
+      return { x: w.cameraX + half + x, y: -GROUND_Y + y };
+    default:
+      return { x: p.x + x * p.facing, y: p.y + y };
+  }
+}
+
+/** Explods: animação, movimento, presos ao lutador e remoção. */
+function updateExplods(w: WorldState, roster: Roster): void {
+  if (w.explods.length === 0) return;
+  const keep: ExplodState[] = [];
+  for (const e of w.explods) {
+    const anim = getAnim(roster[e.charId], e.anim);
+    e.age++;
+    advanceAnim(e, anim);
+    if (e.bindTime !== 0 && e.bindTo >= 0) {
+      const f = w.fighters[e.bindTo];
+      e.x = f.x + e.offX;
+      e.y = f.y + e.offY;
+      if (e.bindTime > 0) e.bindTime--;
+    } else {
+      e.x += e.vx;
+      e.y += e.vy;
+      e.vx += e.ax;
+      e.vy += e.ay;
+    }
+    const done = e.removeTime === -2 ? !anim.infinite && e.age >= anim.totalTime : e.removeTime >= 0 && e.age >= e.removeTime;
+    if (!done) keep.push(e);
+  }
+  w.explods = keep;
+}
+
+/** TargetBind / BindToParent: prende o lutador (ou helper) ao oponente (ou ao pai). */
+function applyBinds(w: WorldState): void {
+  for (const p of [...w.fighters, ...w.helpers]) {
+    if (p.bindTime === 0) continue;
+    const anchor = p.helper ? w.fighters[p.side] : opponentOf(w, p);
+    p.x = anchor.x + p.bindX * anchor.facing;
+    p.y = anchor.y + p.bindY;
+    if (p.bindTime > 0) p.bindTime--;
+  }
+}
+
+/** Helpers: rodam os próprios estados (sem os comandos -1), física e animação. */
+function runHelpers(w: WorldState, roster: Roster, runner: StateRunner): void {
+  if (w.helpers.length === 0) return;
+  for (const h of [...w.helpers]) {
+    if (h.hitPause > 0) {
+      h.hitPause--;
+      continue;
+    }
+    if (h.notHitBy > 0) h.notHitBy--;
+    for (let guard = 0; guard < 16; guard++) {
+      if (!runStateDef(h, h.stateNo, w, roster, runner) || (h.helper?.uid ?? 0) < 0) break;
+    }
+    if ((h.helper?.uid ?? 0) < 0) continue;
+    physicsAndMove(h, w, roster);
+    advanceFighterAnim(h, animCharOf(w, roster, h));
+    tickCounters(h);
+  }
+  w.helpers = w.helpers.filter((h) => (h.helper?.uid ?? 0) >= 0);
 }
 
 function updateProjectiles(w: WorldState, roster: Roster): void {
@@ -292,6 +448,10 @@ function applyHit(
 ): void {
   const defCh = roster[def.charId];
   const wasHit = def.moveType === "H";
+  // apanhar devolve aos próprios estados e solta qualquer TargetBind
+  def.customOwner = -1;
+  def.bindTime = 0;
+  if (w.explods.length) w.explods = w.explods.filter((e) => !(e.owner === def.side && e.removeOnGetHit));
   if (fromProjectile) def.facing = fromProjectile.facing === 1 ? -1 : 1;
   else faceOpponent(def, att);
 
@@ -338,6 +498,7 @@ function applyHit(
     addPower(att, hd.getPower / 2);
     addPower(def, jd ? 40 : hd.givePower / 2);
     w.events.push({ kind: "guard", x: at.x, y: at.y, side: att.side, level: hd.sparkLevel, frame: w.frame });
+    if (hd.guardSound) w.events.push({ kind: "sound", x: at.x, y: at.y, side: att.side, level: 0, frame: w.frame, snd: [hd.guardSound[0], hd.guardSound[1]], common: hd.guardSound[2], charId: att.charId });
     if (jd) w.events.push({ kind: "justdefend", x: def.x, y: def.y - 70, side: def.side, level: 0, frame: w.frame });
     if (crush) w.events.push({ kind: "guardcrush", x: def.x, y: def.y - 70, side: def.side, level: 2, frame: w.frame });
     if (def.life <= 0) w.events.push({ kind: "ko", x: def.x, y: def.y, side: def.side, level: 2, frame: w.frame });
@@ -409,7 +570,15 @@ function applyHit(
   addPower(att, hd.getPower);
   addPower(def, hd.givePower * 0.6);
 
+  if (!fromProjectile) att.hasTarget = true;
   if (!fromProjectile && hd.p1StateNo >= 0) changeState(att, w, roster, hd.p1StateNo);
+  // arremesso do MUGEN: o oponente passa a rodar um estado do atacante
+  if (!fromProjectile && hd.p2StateNo >= 0 && def.life > 0) {
+    def.customOwner = att.side;
+    changeState(def, w, roster, hd.p2StateNo);
+    if (hd.p2Facing !== 0) def.facing = (hd.p2Facing > 0 ? -att.facing : att.facing) as 1 | -1;
+  }
+  if (hd.hitSound) w.events.push({ kind: "sound", x: at.x, y: at.y, side: att.side, level: 0, frame: w.frame, snd: [hd.hitSound[0], hd.hitSound[1]], common: hd.hitSound[2], charId: att.charId });
 
   w.events.push({ kind: "hit", x: at.x, y: at.y, side: att.side, level: hd.sparkLevel, frame: w.frame });
   if (counter) w.events.push({ kind: "counter", x: def.x, y: def.y - 70, side: att.side, level: 0, frame: w.frame });
@@ -421,13 +590,16 @@ function detectHits(w: WorldState, roster: Roster): void {
   type Pending = { att: FighterState; def: FighterState; hd: HitDefState; at: { x: number; y: number } };
   const pending: Pending[] = [];
 
-  for (const [att, def] of [
+  // lutadores e helpers atacam o lutador do outro lado
+  const attackers: [FighterState, FighterState][] = [
     [p0, p1],
     [p1, p0],
-  ] as const) {
+  ];
+  for (const h of w.helpers) attackers.push([h, opponentOf(w, h)]);
+  for (const [att, def] of attackers) {
     if (!att.hitDefActive || !att.hitDef || def.notHitBy > 0) continue;
     if (!hitFlagAllows(att.hitDef, def)) continue;
-    const at = firstContact(fighterBoxes(att, roster[att.charId], 1), fighterBoxes(def, roster[def.charId], 2));
+    const at = firstContact(fighterBoxes(att, animCharOf(w, roster, att), 1), fighterBoxes(def, animCharOf(w, roster, def), 2));
     if (at) pending.push({ att, def, hd: att.hitDef, at });
   }
   // aplicar depois de checar os dois lados: golpes simultâneos trocam (trade)
@@ -454,7 +626,7 @@ function detectHits(w: WorldState, roster: Roster): void {
     const att = w.fighters[pr.owner];
     const def = opponentOf(w, att);
     if (def.notHitBy > 0 || !hitFlagAllows(pr.hitDef, def)) continue;
-    const at = firstContact(projectileBoxes(pr, roster, w), fighterBoxes(def, roster[def.charId], 2));
+    const at = firstContact(projectileBoxes(pr, roster, w), fighterBoxes(def, animCharOf(w, roster, def), 2));
     if (!at) continue;
     applyHit(w, roster, att, def, pr.hitDef, at, pr);
     finishProjectile(pr, roster, w);
@@ -614,6 +786,8 @@ function resetRound(w: WorldState, roster: Roster, keepLife: readonly [boolean, 
   w.roundStateTime = 0;
   w.roundWinner = -1;
   w.projectiles = [];
+  w.explods = [];
+  w.helpers = [];
   w.superPause = 0;
   w.cameraX = 0;
   w.timer = w.roundTicks;
@@ -781,10 +955,13 @@ export function stepWorld(w: WorldState, inputs: readonly [number, number], rost
       continue;
     }
     physicsAndMove(p, w, roster);
-    advanceFighterAnim(p, roster[p.charId]);
+    advanceFighterAnim(p, animCharOf(w, roster, p));
     tickCounters(p);
   }
 
+  runHelpers(w, roster, runner);
+  applyBinds(w);
+  updateExplods(w, roster);
   updateProjectiles(w, roster);
   separate(w, roster);
   clampPositions(w);

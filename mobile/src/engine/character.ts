@@ -21,6 +21,8 @@ export interface CharacterPack {
   def: string;
   files: Record<string, string>;
   sprites: SpriteSheet | null;
+  /** Sons do .snd convertidos ("grupo,índice" → data URI WAV), opcional. */
+  sounds?: Record<string, string> | null;
 }
 
 export class PackError extends Error {}
@@ -160,6 +162,7 @@ export function loadCharacter(pack: CharacterPack): CharacterData {
     style: parseStyle(defSections),
     sprites: pack.sprites,
     unsupported: parsed.unsupported.filter((t) => !COSMETIC_CONTROLLERS.has(t)),
+    sounds: pack.sounds ?? null,
   };
 }
 

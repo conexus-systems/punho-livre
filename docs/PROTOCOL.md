@@ -75,6 +75,9 @@ aprovada; pendentes antigas do mesmo slug viram `rejected`). Submeter um `id` de
 `sprites.scale` (opcional, padrão 1) = pixels do atlas por unidade do MUGEN; `sprites.atlas` pode ser uma lista de
 páginas e cada frame pode ter um 7º número com o índice da página.
 
+`sounds` (opcional, desde a 0.4.0): `{ "<grupo>,<índice>": "data:audio/wav;base64,..." }` com os sons do `.snd`
+usados pelos estados (PlaySnd, hitsound, guardsound). Packs sem esse campo continuam válidos.
+
 ## Online — ActionCable
 
 URL: `wss://<host>/cable?token=<access_token>` (conexão recusada sem JWT válido).

@@ -21,6 +21,7 @@ import type { StageImages } from "@/src/game/stages";
 import { findCommand, macroFromCommand, MacroPlayer, motionCommands } from "@/src/game/macros";
 import { FightRenderer } from "@/src/game/renderer";
 import { STAGES } from "@/src/game/stages";
+import { audio } from "@/src/audio";
 import { matchSetup } from "@/src/match";
 import { joinMatch, onlineStore, type OnlineMatchHandle } from "@/src/net/online";
 import type { RollbackSession } from "@/src/net/rollback";
@@ -153,9 +154,12 @@ export default function Fight() {
         }
       }
       setLoading(false);
+      const startWorld = sessionRef.current?.world ?? worldRef.current;
+      if (startWorld) audio.startMusic(startWorld.stageId);
     })();
     return () => {
       cancelled = true;
+      audio.stopMusic();
       void onlineRef.current?.leave();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -170,6 +174,7 @@ export default function Fight() {
       if (session.framesAhead > 6 && session.world.frame % 4 === 0) return;
       session.advance(local);
       renderer.current.addEvents(session.events, session.world, roster);
+      audio.update(session.world, session.events, roster);
       return;
     }
     const w = worldRef.current;
@@ -177,6 +182,7 @@ export default function Fight() {
     const p2Input = cpu.current ? cpu.current.next(w) : 0;
     stepWorld(w, [local, p2Input], roster);
     renderer.current.addEvents(w.events, w, roster);
+    audio.update(w, w.events, roster);
   }, [roster]);
 
   useEffect(() => {
@@ -254,10 +260,12 @@ export default function Fight() {
   const setPause = (v: boolean) => {
     pausedRef.current = v;
     setPaused(v);
+    audio.duck(v);
   };
 
   // ---------------------------------------------------------- fim de luta
   const leave = async (to: "menu" | "rematch" | "select" | "next") => {
+    audio.stopMusic();
     await onlineRef.current?.leave();
     await onMatchFinished();
     if (online) void fetchMe().catch(() => undefined);

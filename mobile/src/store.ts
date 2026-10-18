@@ -58,6 +58,8 @@ export interface AppState {
     inputDelay: number;
     /** Botões da luta: 4 do padrão SNK (A B C D + A+B e C+D) ou os 6 do MUGEN. */
     buttons: "snk" | "mugen";
+    music: boolean;
+    sfx: boolean;
   };
 }
 
@@ -66,5 +68,5 @@ export const app = createStore<AppState>({
   player: null,
   premium: false,
   matchesSinceAd: 0,
-  settings: { assist: true, vibration: true, difficulty: 2, inputDelay: 2, buttons: "snk" },
+  settings: { assist: true, vibration: true, difficulty: 2, inputDelay: 2, buttons: "snk", music: true, sfx: true },
 });

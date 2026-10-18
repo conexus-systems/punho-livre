@@ -152,6 +152,8 @@ export interface CharacterData {
   sprites: SpriteSheet | null;
   /** Controladores não suportados encontrados ao carregar (para diagnóstico). */
   unsupported: string[];
+  /** Sons do personagem ("grupo,índice" → URL/data URI do WAV), se o pack trouxer. */
+  sounds: Record<string, string> | null;
 }
 
 // ------------------------------------------------------------ estado vivo
@@ -218,6 +220,13 @@ export interface HitDefState {
   guardKill: boolean;
   /** Intensidade visual do impacto 0..2 (light/medium/hard). */
   sparkLevel: number;
+  /** Estado personalizado do oponente ao acertar (arremessos MUGEN); -1 nenhum. */
+  p2StateNo: number;
+  /** 1 = oponente vira para o atacante, -1 = de costas, 0 = não muda. */
+  p2Facing: number;
+  /** Sons do acerto e da defesa: [grupo, índice, comum?]. */
+  hitSound: [number, number, boolean] | null;
+  guardSound: [number, number, boolean] | null;
 }
 
 export interface FighterState {
@@ -282,6 +291,52 @@ export interface FighterState {
   guardRegenDelay: number;
   /** Arremesso em andamento: 1 para frente, -1 para trás (0 = nenhum). */
   throwDir: number;
+  // ---- compatibilidade MUGEN (estados personalizados, alvo, helpers)
+  /** Em estado personalizado (p2stateno/TargetState): lado dono dos estados; -1 = os próprios. */
+  customOwner: number;
+  /** Animações de outro personagem (ChangeAnim2 em estado personalizado): lado; -1 = as próprias. */
+  animOwner: number;
+  /** Este lutador tem o oponente como alvo (acertou com o golpe atual). */
+  hasTarget: boolean;
+  /** Preso ao oponente por TargetBind: ticks restantes e deslocamento. */
+  bindTime: number;
+  bindX: number;
+  bindY: number;
+  /** Helper: id do MUGEN e identificador único; null no lutador principal. */
+  helper: { id: number; uid: number } | null;
+}
+
+/** Efeito visual do MUGEN (Explod). Só visual, mas fica no estado por causa de NumExplod. */
+export interface ExplodState {
+  uid: number;
+  id: number;
+  owner: 0 | 1;
+  /** Personagem dono das animações. */
+  charId: string;
+  anim: number;
+  animElem: number;
+  animElemTime: number;
+  animTick: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  ax: number;
+  ay: number;
+  facing: 1 | -1;
+  /** Segue um lutador (lado) por `bindTime` ticks (-1 sempre). */
+  bindTo: number;
+  bindTime: number;
+  offX: number;
+  offY: number;
+  /** -2 até a animação acabar, -1 para sempre, n ticks. */
+  removeTime: number;
+  age: number;
+  onTop: boolean;
+  scaleX: number;
+  scaleY: number;
+  removeOnGetHit: boolean;
+  additive: boolean;
 }
 
 export interface ProjectileState {
@@ -322,7 +377,9 @@ export type GameEventKind =
   | "max"
   | "guardcancel"
   | "throw"
-  | "tech";
+  | "tech"
+  /** PlaySnd: `snd` = [grupo, índice]; `common` = som comum (prefixo F). */
+  | "sound";
 
 export interface GameEvent {
   kind: GameEventKind;
@@ -331,6 +388,10 @@ export interface GameEvent {
   side: 0 | 1;
   level: number;
   frame: number;
+  snd?: [number, number];
+  common?: boolean;
+  /** Personagem dono do som. */
+  charId?: string;
 }
 
 /**
@@ -363,6 +424,9 @@ export interface WorldState {
   stageId: string;
   /** Batalha de equipes (KOF): null no 1 contra 1. */
   teams: [TeamState, TeamState] | null;
+  explods: ExplodState[];
+  helpers: FighterState[];
+  nextUid: number;
 }
 
 export interface TeamState {

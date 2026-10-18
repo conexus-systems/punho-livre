@@ -24,7 +24,8 @@ import {
 import { currentFrame, worldBox } from "@/src/engine/anim";
 import { getAnim } from "@/src/engine/character";
 import { GUARD_MAX, POWER_PER_LEVEL } from "@/src/engine/constants";
-import type { Box, CharacterData, FighterState, GameEvent, ProjectileState, WorldState } from "@/src/engine/types";
+import { animCharOf } from "@/src/engine/fighter";
+import type { Box, CharacterData, ExplodState, FighterState, GameEvent, ProjectileState, WorldState } from "@/src/engine/types";
 
 import { STAGE_ART } from "./stages.generated";
 import { Effects } from "./effects";
@@ -205,11 +206,14 @@ export class FightRenderer {
     // quem está atacando fica na frente
     const [f0, f1] = w.fighters;
     const order = f0.moveType === "A" && f1.moveType !== "A" ? [f1, f0] : [f0, f1];
+    for (const e of w.explods) if (!e.onTop) this.drawExplod(c, e, input, sx, sy, k);
+    for (const h of w.helpers) this.drawFighter(c, h, input, sx, sy, k);
     for (const f of order) {
       if (f.maxTime > 0) this.drawAura(c, f, input, sx, sy, k);
       this.drawFighter(c, f, input, sx, sy, k);
     }
     for (const p of w.projectiles) this.drawProjectile(c, p, input, sx, sy, k);
+    for (const e of w.explods) if (e.onTop) this.drawExplod(c, e, input, sx, sy, k);
     if (input.debugBoxes) for (const f of w.fighters) this.drawBoxes(c, f, input, sx, sy, k);
     this.fx.draw(c, sx, sy, k);
     this.drawPops(c, input, sx, sy);
@@ -236,6 +240,8 @@ export class FightRenderer {
     k: number,
     alpha = 1,
     over?: SkPaint,
+    scaleX = 1,
+    scaleY = 1,
   ): boolean {
     if (group < 0) return true; // frame vazio (invisível)
     const sheet = ch.sprites;
@@ -248,7 +254,7 @@ export class FightRenderer {
     const scale = sheet.scale ?? 1;
     c.save();
     c.translate(x, y);
-    if (flip) c.scale(-1, 1);
+    if (flip || scaleX !== 1 || scaleY !== 1) c.scale(flip ? -scaleX : scaleX, scaleY);
     c.drawImageRect(
       img,
       Skia.XYWHRect(fx, fy, fw, fh),
@@ -268,21 +274,43 @@ export class FightRenderer {
     k: number,
   ): void {
     const ch = input.roster[f.charId];
-    const anim = getAnim(ch, f.anim);
+    // arremesso do MUGEN: quem é arremessado usa as animações do atacante
+    const animCh = animCharOf(input.world, input.roster, f);
+    const anim = getAnim(animCh, f.anim);
     const frame = currentFrame(f, anim);
     const flip = (f.facing === -1) !== frame.flipH;
     // invencível pisca (menos ao levantar e no rolamento, que já se vê)
     const blink = f.notHitBy > 0 && f.stateNo !== 5120 && (f.stateNo < 6000 || f.stateNo > 6070) && this.frame % 4 < 2 ? 0.55 : 1;
-    const ok = this.drawSprite(c, ch, input.atlases[f.charId], frame.group, frame.index, sx(f.x), sy(f.y), flip, frame.ox, frame.oy, k, blink);
+    const ok = this.drawSprite(c, animCh, input.atlases[animCh.id], frame.group, frame.index, sx(f.x), sy(f.y), flip, frame.ox, frame.oy, k, blink);
     if (!ok) this.drawBoxBody(c, f, ch, frame.clsn2, sx, sy, k);
     // clarão de quem apanhou: o mesmo sprite somado por cima
     if (ok && this.flash[f.side] > 0) {
       const over = Skia.Paint();
       over.setBlendMode(BlendMode.Plus);
       over.setAlphaf(0.18 * this.flash[f.side]);
-      this.drawSprite(c, ch, input.atlases[f.charId], frame.group, frame.index, sx(f.x), sy(f.y), flip, frame.ox, frame.oy, k, 1, over);
+      this.drawSprite(c, animCh, input.atlases[animCh.id], frame.group, frame.index, sx(f.x), sy(f.y), flip, frame.ox, frame.oy, k, 1, over);
       this.flash[f.side]--;
     }
+  }
+
+  /** Explod do MUGEN: sprite do dono, com escala e soma de luz opcional. */
+  private drawExplod(
+    c: SkCanvas,
+    e: ExplodState,
+    input: RenderInput,
+    sx: (x: number) => number,
+    sy: (y: number) => number,
+    k: number,
+  ): void {
+    const ch = input.roster[e.charId];
+    if (!ch) return;
+    const frame = currentFrame(e, getAnim(ch, e.anim));
+    let over: SkPaint | undefined;
+    if (e.additive) {
+      over = Skia.Paint();
+      over.setBlendMode(BlendMode.Plus);
+    }
+    this.drawSprite(c, ch, input.atlases[e.charId], frame.group, frame.index, sx(e.x), sy(e.y), (e.facing === -1) !== frame.flipH, frame.ox, frame.oy, k, 1, over, e.scaleX, e.scaleY);
   }
 
   /** Brilho do modo MAX em volta do lutador. */
@@ -369,8 +397,7 @@ export class FightRenderer {
     sy: (y: number) => number,
     k: number,
   ): void {
-    const ch = input.roster[f.charId];
-    const frame = currentFrame(f, getAnim(ch, f.anim));
+    const frame = currentFrame(f, getAnim(animCharOf(input.world, input.roster, f), f.anim));
     const stroke = (color: string) => {
       const p = paint(color, 0.9);
       p.setStyle(PaintStyle.Stroke);
