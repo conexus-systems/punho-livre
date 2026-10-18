@@ -9,7 +9,7 @@
 </head>
 <body>
 <main id="wrap">
-  <canvas id="game" width="794" height="550" aria-label="Punho Livre"></canvas>
+  <canvas id="game" width="794" height="470" aria-label="Punho Livre"></canvas>
   <div id="touch" hidden>
     <div class="dpad" aria-label="Direcional">
       <span class="arrow up">▲</span><span class="arrow left">◀</span>
@@ -20,6 +20,7 @@
       <button type="button" data-key="Escape" aria-label="Voltar ou sair da luta">Esc</button>
       <button type="button" data-key="F1" aria-label="Pausa">II</button>
     </div>
+    <div class="specials" hidden aria-label="Golpes especiais"></div>
     <div class="btns">
       <button type="button" data-key="T_def" class="d" aria-label="Defesa">D</button>
       <button type="button" data-key="T_jump" class="j" aria-label="Pulo">J</button>
@@ -64,6 +65,7 @@
 <script src="src/effects.js"></script>
 <script src="src/background.js"></script>
 <script src="src/ai.js"></script>
+<script src="src/hud.js"></script>
 <script src="src/match.js"></script>
 <script src="src/stage.js"></script>
 <script src="src/ui.js"></script>

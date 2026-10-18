@@ -774,6 +774,7 @@ class Character extends Living {
     this.stat = { attack: 0, picking: 0, kill: 0 };
     this.counter = { disappear: -1, deadBlink: -1 };
     this.player = opts.player ?? -1;
+    this.damageTaken = 1;
     this.removeOnDeath = !!opts.removeOnDeath;
     this.parent = opts.parent || null;
     this.label = opts.label || this.name;
@@ -971,6 +972,8 @@ class Character extends Living {
 
   injury(inj) {
     if (!inj) return;
+    // jogadores humanos levam menos dano nas dificuldades fáceis
+    if (this.damageTaken !== 1 && inj > 0) inj = Math.max(1, Math.round(inj * this.damageTaken));
     const h = this.health;
     h.hp -= inj;
     h.hp_lost += inj;

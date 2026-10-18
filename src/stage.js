@@ -87,7 +87,7 @@ class StageLogic {
     c.setPos(Math.max(0, Math.min(m.bg.width, x)), 0, m.bg.pos(0, m.random()).z);
     c.switchDir(fromLeft ? 1 : -1);
     if (!boss) {
-      c.health.hp = c.health.hp_full = c.health.hp_bound = 250 + 50 * Game.difficulty;
+      c.health.hp = c.health.hp_full = c.health.hp_bound = 180 + 60 * Game.difficulty;
     }
     m.ais.push(new AI(c, m, boss ? Game.difficulty : Math.max(0, Game.difficulty - 1)));
   }
@@ -120,9 +120,9 @@ class StageLogic {
       return;
     }
     if (this.locked) {
-      if (this.queue.length && alive.length < 5 && --this.spawnT <= 0) {
+      if (this.queue.length && alive.length < 2 + Math.min(2, Game.difficulty) + (this.heroes.length > 1 ? 1 : 0) && --this.spawnT <= 0) {
         this.spawn(this.queue.shift());
-        this.spawnT = 25 + Math.floor(m.random() * 20);
+        this.spawnT = 45 + Math.floor(m.random() * 30);
       }
       if (!this.queue.length && !alive.length) {
         if (this.phase === STAGES[this.stageIndex].phases.length - 1) {
@@ -142,10 +142,10 @@ class StageLogic {
 
   draw(ctx, m) {
     if (this.goArrow && Math.floor(m.time / 10) % 2 === 0) {
-      text(ctx, 'GO →', LF.W - 30, 300, { align: 'right', size: 34, color: '#ffffff', shadow: '#1946ff' });
+      title(ctx, 'SIGA →', LF.W - 30, 240, 40, UI.amber, 'right');
     }
-    if (this.banner) text(ctx, this.banner.text, LF.W / 2, 300, { align: 'center', size: 40, color: '#ffffff', shadow: '#1946ff' });
-    text(ctx, `Fase ${this.stageIndex + 1}-${this.phase + 1}`, 10, LF.H - 14, { size: 13, color: '#ffffff', shadow: '#000' });
+    if (this.banner) drawBanner(ctx, this.banner.text);
+    title(ctx, `Fase ${this.stageIndex + 1}-${this.phase + 1}`, 12, LF.H - 16, 20, UI.text, 'left');
   }
 }
 

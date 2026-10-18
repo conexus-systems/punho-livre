@@ -25,10 +25,14 @@ corpo, e pontos de arma, agarrão e objetos.
   bolas que perseguem o alvo, armas (pegar, golpear, arremessar), transformação e
   clones do Rudolf.
 - **Modos:** Versus (até 8 lutadores, times, computadores com 4 níveis), História
-  (5 fases com chefes), Demonstração e **Jogo em rede**.
-- **Celular:** controles de toque com direcional de 8 direções. Deitado, os controles
-  ficam nas laterais da tela; em pé, ficam embaixo. No navegador do celular o jogo
-  entra em tela cheia.
+  (5 fases com chefes), Demonstração e **Jogo em rede**. No Fácil e no Normal os
+  computadores reagem mais devagar e os jogadores levam menos dano.
+- **Seleção de lutadores** mostra os golpes especiais de cada um e o que fazem.
+- **Celular:** controles de toque com direcional de 8 direções; levar o dedo até a
+  borda do direcional faz correr. Botões de golpe especial fazem a sequência inteira
+  (D → A, D ↑ A...) num toque e ficam apagados sem MP. Deitado, os controles ficam
+  nas laterais da tela; em pé, ficam embaixo. No navegador do celular o jogo entra
+  em tela cheia.
 - Teclas configuráveis para até 4 jogadores no teclado e teclas de função (F1 pausa,
   F7 recupera a vida, F8 joga armas...).
 
@@ -115,7 +119,8 @@ src/character.js        estados do lutador, golpes, defesa, quedas, agarrão, ar
 src/weapon.js, ball.js  armas e ataques especiais
 src/effects.js          faíscas, sangue, fogo e pedaços
 src/background.js       cenários com paralaxe e câmera
-src/match.js            a partida: ordem de processamento, colisões, painel, resumo
+src/match.js            a partida: ordem de processamento, colisões, desenho
+src/hud.js              painel de vida/MP, mensagens e resumo da luta
 src/ai.js               computador
 src/stage.js            modo História
 src/ui.js               telas: inicial, modos, seleção, controles

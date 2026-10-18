@@ -1,16 +1,21 @@
 'use strict';
-// Telas do Punho Livre: inicial, modos, seleção de lutadores,
-// configuração de teclas e a partida.
+// Telas do Punho Livre: inicial, modos, seleção de lutadores, ajustes da
+// partida, controles e a partida.
 
 const Game = {
   ctx: null,
   screen: null,
-  difficulty: 2,
-  setScreen(s) { this.screen = s; if (s.enter) s.enter(); },
+  difficulty: 1,
+  setScreen(s) {
+    this.screen = s;
+    if (s.enter) s.enter();
+    TouchSpecials.update(s instanceof MatchScreen || s instanceof NetMatchScreen ? s.match : null);
+  },
   update() {
     // nas partidas as teclas vão para os personagens (na de rede, para o envio)
     const inMatch = this.screen instanceof MatchScreen || this.screen instanceof NetMatchScreen;
     if (!inMatch) for (const c of Input.controllers) c.fetch();
+    else TouchSpecials.poll(this.screen instanceof NetMatchScreen ? Net.slot : 0);
     if (Input.code('KeyM') && !(this.screen instanceof ControlsScreen)) Sound.muted = !Sound.muted;
     this.screen.update();
   },
@@ -29,46 +34,14 @@ function text(ctx, s, x, y, o = {}) {
   ctx.fillText(s, x, y, o.max);
 }
 
-function uiImg(path) { return Assets.img(path); }
-
-// menu vertical com a imagem do LF2: metade esquerda normal, metade direita destacada
-function drawMenuImage(ctx, D, x, y, active) {
-  const bg = D.bg && uiImg(D.bg), pic = uiImg(D.pic);
-  if (bg) ctx.drawImage(bg, x, y);
-  if (!pic) return;
-  ctx.drawImage(pic, 0, 0, D.width, D.height, x, y, D.width, D.height);
-  const it = D.item[active];
-  if (it) ctx.drawImage(pic, D.width + it[0], it[1], it[2], it[3], x + it[0], y + it[1], it[2], it[3]);
-}
-
 function navVertical(n, sel) {
   if (Input.anyHit('up')) { Sound.play('1/m_pass'); return (sel + n - 1) % n; }
   if (Input.anyHit('down')) { Sound.play('1/m_pass'); return (sel + 1) % n; }
   return sel;
 }
 
-// ---- carregando ----
-
-class LoadingScreen {
-  constructor() { this.p = 0; this.error = null; }
-  update() {}
-  draw(ctx) {
-    menuBackdrop(ctx, 0);
-    if (this.error) {
-      text(ctx, 'Não encontrei os dados do jogo.', LF.W / 2, 230, { align: 'center', size: 18 });
-      text(ctx, 'Rode ./tools/fetch-lf2.sh para baixar e gerar a pasta assets/.', LF.W / 2, 262, { align: 'center', bold: false });
-      text(ctx, this.error, LF.W / 2, 300, { align: 'center', bold: false, size: 11, color: '#afdcff', max: 740 });
-      return;
-    }
-    text(ctx, 'Carregando...', LF.W / 2, 250, { align: 'center', size: 16 });
-    ctx.fillStyle = '#1e337a';
-    ctx.fillRect(247, 275, 300, 10);
-    ctx.fillStyle = '#afdcff';
-    ctx.fillRect(247, 275, 300 * this.p, 10);
-  }
-}
-
-// ---- tela inicial ----
+const confirmHit = () => Input.anyHit('att') || Input.code('Enter');
+const backHit = () => Input.anyHit('jump') || Input.code('Escape');
 
 // fundo das telas de menu: noite azul-escura com faixas diagonais
 function menuBackdrop(ctx, t) {
@@ -82,29 +55,52 @@ function menuBackdrop(ctx, t) {
   ctx.fillStyle = '#ffb000';
   for (let i = -8; i < 20; i++) {
     const x = i * 70 + ((t * 0.5) % 70);
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 30, 0); ctx.lineTo(x - 170, LF.H); ctx.lineTo(x - 200, LF.H); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 30, 0); ctx.lineTo(x - 140, LF.H); ctx.lineTo(x - 170, LF.H); ctx.fill();
   }
   ctx.restore();
 }
 
-// lista de opções com destaque; devolve a área de cada item (toque/clique)
+// lista de opções com destaque em faixa inclinada
 function drawMenuList(ctx, items, sel, y0, gap = 40) {
   items.forEach((it, i) => {
     const y = y0 + i * gap, on = i === sel;
     if (on) {
-      ctx.fillStyle = '#ffb000';
+      ctx.fillStyle = UI.amber;
       ctx.beginPath();
       ctx.moveTo(LF.W / 2 - 150, y - 17); ctx.lineTo(LF.W / 2 + 160, y - 17);
       ctx.lineTo(LF.W / 2 + 150, y + 17); ctx.lineTo(LF.W / 2 - 160, y + 17);
       ctx.fill();
     }
-    ctx.font = `28px ${LOGO_FONT}`;
+    ctx.font = displayFont(28);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = on ? '#120a1e' : (it.disabled ? '#5b5f86' : '#e9ebff');
+    ctx.fillStyle = on ? '#120a1e' : UI.text;
     ctx.fillText(it.name, LF.W / 2, y + 1);
   });
 }
+
+// ---- carregando ----
+
+class LoadingScreen {
+  constructor() { this.p = 0; this.error = null; }
+  update() {}
+  draw(ctx) {
+    menuBackdrop(ctx, 0);
+    if (this.error) {
+      text(ctx, 'Não encontrei os dados do jogo.', LF.W / 2, 200, { align: 'center', size: 18 });
+      text(ctx, 'Rode ./tools/fetch-lf2.sh para baixar e gerar a pasta assets/.', LF.W / 2, 232, { align: 'center', bold: false });
+      text(ctx, this.error, LF.W / 2, 270, { align: 'center', bold: false, size: 11, color: '#afdcff', max: 740 });
+      return;
+    }
+    text(ctx, 'Carregando...', LF.W / 2, 215, { align: 'center', size: 16 });
+    ctx.fillStyle = '#1e337a';
+    ctx.fillRect(247, 240, 300, 10);
+    ctx.fillStyle = UI.amber;
+    ctx.fillRect(247, 240, 300 * this.p, 10);
+  }
+}
+
+// ---- tela inicial ----
 
 const TITLE_ITEMS = [{ name: 'Jogar' }, { name: 'Jogar em rede' }, { name: 'Controles' }];
 
@@ -113,7 +109,7 @@ class TitleScreen {
   update() {
     this.t++;
     this.sel = navVertical(TITLE_ITEMS.length, this.sel);
-    if (Input.anyHit('att') || Input.code('Enter')) {
+    if (confirmHit()) {
       Sound.init();
       Sound.play('1/m_ok');
       if (this.sel === 0) Game.setScreen(new ModeScreen());
@@ -123,12 +119,14 @@ class TitleScreen {
   }
   draw(ctx) {
     menuBackdrop(ctx, this.t);
-    drawLogo(ctx, LF.W / 2, 170, 1, this.t);
-    drawMenuList(ctx, TITLE_ITEMS, this.sel, 330);
-    const k = Input.keys[0];
-    text(ctx, `1P: ${keyName(k.up)} ${keyName(k.down)} ${keyName(k.left)} ${keyName(k.right)} mover · ${keyName(k.att)} ataque · ${keyName(k.jump)} pulo · ${keyName(k.def)} defesa`,
-      LF.W / 2, 478, { align: 'center', bold: false, size: 12, color: '#9aa3d8' });
-    text(ctx, 'Lutadores, cenários e sons originais de Little Fighter 2 © Marti Wong & Starsky Wong', LF.W / 2, 526, { align: 'center', bold: false, size: 10, color: '#5b5f86' });
+    drawLogo(ctx, LF.W / 2, 140, 0.88, this.t);
+    drawMenuList(ctx, TITLE_ITEMS, this.sel, 300);
+    if (!Input.touchActive) {
+      const k = Input.keys[0];
+      text(ctx, `1P: ${keyName(k.up)} ${keyName(k.down)} ${keyName(k.left)} ${keyName(k.right)} move · ${keyName(k.att)} ataca · ${keyName(k.jump)} pula · ${keyName(k.def)} defende`,
+        LF.W / 2, 424, { align: 'center', bold: false, size: 12, color: UI.muted });
+    }
+    text(ctx, 'Lutadores originais, cenários e sons de Little Fighter 2 © Marti Wong & Starsky Wong', LF.W / 2, 454, { align: 'center', bold: false, size: 10, color: UI.dim });
   }
 }
 
@@ -136,7 +134,7 @@ class TitleScreen {
 
 const MODES = [
   { key: 'vs', name: 'Versus', desc: 'Todos contra todos ou em times, até 8 lutadores.' },
-  { key: 'stage', name: 'História', desc: 'Avance pelas fases enfrentando bandidos e chefes.' },
+  { key: 'stage', name: 'História', desc: 'Atravesse 5 fases enfrentando bandidos e chefes.' },
   { key: 'demo', name: 'Demonstração', desc: 'Assista aos computadores lutando.' },
   { key: 'back', name: 'Voltar', desc: '' },
 ];
@@ -146,8 +144,8 @@ class ModeScreen {
   update() {
     this.t++;
     this.sel = navVertical(MODES.length, this.sel);
-    if (Input.anyHit('jump') || Input.code('Escape')) { Sound.play('1/m_cancel'); Game.setScreen(new TitleScreen()); return; }
-    if (Input.anyHit('att') || Input.code('Enter')) {
+    if (backHit()) { Sound.play('1/m_cancel'); Game.setScreen(new TitleScreen()); return; }
+    if (confirmHit()) {
       Sound.play('1/m_ok');
       const m = MODES[this.sel].key;
       if (m === 'back') Game.setScreen(new TitleScreen());
@@ -157,13 +155,13 @@ class ModeScreen {
   }
   draw(ctx) {
     menuBackdrop(ctx, this.t);
-    drawLogo(ctx, LF.W / 2, 130, 0.62, this.t);
-    drawMenuList(ctx, MODES, this.sel, 260);
-    text(ctx, MODES[this.sel].desc, LF.W / 2, 440, { align: 'center', bold: false, color: '#9aa3d8' });
+    drawLogo(ctx, LF.W / 2, 92, 0.5, this.t);
+    drawMenuList(ctx, MODES, this.sel, 210);
+    text(ctx, MODES[this.sel].desc, LF.W / 2, 400, { align: 'center', bold: false, color: UI.muted });
   }
 }
 
-// ---- seleção de lutadores (8 vagas, como no LF2) ----
+// ---- lutadores e golpes ----
 
 function characterList() {
   const order = [11, 10, 9, 8, 7, 6, 5, 4, 2, 1, 50, 51, 52, 53, 54, 30];
@@ -174,206 +172,178 @@ function characterList() {
   });
 }
 
+const SPECIAL_CMDS = [
+  ['hit_Fa', 'D → A', ['def', 'F', 'att']], ['hit_Ua', 'D ↑ A', ['def', 'up', 'att']], ['hit_Da', 'D ↓ A', ['def', 'down', 'att']],
+  ['hit_Fj', 'D → J', ['def', 'F', 'jump']], ['hit_Uj', 'D ↑ J', ['def', 'up', 'jump']], ['hit_Dj', 'D ↓ J', ['def', 'down', 'jump']],
+  ['hit_ja', 'D J A', ['def', 'jump', 'att']],
+];
+
+// golpes especiais de um lutador, com uma descrição curta do que fazem
+function specialsOf(c) {
+  const out = [];
+  const f0 = c.data.frame[0];
+  for (const [tag, cmd, seq] of SPECIAL_CMDS) {
+    const start = f0 && f0[tag];
+    if (!start || !c.data.frame[start]) continue;
+    if (c.id === 6 && tag === 'hit_ja') continue; // transformação que não existe nos dados
+    const k = classifySpecial(c.data, start);
+    const kind = k.heal ? 'Cura' : k.teleport ? 'Teleporte' : k.ranged ? 'Disparo' : k.melee ? 'Golpe forte' : 'Técnica';
+    out.push({ tag, cmd, seq, kind, cost: k.cost });
+  }
+  return out;
+}
+
 const DIFFICULTIES = ['Fácil', 'Normal', 'Difícil', 'Maluco!'];
-const STAGE_NAMES = ['Fase 1', 'Fase 2', 'Fase 3', 'Fase 4', 'Fase 5'];
+const TEAM_LABELS = ['Sem time', 'Time 1', 'Time 2', 'Time 3', 'Time 4'];
+const TEAM_COLORS = ['#c9cbe8', '#ff6b5e', '#5aa9ff', '#66d17a', '#ffc94a'];
+
+// ---- seleção de lutadores ----
+// Cada jogador (até 4 no mesmo aparelho) entra com ATAQUE, escolhe o lutador na
+// grade, depois o time, e fica pronto. Com todos prontos aparecem os ajustes.
 
 class SelectScreen {
   constructor(mode, keep) {
     this.mode = mode;
     this.chars = characterList();
     this.t = 0;
-    this.slots = keep ? keep.slots : [...Array(8)].map(() => ({ use: false, step: 0, type: 'human', team: 0, sel: -1, player: -1 }));
-    this.step = keep ? 3 : 0;
-    this.bg = keep ? keep.bg : -1;
-    this.stage = keep ? keep.stage : 0;
-    this.dialogSel = 0;
-    this.numComputers = 0;
-    this.howMany = { low: 0, high: 0, sel: 0 };
-    this.settingComputer = -1;
-    this.done = 0;
-    if (keep) this.rollRandom();
+    this.cells = this.chars.length + 1; // a última é "Aleatório"
+    this.players = keep ? keep.players : [0, 1, 2, 3].map((p) => ({ p, state: 'off', cur: p, team: 0, pick: null }));
+    this.settings = keep ? keep.settings : { cpus: mode === 'stage' ? 0 : 1, cpuTeam: 0, bg: -1, stage: 0 };
+    this.phase = keep ? 'settings' : 'pick';
+    this.sel = 0;
+    this.msg = '';
   }
 
-  bgList() { return Assets.backgrounds; }
+  joined() { return this.players.filter((p) => p.state !== 'off'); }
 
-  // jogador humano p ocupa a vaga p (como no LF2 local)
   update() {
     this.t++;
-    if (this.step === 0) this.updateHumans();
-    else if (this.step === 1) this.updateHowMany();
-    else if (this.step === 2) this.updateComputers();
-    else this.updateDialog();
+    if (this.phase === 'pick') this.updatePick();
+    else this.updateSettings();
   }
 
-  cycleChar(s, d) {
-    const n = this.chars.length;
-    s.sel += d;
-    if (s.sel >= n) s.sel = s.type === 'human' ? -1 : 0;
-    if (s.sel < (s.type === 'human' ? -1 : 0)) s.sel = n - 1;
+  moveCursor(pl, dx, dy) {
+    const perRow = 9, n = this.cells;
+    let c = pl.cur;
+    if (dx) c = (c + dx + n) % n;
+    if (dy) {
+      const next = c + dy * perRow;
+      if (next >= 0 && next < n) c = next;
+    }
+    pl.cur = c;
+    Sound.play('1/m_pass');
   }
 
-  updateHumans() {
+  updatePick() {
     if (Input.code('Escape')) { Game.setScreen(new ModeScreen()); return; }
-    for (let p = 0; p < 4; p++) {
-      const s = this.slots[p];
-      if (Input.hit(p, 'att')) {
-        if (!s.use) { s.use = true; s.type = 'human'; s.player = p; s.step = 0; }
-        if (s.step < 3) s.step++;
-        if (this.mode === 'stage' && s.step === 2) { s.team = 1; s.step = 3; }
-        Sound.play('1/m_join');
-        const humans = this.slots.filter((x) => x.use);
-        if (humans.length && humans.every((x) => x.step === 3)) this.enterHowMany();
+    for (const pl of this.players) {
+      const P = (a) => Input.hit(pl.p, a) || (pl.p === 0 && a === 'att' && Input.code('Enter'));
+      if (pl.state === 'off') {
+        if (P('att')) { pl.state = 'char'; Sound.play('1/m_join'); }
+        continue;
       }
-      if (Input.hit(p, 'jump') && s.use) {
-        s.step--;
-        if (this.mode === 'stage' && s.step === 2) s.step = 1;
-        if (s.step <= 0) { s.use = false; s.step = 0; }
+      if (P('jump')) {
         Sound.play('1/m_cancel');
+        if (pl.state === 'char') {
+          if (pl.p === 0 && this.joined().length === 1) { Game.setScreen(new ModeScreen()); return; }
+          pl.state = 'off';
+        } else if (pl.state === 'team') pl.state = 'char';
+        else pl.state = this.mode === 'stage' ? 'char' : 'team';
+        continue;
       }
-      if (s.step === 1) {
-        if (Input.hit(p, 'left')) this.cycleChar(s, -1);
-        if (Input.hit(p, 'right')) this.cycleChar(s, 1);
-      } else if (s.step === 2) {
-        if (Input.hit(p, 'left')) s.team = (s.team + 4) % 5;
-        if (Input.hit(p, 'right')) s.team = (s.team + 1) % 5;
+      if (pl.state === 'char') {
+        if (P('left')) this.moveCursor(pl, -1, 0);
+        if (P('right')) this.moveCursor(pl, 1, 0);
+        if (P('up')) this.moveCursor(pl, 0, -1);
+        if (P('down')) this.moveCursor(pl, 0, 1);
+        if (P('att')) { pl.state = this.mode === 'stage' ? 'ready' : 'team'; Sound.play('1/m_join'); }
+      } else if (pl.state === 'team') {
+        if (P('left')) { pl.team = (pl.team + 4) % 5; Sound.play('1/m_pass'); }
+        if (P('right')) { pl.team = (pl.team + 1) % 5; Sound.play('1/m_pass'); }
+        if (P('att')) { pl.state = 'ready'; Sound.play('1/m_join'); }
       }
     }
-  }
-
-  enterHowMany() {
-    const used = this.slots.filter((s) => s.use);
-    let low = 0;
-    const high = 8 - used.length;
-    if (this.mode === 'stage') { low = 0; }
-    else {
-      // sem adversário humano é preciso ao menos um computador
-      const t = used[0].team;
-      if (used.length === 1 || used.every((s) => s.team === t && t !== 0)) low = 1;
-    }
-    this.howMany = { low, high: this.mode === 'stage' ? Math.min(high, 3) : high, sel: low };
-    this.step = 1;
-  }
-
-  updateHowMany() {
-    const H = this.howMany;
-    if (Input.anyHit('left')) H.sel = H.sel > H.low ? H.sel - 1 : H.high;
-    if (Input.anyHit('right')) H.sel = H.sel < H.high ? H.sel + 1 : H.low;
-    if (Input.anyHit('jump')) {
-      for (const s of this.slots) if (s.use) s.step = this.mode === 'stage' ? 1 : 2;
-      this.step = 0;
-      Sound.play('1/m_cancel');
-      return;
-    }
-    if (Input.anyHit('att')) {
+    const j = this.joined();
+    if (j.length && j.every((p) => p.state === 'ready')) {
+      this.phase = 'settings';
+      this.sel = 0;
+      this.msg = '';
       Sound.play('1/m_ok');
-      this.numComputers = H.sel;
-      this.done = 0;
-      this.step = 2;
-      this.nextComputer();
     }
   }
 
-  nextComputer() {
-    if (this.done === this.numComputers) { this.enterDialog(); return; }
-    const i = this.slots.findIndex((s) => !s.use);
-    if (i < 0) { this.enterDialog(); return; }
-    this.settingComputer = i;
-    Object.assign(this.slots[i], { use: true, step: 1, type: 'computer', team: this.mode === 'stage' ? 1 : 0, sel: -1, player: -1 });
-    // computadores também podem ser aleatórios: o padrão é o primeiro da lista
-    this.slots[i].sel = 0;
+  settingItems() {
+    const S = this.settings, humans = this.joined().length;
+    const items = [];
+    if (this.mode === 'stage') {
+      items.push({ k: 'cpus', label: 'Aliados (computador)', value: String(S.cpus), max: Math.min(3, 4 - humans) });
+      items.push({ k: 'stage', label: 'Começar na fase', value: String(S.stage + 1) });
+    } else {
+      items.push({ k: 'cpus', label: 'Computadores', value: String(S.cpus), max: 8 - humans });
+      items.push({ k: 'cpuTeam', label: 'Time dos computadores', value: S.cpuTeam ? TEAM_LABELS[S.cpuTeam] : 'Cada um por si' });
+      items.push({ k: 'bg', label: 'Cenário', value: S.bg < 0 ? 'Sorteado' : Assets.backgrounds[S.bg].name });
+    }
+    items.push({ k: 'diff', label: 'Dificuldade', value: DIFFICULTIES[Game.difficulty] });
+    items.push({ k: 'fight', label: 'LUTAR!' });
+    items.push({ k: 'back', label: 'Trocar lutadores' });
+    return items;
   }
 
-  updateComputers() {
-    const s = this.slots[this.settingComputer];
-    if (!s) { this.enterDialog(); return; }
-    if (Input.anyHit('att')) {
-      s.step++;
-      if (this.mode === 'stage' && s.step === 2) s.step = 3;
-      Sound.play('1/m_join');
-      if (s.step === 3) { this.done++; this.nextComputer(); }
+  updateSettings() {
+    const items = this.settingItems();
+    this.sel = Math.min(navVertical(items.length, this.sel), items.length - 1);
+    const it = items[this.sel], S = this.settings;
+    const d = Input.anyHit('right') ? 1 : Input.anyHit('left') ? -1 : 0;
+    if (d) {
+      Sound.play('1/m_pass');
+      this.msg = '';
+      if (it.k === 'cpus') S.cpus = Math.max(0, Math.min(it.max, S.cpus + d));
+      if (it.k === 'cpuTeam') S.cpuTeam = (S.cpuTeam + d + 5) % 5;
+      if (it.k === 'bg') { const n = Assets.backgrounds.length; S.bg = ((S.bg + 1 + d + n + 1) % (n + 1)) - 1; }
+      if (it.k === 'stage') S.stage = (S.stage + d + STAGES.length) % STAGES.length;
+      if (it.k === 'diff') Game.difficulty = (Game.difficulty + d + 4) % 4;
     }
-    if (Input.anyHit('jump')) {
-      if (s.step > 1) s.step--;
-      Sound.play('1/m_cancel');
-    }
-    if (s.step === 1) {
-      if (Input.anyHit('left')) this.cycleChar(s, -1);
-      if (Input.anyHit('right')) this.cycleChar(s, 1);
-    } else if (s.step === 2) {
-      if (Input.anyHit('left')) s.team = (s.team + 4) % 5;
-      if (Input.anyHit('right')) s.team = (s.team + 1) % 5;
-    }
-  }
-
-  enterDialog() {
-    this.step = 3;
-    for (const s of this.slots) s.random = s.use && s.sel === -1;
-    this.rollRandom();
-  }
-
-  rollRandom() {
-    for (const s of this.slots) if (s.random) s.pick = Math.floor(Math.random() * this.chars.length);
-  }
-
-  dialogData() { return Assets.data.ui[this.mode === 'stage' ? 'stage_mode_dialog' : 'vs_mode_dialog'] || Assets.data.ui.vs_mode_dialog; }
-
-  updateDialog() {
-    const D = this.dialogData();
-    this.dialogSel = navVertical(D.item.length, this.dialogSel);
-    const dir = Input.anyHit('right') ? 1 : Input.anyHit('left') ? -1 : 0;
-    if (dir) {
-      if (this.dialogSel === 3) {
-        if (this.mode === 'stage') this.stage = (this.stage + dir + 5) % 5;
-        else {
-          const n = this.bgList().length;
-          this.bg = ((this.bg + 1 + dir + n + 1) % (n + 1)) - 1;
-        }
-      }
-      if (this.dialogSel === 4) Game.difficulty = (Game.difficulty + dir + 4) % 4;
-    }
-    if (Input.anyHit('att')) {
-      Sound.play('1/m_ok');
-      switch (this.dialogSel) {
-        case 0: this.fight(); break;
-        case 1: Game.setScreen(new SelectScreen(this.mode)); break;
-        case 2: this.rollRandom(); break;
-        case 3:
-          if (this.mode === 'stage') this.stage = (this.stage + 1) % 5;
-          else { const n = this.bgList().length; this.bg = ((this.bg + 2) % (n + 1)) - 1; }
-          break;
-        case 4: Game.difficulty = (Game.difficulty + 1) % 4; break;
-        case 5: Game.setScreen(new TitleScreen()); break;
-      }
+    if (backHit()) { this.unready(); return; }
+    if (confirmHit()) {
+      if (it.k === 'fight') this.fight();
+      else if (it.k === 'back') this.unready();
+      else if (it.k === 'diff') Game.difficulty = (Game.difficulty + 1) % 4;
     }
   }
 
-  charOf(s) {
-    const i = s.sel === -1 ? s.pick : s.sel;
-    return this.chars[i] || this.chars[0];
+  unready() {
+    Sound.play('1/m_cancel');
+    this.phase = 'pick';
+    for (const p of this.joined()) p.state = 'char';
   }
+
+  charAt(cur) { return cur < this.chars.length ? this.chars[cur] : null; }
 
   fight() {
-    const keep = { slots: this.slots, bg: this.bg, stage: this.stage };
-    const players = [];
-    this.slots.forEach((s, i) => {
-      if (!s.use) return;
-      const c = this.charOf(s);
-      const human = s.type === 'human';
-      players.push({
-        id: c.id,
-        team: s.team ? s.team : 100 + i,
-        con: human ? Input.controllers[s.player] : new Controller(),
-        player: human ? s.player : -1,
-        ai: human ? null : Game.difficulty,
-        name: human ? `${s.player + 1}P` : 'COM',
-      });
+    const S = this.settings, humans = this.joined();
+    const rnd = () => this.chars.filter((c) => c.id !== 30)[Math.floor(Math.random() * (this.chars.length - 1))];
+    const players = humans.map((pl) => {
+      const c = this.charAt(pl.cur) || rnd();
+      return { id: c.id, team: this.mode === 'stage' ? 1 : (pl.team || 100 + pl.p), con: Input.controllers[pl.p], player: pl.p, name: `${pl.p + 1}P` };
     });
+    for (let i = 0; i < S.cpus; i++) {
+      players.push({ id: rnd().id, team: this.mode === 'stage' ? 1 : (S.cpuTeam || 110 + i), con: new Controller(), ai: Game.difficulty, name: 'COM' });
+    }
+    if (this.mode !== 'stage') {
+      const teams = new Set(players.map((p) => p.team));
+      if (players.length < 2 || teams.size < 2) {
+        this.msg = players.length < 2 ? 'Adicione computadores ou mais jogadores.' : 'Todos estão no mesmo time: mude os times.';
+        Sound.play('1/m_cancel');
+        return;
+      }
+    }
+    Sound.play('1/m_ok');
+    const keep = { players: this.players, settings: S };
     const back = () => Game.setScreen(new SelectScreen(this.mode, keep));
-    if (this.mode === 'stage') {
-      startStage(players, this.stage, back);
-    } else {
-      const list = this.bgList();
-      const bg = this.bg < 0 ? list[Math.floor(Math.random() * list.length)].id : list[this.bg].id;
+    if (this.mode === 'stage') startStage(players, S.stage, back);
+    else {
+      const list = Assets.backgrounds;
+      const bg = S.bg < 0 ? list[Math.floor(Math.random() * list.length)].id : list[S.bg].id;
       startMatch({ players, bg, mode: 'vs', onEnd: back });
     }
   }
@@ -381,96 +351,124 @@ class SelectScreen {
   // ---- desenho ----
 
   draw(ctx) {
-    const S = Assets.data.ui.character_selection;
-    ctx.fillStyle = S.bg_color;
-    ctx.fillRect(0, 0, LF.W, LF.H);
-    const pic = uiImg(S.pic);
-    if (pic) ctx.drawImage(pic, 0, 0);
-    text(ctx, this.mode === 'stage' ? 'História' : 'Versus', 60, 38, { size: 14, color: '#afdcff' });
-    for (let i = 0; i < 8; i++) this.drawSlot(ctx, i);
-    if (this.step === 1) this.drawHowMany(ctx);
-    if (this.step === 3) this.drawDialog(ctx);
-    if (this.step === 0) text(ctx, 'ATAQUE entra/confirma · PULO volta · ←/→ escolhe', LF.W / 2, 520, { align: 'center', bold: false, size: 12, color: '#afdcff' });
+    menuBackdrop(ctx, this.t);
+    title(ctx, 'ESCOLHA SEU LUTADOR', 28, 26, 28, UI.text, 'left');
+    title(ctx, this.mode === 'stage' ? 'HISTÓRIA' : 'VERSUS', LF.W - 28, 26, 22, UI.amber, 'right');
+    this.drawGrid(ctx);
+    for (let i = 0; i < 4; i++) this.drawCard(ctx, this.players[i], 22 + i * 190, 222, 180, 212);
+    const hint = Input.touchActive ? 'A entra e confirma · J volta · direcional escolhe'
+      : `1P: ${keyName(Input.keys[0].att)} entra e confirma · ${keyName(Input.keys[0].jump)} volta · 2P: ${keyName(Input.keys[1].att)} entra`;
+    text(ctx, hint, LF.W / 2, 456, { align: 'center', bold: false, size: 12, color: UI.muted });
+    if (this.phase === 'settings') this.drawSettings(ctx);
   }
 
-  drawSlot(ctx, i) {
-    const S = Assets.data.ui.character_selection, s = this.slots[i];
-    const x = S.posx[i % 4], row = i < 4 ? 0 : 4;
-    const by = S.posy[row], ty = [S.posy[row + 1], S.posy[row + 2], S.posy[row + 3]];
-    const W = S.box_width, H = S.box_height, TW = S.text.box_width, TH = S.text.box_height;
-    const blink = Math.floor(this.t / 6) % 2 === 0 ? S.text.color[0] : S.text.color[1];
-    const stat = s.type === 'human' ? S.text.color[2] : S.text.color[3];
-    const cx = x + TW / 2;
-    if (!s.use) {
-      if (this.step === 0) {
-        const w = uiImg(S.waiting.pic);
-        if (w) ctx.drawImage(w, (Math.floor(this.t / 8) % 2) * W, 0, W, H, x, by, W, H);
-        text(ctx, 'Join?', cx, ty[0] + TH / 2, { align: 'center', color: blink });
+  drawGrid(ctx) {
+    const cw = 76, gap = 8, x0 = (LF.W - (9 * cw + 8 * gap)) / 2, y0 = 52;
+    for (let i = 0; i < this.cells; i++) {
+      const x = x0 + (i % 9) * (cw + gap), y = y0 + Math.floor(i / 9) * (cw + gap);
+      const c = this.charAt(i);
+      ctx.fillStyle = UI.panel;
+      ctx.fillRect(x, y, cw, cw);
+      if (c) {
+        const img = Assets.img(c.data.bmp.head);
+        if (img) ctx.drawImage(img, x + 2, y + 2, cw - 4, cw - 4);
+        ctx.fillStyle = 'rgba(5,8,20,0.7)';
+        ctx.fillRect(x, y + cw - 16, cw, 16);
+        text(ctx, c.name, x + cw / 2, y + cw - 8, { align: 'center', size: 11, max: cw - 4 });
+      } else {
+        title(ctx, '?', x + cw / 2, y + cw / 2 - 6, 48, UI.amber);
+        text(ctx, 'Aleatório', x + cw / 2, y + cw - 8, { align: 'center', size: 11 });
       }
+      // cursores dos jogadores
+      const here = this.players.filter((p) => p.state !== 'off' && p.cur === i);
+      here.forEach((p, k) => {
+        const col = UI.players[p.p], inset = k * 4;
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x + 1.5 + inset, y + 1.5 + inset, cw - 3 - inset * 2, cw - 3 - inset * 2);
+        ctx.fillStyle = col;
+        ctx.fillRect(x + k * 22, y - 9, 22, 12);
+        text(ctx, `${p.p + 1}P`, x + k * 22 + 11, y - 3, { align: 'center', size: 10, color: '#120a1e' });
+      });
+    }
+  }
+
+  drawCard(ctx, pl, x, y, w, h) {
+    const col = UI.players[pl.p];
+    panelBox(ctx, x, y, w, h, col);
+    if (pl.state === 'off') {
+      title(ctx, `${pl.p + 1}P`, x + w / 2, y + 70, 40, col);
+      const blink = Math.floor(this.t / 20) % 2 === 0;
+      text(ctx, 'Aperte ATAQUE', x + w / 2, y + 112, { align: 'center', size: 14, color: blink ? UI.text : UI.muted });
+      text(ctx, 'para entrar', x + w / 2, y + 130, { align: 'center', size: 14, color: blink ? UI.text : UI.muted });
+      if (!Input.touchActive) text(ctx, `tecla ${keyName(Input.keys[pl.p].att)}`, x + w / 2, y + 156, { align: 'center', bold: false, size: 12, color: UI.dim });
       return;
     }
-    const step = s.step;
-    // "Random" só revela o lutador sorteado no menu final
-    const c = s.sel >= 0 ? this.chars[s.sel] : (this.step === 3 && s.random ? this.chars[s.pick] : null);
-    if (step >= 1) {
-      const img = c ? uiImg(c.data.bmp.head) : uiImg(S.random.pic);
-      if (img) ctx.drawImage(img, x, by, W, H);
+    const c = this.charAt(pl.cur);
+    const img = c ? Assets.img(c.data.bmp.head) : null;
+    if (img) ctx.drawImage(img, x + 8, y + 10, 72, 72);
+    else title(ctx, '?', x + 44, y + 46, 56, UI.amber);
+    title(ctx, c ? c.name : 'Aleatório', x + 88, y + 26, 22, UI.text, 'left');
+    text(ctx, `${pl.p + 1}P`, x + 88, y + 50, { size: 12, color: col });
+    if (this.mode !== 'stage') {
+      const choosing = pl.state === 'team';
+      const tl = TEAM_LABELS[pl.team];
+      text(ctx, choosing ? `◀ ${tl} ▶` : tl, x + 88, y + 70, { size: 12, color: choosing ? UI.amber : TEAM_COLORS[pl.team] });
+    }
+    // golpes especiais
+    if (c) {
+      const sp = specialsOf(c);
+      text(ctx, 'Especiais', x + 10, y + 98, { size: 11, color: UI.muted });
+      sp.slice(0, 5).forEach((s, k) => {
+        const yy = y + 116 + k * 17;
+        text(ctx, s.cmd, x + 10, yy, { size: 12, color: UI.amber });
+        text(ctx, s.kind, x + 62, yy, { bold: false, size: 12, color: UI.text, max: w - 70 });
+      });
     } else {
-      const w = uiImg(S.waiting.pic);
-      if (w) ctx.drawImage(w, (Math.floor(this.t / 8) % 2) * W, 0, W, H, x, by, W, H);
+      text(ctx, 'Um lutador é sorteado', x + 10, y + 110, { bold: false, size: 12, color: UI.muted });
+      text(ctx, 'quando a luta começa.', x + 10, y + 128, { bold: false, size: 12, color: UI.muted });
     }
-    const name = s.type === 'human' ? `${s.player + 1}P` : 'Computer';
-    text(ctx, step === 0 ? 'Join?' : name, cx, ty[0] + TH / 2, { align: 'center', color: step <= 1 && this.isActive(s) ? (step === 0 ? blink : stat) : stat, max: TW });
-    if (step >= 1) {
-      const fname = c ? c.name : 'Random';
-      text(ctx, fname, cx, ty[1] + TH / 2, { align: 'center', color: step === 1 && this.isActive(s) ? blink : stat, max: TW });
-    }
-    if (step >= 2 && this.mode !== 'stage') {
-      text(ctx, s.team === 0 ? 'Independent' : `Team ${s.team}`, cx, ty[2] + TH / 2, { align: 'center', color: step === 2 && this.isActive(s) ? blink : stat, max: TW });
-    }
+    const st = pl.state === 'ready' ? ['PRONTO', UI.good] : pl.state === 'team' ? ['Escolha o time', UI.amber] : ['Escolha o lutador', UI.amber];
+    text(ctx, st[0], x + w / 2, y + h - 14, { align: 'center', size: 13, color: st[1] });
   }
 
-  isActive(s) {
-    if (this.step === 0) return s.type === 'human';
-    if (this.step === 2) return this.slots[this.settingComputer] === s;
-    return false;
-  }
-
-  drawHowMany(ctx) {
-    const D = Assets.data.ui.how_many_computer_players, H = this.howMany;
-    const bg = uiImg(D.bg);
-    if (bg) ctx.drawImage(bg, D.x, D.y);
-    for (let i = 0; i <= 7; i++) {
-      const x = D.x + D.item_x + i * D.item_space, y = D.y + D.item_y;
-      text(ctx, String(i), x + D.item_width / 2, y + D.item_height / 2, { align: 'center', color: i >= H.low && i <= H.high ? D.active_color : D.inactive_color });
-      if (i === H.sel) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, D.item_width, D.item_height); }
-    }
-  }
-
-  drawDialog(ctx) {
-    const D = this.dialogData();
-    const x = Math.round((LF.W - D.width) / 2), y = Math.round((LF.H - D.height) / 2);
-    drawMenuImage(ctx, D, x, y, this.dialogSel);
-    const t1 = D.text[0], t2 = D.text[1];
-    const bgName = this.mode === 'stage' ? STAGE_NAMES[this.stage] : (this.bg < 0 ? 'Random' : this.bgList()[this.bg].name);
-    text(ctx, bgName, x + t1[0] + 3, y + t1[1] + t1[3] / 2, { color: D.text_color, bold: false, max: t1[2] - 4 });
-    text(ctx, DIFFICULTIES[Game.difficulty], x + t2[0] + 3, y + t2[1] + t2[3] / 2, { color: D.text_color, bold: false, max: t2[2] - 4 });
+  drawSettings(ctx) {
+    ctx.fillStyle = 'rgba(5,8,20,0.7)';
+    ctx.fillRect(0, 0, LF.W, LF.H);
+    const items = this.settingItems();
+    const w = 470, rh = 36, h = 70 + items.length * rh + (this.msg ? 26 : 8);
+    const x = (LF.W - w) / 2, y = (LF.H - h) / 2;
+    panelBox(ctx, x, y, w, h, UI.amber);
+    title(ctx, 'AJUSTES DA PARTIDA', LF.W / 2, y + 30, 26, UI.text);
+    items.forEach((it, i) => {
+      const yy = y + 70 + i * rh, on = i === this.sel;
+      if (on) { ctx.fillStyle = 'rgba(255,176,0,0.16)'; ctx.fillRect(x + 12, yy - 15, w - 24, 30); }
+      if (it.value === undefined) {
+        title(ctx, it.label, LF.W / 2, yy, it.k === 'fight' ? 26 : 20, on ? UI.amber : UI.text);
+      } else {
+        text(ctx, it.label, x + 28, yy, { size: 15, color: on ? UI.text : UI.muted });
+        text(ctx, on ? `◀  ${it.value}  ▶` : it.value, x + w - 28, yy, { align: 'right', size: 15, color: on ? UI.amber : UI.text });
+      }
+    });
+    if (this.msg) text(ctx, this.msg, LF.W / 2, y + h - 18, { align: 'center', size: 13, color: '#ff9b9b' });
   }
 }
 
-// ---- configuração de teclas ----
+// ---- controles ----
 
 class ControlsScreen {
-  constructor() { this.p = 0; this.a = 0; this.waiting = false; this.okSel = false; }
+  constructor() { this.p = 0; this.a = 0; this.waiting = false; this.t = 0; }
   update() {
+    this.t++;
     if (this.waiting) return;
-    if (Input.code('Escape')) { Input.save(); Game.setScreen(new TitleScreen()); return; }
-    if (Input.code('ArrowUp')) this.a = (this.a + KEY_ACTIONS.length) % (KEY_ACTIONS.length + 1);
-    if (Input.code('ArrowDown')) this.a = (this.a + 1) % (KEY_ACTIONS.length + 1);
-    if (Input.code('ArrowLeft')) this.p = (this.p + 3) % 4;
-    if (Input.code('ArrowRight')) this.p = (this.p + 1) % 4;
-    if (Input.code('Enter')) {
-      if (this.a === KEY_ACTIONS.length) { Input.save(); Sound.play('1/m_ok'); Game.setScreen(new TitleScreen()); return; }
+    const n = KEY_ACTIONS.length + 1;
+    if (Input.code('Escape') || Input.anyHit('jump') && this.a === n - 1) { Input.save(); Game.setScreen(new TitleScreen()); return; }
+    if (Input.code('ArrowUp') || Input.hit(0, 'up')) this.a = (this.a + n - 1) % n;
+    if (Input.code('ArrowDown') || Input.hit(0, 'down')) this.a = (this.a + 1) % n;
+    if (Input.code('ArrowLeft') || Input.hit(0, 'left')) this.p = (this.p + 3) % 4;
+    if (Input.code('ArrowRight') || Input.hit(0, 'right')) this.p = (this.p + 1) % 4;
+    if (Input.code('Enter') || Input.hit(0, 'att')) {
+      if (this.a === n - 1) { Input.save(); Sound.play('1/m_ok'); Game.setScreen(new TitleScreen()); return; }
       this.waiting = true;
       Input.listeners.push((code) => {
         Input.listeners.pop();
@@ -485,29 +483,26 @@ class ControlsScreen {
     if (Input.code('KeyR') && Input.down.has('ShiftLeft')) Input.keys = DEFAULT_KEYS.map((k) => ({ ...k }));
   }
   draw(ctx) {
-    const S = Assets.data.ui.settings;
-    ctx.fillStyle = S.bg_color;
-    ctx.fillRect(0, 0, LF.W, LF.H);
-    const pic = uiImg(S.pic);
-    if (pic) ctx.drawImage(pic, 0, 0);
-    const x0 = 70, y0 = 170, cw = 160, rh = 30;
-    ctx.fillStyle = S.leftmost_column_bg_color;
-    ctx.fillRect(x0 - 10, y0 - 22, 110, rh * 8 + 8);
+    menuBackdrop(ctx, this.t);
+    title(ctx, 'CONTROLES', LF.W / 2, 34, 34, UI.amber);
+    const x0 = 60, y0 = 84, cw = 162, rh = 34;
+    panelBox(ctx, x0 - 16, y0 - 26, LF.W - 2 * (x0 - 16), rh * KEY_ACTIONS.length + 46);
     for (let p = 0; p < 4; p++) {
-      text(ctx, `Player ${p + 1}`, x0 + 120 + p * cw, y0 - 8, { color: p === this.p ? '#fff' : '#9b9bff' });
+      text(ctx, `Jogador ${p + 1}`, x0 + 120 + p * cw, y0, { color: p === this.p ? UI.players[p] : UI.muted });
     }
     KEY_ACTIONS.forEach((a, i) => {
-      const y = y0 + 18 + i * rh;
-      text(ctx, KEY_LABELS[a], x0, y, { color: S.leftmost_column_text_color });
+      const y = y0 + 30 + i * rh;
+      text(ctx, KEY_LABELS[a], x0, y, { color: UI.muted });
       for (let p = 0; p < 4; p++) {
         const on = p === this.p && i === this.a;
-        if (on) { ctx.fillStyle = this.waiting ? '#ff9b9b' : '#5068c0'; ctx.fillRect(x0 + 110 + p * cw, y - 11, cw - 12, 22); }
-        text(ctx, on && this.waiting ? 'aperte uma tecla' : keyName(Input.keys[p][a]), x0 + 120 + p * cw, y, { color: '#fff', bold: false });
+        if (on) { ctx.fillStyle = this.waiting ? '#7a2a3a' : 'rgba(255,176,0,0.25)'; ctx.fillRect(x0 + 110 + p * cw, y - 13, cw - 14, 26); }
+        text(ctx, on && this.waiting ? 'aperte uma tecla' : keyName(Input.keys[p][a]), x0 + 120 + p * cw, y, { color: UI.text, bold: false });
       }
     });
-    const ok = S.ok_button, okImg = uiImg(ok.pic);
-    if (okImg) ctx.drawImage(okImg, this.a === KEY_ACTIONS.length ? ok.width : 0, 0, ok.width, ok.height, ok.x, ok.y, ok.width, ok.height);
-    text(ctx, 'Setas escolhem · Enter troca a tecla · Delete apaga · Esc sai e salva', LF.W / 2, 500, { align: 'center', bold: false, size: 12, color: '#afdcff' });
+    const okY = y0 + 30 + KEY_ACTIONS.length * rh + 22, on = this.a === KEY_ACTIONS.length;
+    if (on) { ctx.fillStyle = UI.amber; ctx.fillRect(LF.W / 2 - 80, okY - 16, 160, 32); }
+    title(ctx, 'SALVAR', LF.W / 2, okY, 22, on ? '#120a1e' : UI.text);
+    text(ctx, 'Setas escolhem · Enter troca a tecla · Delete apaga · Esc salva e sai', LF.W / 2, 448, { align: 'center', bold: false, size: 12, color: UI.muted });
   }
 }
 
@@ -528,10 +523,9 @@ function startMatch(opts) {
 
 function startDemo() {
   const chars = characterList().filter((c) => c.id !== 30);
-  const n = 4;
   const players = [];
-  for (let i = 0; i < n; i++) {
-    players.push({ id: chars[Math.floor(Math.random() * chars.length)].id, team: 100 + i, con: new Controller(), ai: 3, name: 'COM' });
+  for (let i = 0; i < 4; i++) {
+    players.push({ id: chars[Math.floor(Math.random() * chars.length)].id, team: 100 + i, con: new Controller(), ai: 2, name: 'COM' });
   }
   const bgs = Assets.backgrounds;
   const m = startMatch({

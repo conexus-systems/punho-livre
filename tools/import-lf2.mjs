@@ -2,7 +2,7 @@
 // pacote que o jogo carrega direto do disco, inclusive por file:// e no APK:
 //   assets/data.js        window.LF2_DATA com objetos, cenários, interface e sons
 //   assets/sound-ogg.js   trilha de sons em base64 (e sound-mp3.js de reserva)
-//   assets/sprite|bg|UI   imagens; o preto vira transparente onde o LF2 espera
+//   assets/sprite|bg      imagens; o preto vira transparente onde o LF2 espera
 //
 // Os arquivos de dados são lidos como literais (tools/literal.mjs), nunca executados.
 //
@@ -28,10 +28,15 @@ const objects = manifest.object.map((o) => ({ ...o }));
 
 for (const o of objects) o.data = parseDefine(read(o.file));
 
+// nomes em português; Tai Hom Village fica de fora (tem letreiros em chinês)
+const BG_NAMES = {
+  'HK Coliseum': 'Coliseu', 'Lion Forest': 'Floresta do Leão', 'Stanley Prison': 'Prisão',
+  'The Great Wall': 'Grande Muralha', "Queen's Island": 'Ilha da Rainha', 'Forbidden Tower': 'Torre Proibida',
+  CUHK: 'Universidade',
+};
 const backgrounds = manifest.background
-  .filter((b) => !/template/i.test(b.file))
-  .map((b) => ({ id: b.id, name: b.name, data: parseDefine(read(b.file)) }));
-const ui = parseDefine(read(manifest.UI.file));
+  .filter((b) => !/template/i.test(b.file) && BG_NAMES[b.name])
+  .map((b) => ({ id: b.id, name: BG_NAMES[b.name], data: parseDefine(read(b.file)) }));
 const soundpack = parseDefine(read(manifest.sound[0].file));
 
 // properties.js define uma função que preenche ID[n] = {...}
@@ -131,7 +136,6 @@ for (const b of backgrounds) {
   addImage(b.data.shadow, true);
   for (const l of b.data.layer) if (l.pic && !l.rect) addImage(l.pic, l.transparency === 1);
 }
-for (const f of readdirSync(join(src, 'UI'))) if (f.endsWith('.png')) addImage('UI/' + f, false);
 
 // troca as cores da paleta (PLTE) de uma imagem indexada
 function recolorPng(png, color) {
@@ -183,7 +187,6 @@ for (const ext of ['ogg', 'mp3']) {
 const bundle = {
   objects: objects.map((o) => ({ id: o.id, base: o.base, type: o.type, name: o.name || o.data.bmp.name || '', AI: o.AI, data: o.data })),
   backgrounds,
-  ui,
   properties,
   sounds,
 };

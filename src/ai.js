@@ -3,10 +3,10 @@
 // um humano, então usa as mesmas regras de combos e golpes especiais dos dados.
 
 const AI_LEVELS = [
-  { name: 'Fácil', act: 0.35, special: 0.08, defend: 0.05, dodge: 0.1, roll: 0.1, combo: 0.4 },
-  { name: 'Normal', act: 0.6, special: 0.16, defend: 0.18, dodge: 0.3, roll: 0.35, combo: 0.7 },
-  { name: 'Difícil', act: 0.85, special: 0.26, defend: 0.32, dodge: 0.55, roll: 0.7, combo: 0.9 },
-  { name: 'Maluco!', act: 1, special: 0.38, defend: 0.5, dodge: 0.8, roll: 0.95, combo: 1 },
+  { name: 'Fácil', act: 0.3, special: 0.05, defend: 0.02, dodge: 0.05, roll: 0.1, combo: 0.3, every: 9 },
+  { name: 'Normal', act: 0.5, special: 0.1, defend: 0.1, dodge: 0.15, roll: 0.3, combo: 0.55, every: 6 },
+  { name: 'Difícil', act: 0.75, special: 0.2, defend: 0.25, dodge: 0.4, roll: 0.6, combo: 0.85, every: 4 },
+  { name: 'Maluco!', act: 1, special: 0.35, defend: 0.45, dodge: 0.75, roll: 0.9, combo: 1, every: 3 },
 ];
 
 const SPECIAL_KEYS = [

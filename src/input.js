@@ -163,6 +163,7 @@ function setupTouch() {
   if (pad) {
     const knob = pad.querySelector('.knob');
     const held = { T_up: false, T_down: false, T_left: false, T_right: false };
+    let running = false;
     const set = (code, on) => { if (held[code] !== on) { held[code] = on; Input.setKey(code, on); } };
     const update = (e) => {
       const r = pad.getBoundingClientRect();
@@ -175,11 +176,20 @@ function setupTouch() {
         y = [0, -1, -1, -1, 0, 1, 1, 1, 0][sector + 4];
       }
       set('T_left', x < 0); set('T_right', x > 0); set('T_up', y < 0); set('T_down', y > 0);
+      // dedo na borda do direcional = correr (o mesmo que tocar duas vezes na direção)
+      const edge = x !== 0 && dist > r.width * 0.4;
+      if (edge && !running) {
+        const code = x < 0 ? 'T_left' : 'T_right';
+        Input.setKey(code, false);
+        Input.setKey(code, true);
+      }
+      running = edge;
       const k = Math.min(1, dist / (r.width / 2)) * r.width * 0.28;
       knob.style.transform = dist > 1 ? `translate(${(dx / dist) * k}px, ${(dy / dist) * k}px)` : '';
     };
     const release = () => {
       for (const c in held) set(c, false);
+      running = false;
       knob.style.transform = '';
       pad.classList.remove('on');
     };
@@ -215,3 +225,56 @@ function setupTouch() {
     btn.addEventListener('lostpointercapture', off);
   });
 }
+
+// Botões de golpes especiais na tela de toque: cada um digita a sequência
+// (defesa, direção, ataque/pulo) no controle do 1P, como se fosse apertada.
+const TouchSpecials = {
+  el: null,
+  match: null,
+  ch: null,
+  id: -1,
+  update(match) {
+    this.el = this.el || document.querySelector('#touch .specials');
+    this.match = match && !match.demo ? match : null;
+    this.ch = null;
+    this.id = -1;
+    if (this.el) { this.el.replaceChildren(); this.el.hidden = true; }
+  },
+  // chamado a cada quadro durante a partida
+  poll(slot) {
+    if (!this.el || !this.match) return;
+    const ch = this.match.characters().find((c) => c.player === slot);
+    if (!ch) return;
+    if (ch !== this.ch || ch.id !== this.id) this.build(ch);
+    for (const b of this.el.children) b.classList.toggle('low', ch.health.mp < Number(b.dataset.cost));
+  },
+  build(ch) {
+    this.ch = ch;
+    this.id = ch.id;
+    const list = specialsOf({ id: Assets.obj(ch.id).base || ch.id, data: ch.data }).slice(0, 4);
+    this.el.replaceChildren(...list.map((sp) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.cost = sp.cost;
+      b.setAttribute('aria-label', `${sp.kind} (${sp.cmd})`);
+      b.innerHTML = `<small>${sp.cmd.replace(/ /g, '')}</small>${sp.kind}`;
+      b.addEventListener('pointerdown', (e) => { e.preventDefault(); this.fire(sp.seq); });
+      return b;
+    }));
+    this.el.hidden = !list.length;
+  },
+  fire(seq) {
+    const ch = this.ch, con = Input.controllers[0];
+    if (!ch) return;
+    Sound.init();
+    const keys = seq.map((k) => (k === 'F' ? (ch.ps.dir === -1 ? 'left' : 'right') : k));
+    const held = new Set(KEY_ACTIONS.filter((a) => Input.down.has(TOUCH_KEYS[a]) || Input.down.has(Input.keys[0][a])));
+    for (const k of keys) {
+      if (held.has(k)) con.key(k, false);
+      con.key(k, true);
+      con.key(k, false);
+    }
+    // devolve as teclas que o jogador continua segurando
+    for (const k of new Set(keys)) if (held.has(k)) con.key(k, true);
+  },
+};

@@ -49,6 +49,16 @@ class Background {
     this.timer++;
   }
 
+  // borda de baixo do cenário (abaixo dela o LF2 deixava preto)
+  bottom() {
+    let b = 0;
+    for (const l of this.layers) {
+      const h = l.rect ? l.height : (l.img && l.img.naturalHeight) || 0;
+      if (!l.cc) b = Math.max(b, l.y + h);
+    }
+    return b;
+  }
+
   draw(ctx) {
     for (const l of this.layers) {
       if (l.cc) {

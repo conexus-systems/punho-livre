@@ -216,18 +216,19 @@ class NetLobbyScreen {
     // jogadores
     for (let s = 0; s < 4; s++) {
       const p = room.players.find((q) => q.slot === s);
-      const x = 40 + s * 182, y = 90;
+      const x = 40 + s * 182, y = 72;
       ctx.fillStyle = p ? 'rgba(20,26,60,0.95)' : 'rgba(20,26,60,0.45)';
-      ctx.fillRect(x, y, 170, 200);
-      if (!p) { text(ctx, 'Vaga livre', x + 85, y + 100, { align: 'center', bold: false, color: '#5b5f86' }); continue; }
+      ctx.fillRect(x, y, 170, 160);
+      if (!p) { text(ctx, 'Vaga livre', x + 85, y + 80, { align: 'center', bold: false, color: '#5b5f86' }); continue; }
       const c = p.char >= 0 ? this.chars[p.char] : null;
-      const img = c ? Assets.img(c.data.bmp.head) : Assets.img(Assets.data.ui.character_selection.random.pic);
-      if (img) ctx.drawImage(img, x + 25, y + 10, 120, 116);
+      const img = c ? Assets.img(c.data.bmp.head) : null;
+      if (img) ctx.drawImage(img, x + 49, y + 8, 72, 72);
+      else title(ctx, '?', x + 85, y + 44, 56, UI.amber);
       const me = p.slot === Net.slot;
-      text(ctx, p.name + (me ? ' (você)' : ''), x + 85, y + 142, { align: 'center', color: me ? '#ffb000' : '#ffffff', max: 160 });
-      text(ctx, c ? c.name : 'Aleatório', x + 85, y + 162, { align: 'center', bold: false, max: 160 });
-      text(ctx, (p.team ? `Time ${p.team}` : 'Independente') + (room.host === p.slot ? ' · anfitrião' : ''), x + 85, y + 180, { align: 'center', bold: false, size: 12, color: '#9aa3d8' });
-      if (p.ready && room.host !== p.slot) text(ctx, 'PRONTO', x + 85, y + 20, { align: 'center', color: '#66d17a' });
+      text(ctx, p.name + (me ? ' (você)' : ''), x + 85, y + 98, { align: 'center', color: me ? '#ffb000' : '#ffffff', max: 160 });
+      text(ctx, c ? c.name : 'Aleatório', x + 85, y + 118, { align: 'center', bold: false, max: 160 });
+      text(ctx, (p.team ? `Time ${p.team}` : 'Independente') + (room.host === p.slot ? ' · anfitrião' : ''), x + 85, y + 138, { align: 'center', bold: false, size: 12, color: '#9aa3d8' });
+      if (p.ready && room.host !== p.slot) text(ctx, 'PRONTO', x + 85, y + 152, { align: 'center', color: '#66d17a' });
     }
     // opções do jogador local
     const S = room.settings, rows = this.rows();
@@ -241,8 +242,8 @@ class NetLobbyScreen {
       fight: ['LUTAR!', ''],
     };
     rows.forEach((r, i) => {
-      const y = 316 + i * 30, on = i === this.row;
-      if (on) { ctx.fillStyle = 'rgba(255,176,0,0.2)'; ctx.fillRect(180, y - 13, 434, 26); }
+      const y = 256 + i * 26, on = i === this.row;
+      if (on) { ctx.fillStyle = 'rgba(255,176,0,0.2)'; ctx.fillRect(180, y - 12, 434, 24); }
       const [k, v] = labels[r];
       if (r === 'fight') {
         ctx.font = `24px ${LOGO_FONT}`;
@@ -254,9 +255,9 @@ class NetLobbyScreen {
         text(ctx, (on ? '◀ ' : '') + v + (on ? ' ▶' : ''), 598, y, { align: 'right', color: on ? '#ffb000' : '#ffffff' });
       }
     });
-    if (!Net.isHost()) text(ctx, 'O anfitrião escolhe cenário e computadores e começa a luta.', LF.W / 2, 316 + rows.length * 30 + 4, { align: 'center', bold: false, size: 12, color: '#9aa3d8' });
-    if (this.msg) text(ctx, this.msg, LF.W / 2, 512, { align: 'center', color: '#ff9b9b' });
-    text(ctx, '↑/↓ escolhe · ←/→ muda · Ataque confirma · Esc sai da sala', LF.W / 2, 534, { align: 'center', bold: false, size: 12, color: '#5b5f86' });
+    if (!Net.isHost()) text(ctx, 'O anfitrião escolhe cenário e computadores e começa a luta.', LF.W / 2, 256 + rows.length * 26 + 2, { align: 'center', bold: false, size: 12, color: '#9aa3d8' });
+    if (this.msg) text(ctx, this.msg, LF.W / 2, 432, { align: 'center', color: '#ff9b9b' });
+    text(ctx, '↑/↓ escolhe · ←/→ muda · Ataque confirma · Esc sai da sala', LF.W / 2, 456, { align: 'center', bold: false, size: 12, color: '#5b5f86' });
   }
 }
 
@@ -285,7 +286,7 @@ function startNetMatch(setup, seed) {
       name: human ? p.name : 'COM',
     };
   });
-  const m = new Match({ players, bg: setup.bg, mode: 'vs', seed, onEnd: () => {
+  const m = new Match({ players, bg: setup.bg, mode: 'vs', seed, net: true, onEnd: () => {
     Net.send({ t: 'lobby' });
     Game.setScreen(new NetLobbyScreen());
   } });

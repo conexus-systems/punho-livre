@@ -4,8 +4,9 @@
 
 const LF = {
   W: 794,          // largura da janela do LF2
-  H: 550,          // altura da janela do LF2
-  PANEL_H: 128,    // faixa do painel de vida no topo
+  H: 470,          // altura da tela do jogo
+  HUD_H: 58,       // painel de vida compacto no topo
+  WORLD_Y: 84,     // a cena sobe 84px (os cenários do LF2 começam em y=128)
   FPS: 30,         // o LF2 roda a 30 quadros (TU) por segundo
   ASSETS: (window.LF2_ASSETS || 'assets/'),
 };

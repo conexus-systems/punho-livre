@@ -30,6 +30,7 @@ class Match {
       c.setPos(pos.x, 0, pos.z);
       if (p.dir) c.switchDir(p.dir);
       if (p.ai !== undefined && p.ai !== null) this.ais.push(new AI(c, this, p.ai));
+      else if (p.player >= 0 && !opts.net) c.damageTaken = [0.6, 0.8, 1, 1][Game.difficulty];
       if (p.panel !== false) this.panel.push({ ch: c, name: p.name || c.name, player: p.player });
     });
     if (opts.weapons !== false && this.mode !== 'stage') this.dropWeapons(5);
@@ -214,7 +215,7 @@ class Match {
     if (this.f6) for (const c of chars) c.health.mp = c.health.mp_full;
     const humans = chars.filter((c) => c.player >= 0 && c.health.hp > 0);
     this.bg.updateCamera(humans.length ? humans : chars.filter((c) => c.health.hp > 0), this.camBound);
-    if (this.time % 3 === 0) for (const ai of this.ais) if (ai.ch.uid >= 0) ai.think();
+    for (const ai of this.ais) if (ai.ch.uid >= 0 && this.time % ai.L.every === 0) ai.think();
     this.ais = this.ais.filter((ai) => ai.ch.uid >= 0);
     if (this.modeLogic) this.modeLogic.TU(this);
     else this.checkGameover();
@@ -267,7 +268,7 @@ class Match {
       time: this.time / LF.FPS,
       rows: this.panel.map((p) => {
         const c = p.ch, alive = c.health.hp > 0;
-        return { small: c.data.bmp.small, name: p.name, kill: c.stat.kill, attack: Math.round(c.stat.attack),
+        return { small: c.data.bmp.small, name: !p.name || p.name === c.name || p.name === 'COM' ? c.name : `${p.name} · ${c.name}`, kill: c.stat.kill, attack: Math.round(c.stat.attack),
           lost: Math.round(c.health.hp_lost), mp: Math.round(c.health.mp_usage), pick: c.stat.picking,
           win: teams.has(c.team), alive };
       }),
@@ -287,85 +288,38 @@ class Match {
   draw(ctx) {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, LF.W, LF.H);
+    // o cenário do LF2 começa em y=128; a cena sobe para caber sob o painel compacto
+    ctx.save();
+    ctx.translate(0, -LF.WORLD_Y);
     this.bg.draw(ctx);
+    // estica a última linha do chão até o pé da tela, escurecendo
+    const by = this.bg.bottom() - LF.WORLD_Y;
+    if (by > 0 && by < LF.H) {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      const k = ctx.canvas.width / LF.W;
+      ctx.drawImage(ctx.canvas, 0, (by - 1) * k, ctx.canvas.width, k, 0, by * k, ctx.canvas.width, (LF.H - by) * k);
+      ctx.scale(k, k);
+      const g = ctx.createLinearGradient(0, by, 0, LF.H);
+      g.addColorStop(0, 'rgba(0,0,0,0.15)');
+      g.addColorStop(1, 'rgba(0,0,0,0.6)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, by, LF.W, LF.H - by);
+      ctx.restore();
+    }
     const camX = this.bg.camX;
     for (const o of this.live) if (o.visible && o.shadowVisible && !o.hidden && !o.holder) this.bg.drawShadow(ctx, o);
     const list = [...this.live, ...this.effects];
     list.sort((a, b) => ((a.ps.sz !== undefined ? a.ps.sz + (a.ps.zz || 0) : a.z) - (b.ps.sz !== undefined ? b.ps.sz + (b.ps.zz || 0) : b.z)) || ((a.uid || 0) - (b.uid || 0)));
     for (const o of list) o.draw(ctx, camX);
-    this.drawPanel(ctx);
+    ctx.restore();
+    drawHud(ctx, this);
     if (this.modeLogic && this.modeLogic.draw) this.modeLogic.draw(ctx, this);
-    if (this.paused) this.drawMessage(ctx, 'pause');
-    else if (this.demo) this.drawMessage(ctx, 'demo');
-    if (this.summary) this.drawSummary(ctx);
-  }
-
-  drawPanel(ctx) {
-    const P = Assets.data.ui.panel, img = Assets.img(P.pic);
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, LF.W, LF.PANEL_H);
-    for (let i = 0; i < 8; i++) {
-      const X = P.pane_width * (i % 4), Y = P.pane_height * Math.floor(i / 4);
-      if (img) ctx.drawImage(img, X, Y);
-      const slot = this.panel[i];
-      if (!slot) continue;
-      const c = slot.ch, h = c.health;
-      const small = Assets.img(c.data.bmp.small);
-      if (small) ctx.drawImage(small, X + P.x, Y + P.y);
-      const bw = (v) => Math.max(0, Math.floor(v * P.hpw));
-      ctx.fillStyle = P.hp_dark;
-      ctx.fillRect(X + P.hpx, Y + P.hpy, bw(h.hp_bound / h.hp_full), P.hph);
-      ctx.fillStyle = h.hp > 0 && c.effect.heal > 0 && this.time % 3 === 0 ? P.hp_light : P.hp_bright;
-      ctx.fillRect(X + P.hpx, Y + P.hpy, bw(h.hp / h.hp_full), P.hph);
-      ctx.fillStyle = P.mp_dark;
-      ctx.fillRect(X + P.mpx, Y + P.mpy, P.mpw, P.mph);
-      ctx.fillStyle = P.mp_bright;
-      ctx.fillRect(X + P.mpx, Y + P.mpy, Math.floor(Math.max(0, h.mp / h.mp_full) * P.mpw), P.mph);
+    if (this.demo && !this.summary) {
+      title(ctx, 'DEMONSTRAÇÃO', LF.W / 2, LF.HUD_H + 26, 26, UI.amber);
+      text(ctx, 'Aperte ATAQUE para voltar', LF.W / 2, LF.HUD_H + 50, { align: 'center', bold: false, size: 12, shadow: '#000' });
     }
-  }
-
-  drawMessage(ctx, key) {
-    const M = Assets.data.ui.message_overlay, img = Assets.img(M.pic), r = M[key];
-    if (!img || !r || Math.floor(Date.now() / 400) % 2) return;
-    ctx.drawImage(img, r[0], r[1], r[2], r[3], Math.round((LF.W - r[2]) / 2), 250, r[2], r[3]);
-  }
-
-  drawSummary(ctx) {
-    const S = Assets.data.ui.summary, img = Assets.img(S.pic), sum = this.summary;
-    if (!img) return;
-    const rows = sum.rows.length;
-    const total = S.head[3] + S.body[3] * rows + S.foot[3];
-    const x0 = Math.round((LF.W - S.width) / 2), y0 = Math.round(LF.PANEL_H + (LF.H - LF.PANEL_H - total) / 2);
-    const part = (r, y) => ctx.drawImage(img, r[0], r[1], r[2], r[3], x0, y, r[2], r[3]);
-    part(S.head, y0);
-    sum.rows.forEach((row, i) => {
-      const y = y0 + S.head[3] + i * S.body[3];
-      part(S.body, y);
-      const small = Assets.img(row.small);
-      if (small) ctx.drawImage(small, x0 + S.icon[0], y + S.icon[1], S.icon[2], S.icon[3]);
-      const vals = [row.name, row.kill, row.attack, row.lost, row.mp, row.pick,
-        (row.win ? 'Vitória' : 'Derrota') + (row.alive ? '' : ' (KO)')];
-      vals.forEach((v, k) => {
-        const t = S.text[k];
-        const color = k === 6 ? S.text_color[row.win ? 6 : 7] : S.text_color[k];
-        ctx.font = k === 0 ? 'bold 11px Arial, sans-serif' : 'bold 13px Arial, sans-serif';
-        ctx.fillStyle = color;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(String(v), x0 + t[0] + t[2] / 2, y + t[1] + t[3] / 2, t[2]);
-      });
-    });
-    const fy = y0 + S.head[3] + rows * S.body[3];
-    part(S.foot, fy);
-    const sec = Math.floor(sum.time), tx = `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
-    ctx.font = 'bold 13px Arial, sans-serif';
-    ctx.fillStyle = S.time_color;
-    ctx.textAlign = 'center';
-    ctx.fillText(tx, x0 + S.time[0] + S.time[2] / 2, fy + S.time[1] + S.time[3] / 2);
-    if (sum.title) {
-      ctx.font = 'bold 22px Arial, sans-serif';
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(sum.title, LF.W / 2, y0 - 20);
-    }
+    if (this.paused) drawPauseOverlay(ctx);
+    if (this.summary) drawSummary(ctx, this);
   }
 }

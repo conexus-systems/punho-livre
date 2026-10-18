@@ -25,13 +25,6 @@ const Assets = {
         if (b.data.shadow) paths.add(b.data.shadow);
         for (const l of b.data.layer) if (l.pic && !l.rect) paths.add(l.pic);
       }
-      for (const k in D.ui) {
-        const u = D.ui[k];
-        if (u && typeof u === 'object') {
-          for (const p of [u.pic, u.bg]) if (typeof p === 'string') paths.add(p);
-          for (const v of Object.values(u)) if (v && typeof v === 'object' && typeof v.pic === 'string') paths.add(v.pic);
-        }
-      }
       const list = [...paths];
       let done = 0;
       return Promise.all(list.map((p) => new Promise((resolve) => {
