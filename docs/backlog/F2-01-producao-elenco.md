@@ -30,7 +30,7 @@ Files in scope: pacote da Yaguar; dados de golpes; mobile/src/engine (se a super
 Acceptance criteria: critérios comuns + super armadura de 1 golpe (Bomba) testada + Huracán pegando só oponente no ar.
 Tests required: comuns + teste de super armadura e de agarrão anti-aéreo
 Metrics/baseline: memória de textura (maior lutador do elenco)
-Impacto em determinismo, justiça online, privacidade ou anúncios: muda a simulação
+Impacto em determinismo, justiça online, privacidade ou licença: muda a simulação
 Evidence (commands/logs/devices): testes; números de memória no Android de 3 GB
 Status: TODO
 
@@ -42,7 +42,7 @@ Files in scope: pacote da Lua; dados de golpes
 Acceptance criteria: comuns.
 Tests required: comuns
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: muda a simulação
+Impacto em determinismo, justiça online, privacidade ou licença: muda a simulação
 Evidence (commands/logs/devices): testes
 Status: TODO
 
@@ -54,7 +54,7 @@ Files in scope: pacote do Volt; dados de golpes
 Acceptance criteria: comuns + revisão das falas em espanhol rioplatense por falante nativo.
 Tests required: comuns
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: muda a simulação
+Impacto em determinismo, justiça online, privacidade ou licença: muda a simulação
 Evidence (commands/logs/devices): testes
 Status: TODO
 
@@ -66,7 +66,7 @@ Files in scope: pacote da Iara; dados de golpes; textos da história
 Acceptance criteria: comuns + parecer da consultoria cultural sobre visual, nome dos golpes e história.
 Tests required: comuns
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: muda a simulação
+Impacto em determinismo, justiça online, privacidade ou licença: muda a simulação
 Evidence (commands/logs/devices): parecer cultural; testes
 Status: TODO
 
@@ -78,7 +78,7 @@ Files in scope: pacote do Severino; dados de golpes; mobile/src/game/macros.ts (
 Acceptance criteria: comuns + comandos de carga funcionando no toque (clássico) com taxa de acerto medida.
 Tests required: comuns + teste de carga pela macro
 Metrics/baseline: taxa de acerto de comandos de carga no toque
-Impacto em determinismo, justiça online, privacidade ou anúncios: muda a simulação
+Impacto em determinismo, justiça online, privacidade ou licença: muda a simulação
 Evidence (commands/logs/devices): testes
 Status: TODO
 
@@ -90,7 +90,7 @@ Files in scope: pacote do Kai; dados de golpes
 Acceptance criteria: comuns + contra-golpes respeitam o tipo do golpe (alto/médio/baixo) e não pegam arremessos.
 Tests required: comuns + testes de contra-golpe por tipo
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: muda a simulação
+Impacto em determinismo, justiça online, privacidade ou licença: muda a simulação
 Evidence (commands/logs/devices): testes
 Status: TODO
 
@@ -102,6 +102,6 @@ Files in scope: mobile/scripts/roster/, mobile/src/characters/, check do `test:c
 Acceptance criteria: app só com os 8 finais; gerador procedural continua rodando nos testes, se útil.
 Tests required: gates do mobile
 Metrics/baseline: tamanho do app antes e depois
-Impacto em determinismo, justiça online, privacidade ou anúncios: versão de conteúdo
+Impacto em determinismo, justiça online, privacidade ou licença: versão de conteúdo
 Evidence (commands/logs/devices): gates
 Status: TODO

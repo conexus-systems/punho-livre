@@ -2,8 +2,9 @@
 
 Fonte da verdade entre `mobile/` (Expo) e `web/` (Rails 8 API). Mudou aqui, muda nos dois lados.
 
-Identidade, cobrança e mensagens **não** são implementadas aqui: vêm dos BFFs CONEXUS
-(`bff-auth`, `bff-payment`, `bff-api`). Ver `CONEXUS.md`.
+Identidade e mensagens **não** são implementadas aqui: vêm dos BFFs CONEXUS (`bff-auth`, `bff-api`).
+Ver `CONEXUS.md`. O jogo é **pago** (compra única na Google Play): não há cobrança, anúncio nem compra no
+app, e o app não usa mais o `bff-payment`. A licença do online é conferida pelo Play Integrity (§ Licença).
 
 ## Autenticação
 
@@ -16,7 +17,8 @@ Identidade, cobrança e mensagens **não** são implementadas aqui: vêm dos BFF
 - Admin = claim `groups` contém algum valor de `ADMIN_GROUPS` (default `mugen-arena-admin,admin`).
 
 Erros seguem `{ "error": "<code>", "message": "..." }`:
-`401 invalid_token`, `403 forbidden`, `404 not_found`, `402 premium_required`, `422 validation_failed`, `503 auth_unavailable`.
+`401 invalid_token`, `403 forbidden`, `404 not_found`, `422 validation_failed`, `503 auth_unavailable`
+(licença: `403 <motivo>` e `503 license_unavailable`, ver § Licença).
 
 ## REST — `/api/v1`
 
@@ -26,25 +28,30 @@ Erros seguem `{ "error": "<code>", "message": "..." }`:
 | GET | `/api/v1/me` | sim | `{ player }` |
 | PATCH | `/api/v1/me` | sim | body `{ display_name }` → `{ player }` |
 | GET | `/api/v1/characters` | não | `{ characters: [CharacterSummary] }` (só `approved`) |
-| GET | `/api/v1/characters/:slug/pack` | só se premium | corpo = Pack JSON (bytes exatos usados no `sha256`) |
+| GET | `/api/v1/characters/:slug/pack` | não | corpo = Pack JSON (bytes exatos usados no `sha256`); todo personagem aprovado é livre |
 | POST | `/api/v1/characters` | sim | body `{ pack: Pack }` → `201 { character: CharacterSummary }` status `pending` |
 | GET | `/api/v1/admin/characters?status=pending` | admin | `{ characters: [CharacterSummary] }` |
-| PATCH | `/api/v1/admin/characters/:slug` | admin | body `{ status: "approved"\|"rejected", premium?: bool, reason?: string }` |
+| PATCH | `/api/v1/admin/characters/:slug` | admin | body `{ status: "approved"\|"rejected", premium?: bool, reason?: string }` (`premium` é legado: não bloqueia mais nada) |
 | GET | `/api/v1/leaderboard[?season=N]` | não | `{ season: Season, players: [{ display_name, rating, wins, losses, league }] }` (top 100 da temporada, só quem terminou a colocação; temporada inexistente → 404) |
 | GET | `/api/v1/ranked` | sim | `RankedStanding` (temporada atual) |
 | GET | `/api/v1/matches` | sim | `{ matches: [{ id, opponent, my_character, opponent_character, result: "win"\|"loss"\|"draw"\|"abandoned"\|"void", rating_delta, finished_at }] }` |
 | GET | `/api/v1/matches/:id/replay` | participante ou admin | `{ replay: Replay }` (403 para os demais) |
 | GET | `/api/v1/admin/match_reviews?status=open` | admin | `{ reviews: [MatchReview] }` (`open`\|`resolved`\|`dismissed`) |
 | PATCH | `/api/v1/admin/match_reviews/:id` | admin | body `{ status: "resolved"\|"dismissed", note?: string }` → `{ review: MatchReview }` |
-| POST | `/conexus/webhooks` | HMAC | webhooks do bff-auth e bff-payment |
+| POST | `/api/v1/license/challenge` | sim | `{ nonce, required }` — ver § Licença |
+| POST | `/api/v1/license/verify` | sim | body `{ nonce, token }` → `{ licensed_until }` \| 403/503 — ver § Licença |
+| POST | `/conexus/webhooks` | HMAC | webhooks do bff-auth (e, legado, do bff-payment) |
 | POST | `/api/telemetry/batch` | não (anônimo, só com consentimento) | `202 { accepted, rejected }` — ver § Telemetria |
 
 `player`:
 ```json
 { "id": 1, "conexus_user_id": "uuid", "display_name": "Ryo", "email": "a@b.c",
-  "rating": 1500, "wins": 0, "losses": 0, "premium": false, "admin": false }
+  "rating": 1500, "wins": 0, "losses": 0, "premium": false,
+  "licensed_until": "2026-10-25T12:00:00Z", "license_required": true, "admin": false }
 ```
 `rating` = rating exibido da temporada atual (Glicko-2, arredondado); `wins`/`losses` = vida toda.
+`licensed_until` = até quando a licença do online vale (nulo se nunca verificou); `license_required` = o servidor
+exige licença (`PLAY_INTEGRITY_REQUIRED=1`). `premium` é legado (da assinatura antiga) e o app o ignora.
 
 `Season`: `{ "number": 1, "name": "Temporada 1", "starts_at": "<iso8601>", "ends_at": "<iso8601>" }`
 
@@ -108,6 +115,38 @@ páginas e cada frame pode ter um 7º número com o índice da página.
 `sounds` (opcional, desde a 0.4.0): `{ "<grupo>,<índice>": "data:audio/wav;base64,..." }` com os sons do `.snd`
 usados pelos estados (PlaySnd, hitsound, guardsound). Packs sem esse campo continuam válidos.
 
+`CharacterSummary.premium` é legado: o download do pack não exige mais nada (jogo pago, nada bloqueado).
+
+## Licença (jogo pago)
+
+O MUGEN Arena é vendido na Google Play (compra única). O **online** (fila ranqueada e salas) só aceita cópias
+compradas; o **modo offline nunca depende de licença**. A prova é o veredito do **Play Integrity**
+(`@expo/app-integrity` no app, `web/app/services/integrity/*` no servidor).
+
+Fluxo (`mobile/src/services/license.ts`, só Android, antes de entrar no online):
+1. Se `player.license_required` é falso, ou `licensed_until` ainda vale por mais de 24 h, não faz nada.
+2. `POST /api/v1/license/challenge` (Bearer) → `{ "nonce": "<string>", "required": true }`. O nonce é assinado com o
+   `secret_key_base`, amarrado ao jogador e vale 5 min (sem tabela).
+3. O app chama o Play Integrity (projeto do Google Cloud em `EXPO_PUBLIC_PLAY_CLOUD_PROJECT`) com
+   `requestHash` = SHA-256(nonce) em hex.
+4. `POST /api/v1/license/verify` (Bearer) body `{ "nonce": "...", "token": "<token do Play Integrity>" }`:
+   - `200 { "licensed_until": "<iso8601>" }` — aprovado; o servidor grava `players.licensed_until` = agora + 7 dias.
+   - `403 { "error": "<motivo>" }`, com motivo:
+     `invalid_nonce` (nonce vencido ou de outro jogador), `wrong_request` (`requestHash`/pacote não batem),
+     `stale_token` (token com mais de 10 min), `unrecognized_app` (não é `PLAY_RECOGNIZED`),
+     `not_licensed` (não é `LICENSED`), `device_integrity` (sem `MEETS_DEVICE_INTEGRITY`).
+   - `503 { "error": "license_unavailable" }` — conta de serviço não configurada ou API do Google fora.
+
+O servidor decodifica o token no Google (`decodeIntegrityToken` do pacote `PLAY_INTEGRITY_PACKAGE`, padrão
+`br.com.conexus.mugenarena`) com a conta de serviço em `PLAY_INTEGRITY_SERVICE_ACCOUNT` (JSON, nunca no Git) e
+exige os três vereditos: `PLAY_RECOGNIZED` + `LICENSED` + `MEETS_DEVICE_INTEGRITY`.
+
+Com `PLAY_INTEGRITY_REQUIRED=1` (produção), o `MatchmakingChannel` responde `{ type: "error", error:
+"license_required" }` a quem não tem `licensed_until` no futuro. Desligado (dev, testes, versão web), todo jogador
+conta como licenciado.
+
+iOS: não há checagem — o App Attest prova que o app é genuíno, mas não prova compra.
+
 ## Telemetria — `POST /api/telemetry/batch`
 
 Eventos anônimos do app, **só com consentimento** do jogador (diálogo da primeira abertura ou
@@ -167,7 +206,8 @@ Servidor → cliente (`transmit`):
 - `{ type: "room_created", room_code: "ABCD12" }` — `mode: "room"` sem código.
 - `{ type: "matched", match_id, side: 0|1, seed: <int32>, input_delay: 2, engine_version,
      opponent: { display_name, rating, league, character, pack_sha256 } }`
-- `{ type: "error", error: "room_not_found" | "room_full" | "already_queued" | "version_mismatch" }`
+- `{ type: "error", error: "room_not_found" | "room_full" | "already_queued" | "version_mismatch" | "license_required" }`
+  (`license_required` só com `PLAY_INTEGRITY_REQUIRED=1`, ver § Licença)
 
 Ação cliente: `cancel` (sai da fila / fecha sala). Unsubscribe também sai.
 Ranked pareia o mais antigo da fila (mesma `engine_version`) com rating da temporada dentro da janela, que alarga com
@@ -221,8 +261,9 @@ Em `/api/v1/matches`, `opponent` = `{ display_name, rating }`, partida `disputed
 ## Webhooks recebidos (`POST /conexus/webhooks`, header `X-Conexus-Signature: sha256=<hmac>`)
 
 - `user.created`, `user.updated` (bff-auth) → upsert `Player` (nome, email, avatar).
-- `entitlement.changed`, `subscription.activated`, `subscription.canceled` (bff-payment) com
-  `product_slug == CONEXUS_PRODUCT_SLUG` → `Player#premium` = `status == "active"`.
+- Legado: `entitlement.changed`, `subscription.activated`, `subscription.canceled` (bff-payment) com
+  `product_slug == CONEXUS_PRODUCT_SLUG` ainda atualizam `Player#premium`, mas isso não libera nem bloqueia nada
+  (jogo pago; o app não usa mais o bff-payment).
 - Idempotência por `id` do evento (tabela `conexus_webhook_events`).
 
 ## Mensagens enviadas (bff-api, via gem `conexus-platform`, sempre em job Solid Queue)

@@ -9,7 +9,8 @@ Esta API é um **consumidor** da plataforma CONEXUS (template `conexus-bff-stack
 | Papel | Quem faz | Aqui |
 |---|---|---|
 | Login, OAuth2/PKCE, JWT | `bff-auth` | só **verifica** o JWT (JWKS) e faz upsert do `Player` |
-| Assinatura / premium | `bff-payment` | recebe webhook e liga/desliga `Player#premium` |
+| Venda | Google Play (jogo pago) | **licença do online**: confere o Play Integrity (`Integrity::License`) e grava `licensed_until` |
+| (legado) assinatura | `bff-payment` | não usado pelo app; o webhook ainda liga/desliga `Player#premium`, que não libera nada |
 | E-mail | `bff-api` | job Solid Queue → `Conexus::Messaging::Client#dispatch` |
 
 Não há Devise/OmniAuth, SDK Stripe/Mercado Pago, Resend/Twilio nem mailer neste app.
@@ -53,7 +54,7 @@ bin/ci                          # tudo acima em sequência
 | `CONEXUS_AUTH_URL` | bff-auth; JWKS em `<url>/.well-known/jwks.json` |
 | `CONEXUS_AUTH_ISSUER` | `iss` esperado (padrão: `CONEXUS_AUTH_URL`) |
 | `CONEXUS_AUTH_ALLOWED_AUDIENCES` | client_id(s) aceitos no `aud` (o client público do app) |
-| `CONEXUS_PAYMENTS_URL`, `CONEXUS_API_URL` | hosts dos BFFs de pagamento e mensagens |
+| `CONEXUS_PAYMENTS_URL`, `CONEXUS_API_URL` | hosts dos BFFs de pagamento (legado, não usado pelo app) e mensagens |
 | `CONEXUS_WEBHOOK_SECRET` | HMAC dos webhooks recebidos (bff-auth / bff-payment) |
 | `CONEXUS_API_WEBHOOK_SECRET` | HMAC dos dispatches ao bff-api (sem ele, e-mails são pulados e logados) |
 | `CONEXUS_PRODUCT_SLUG` | `mugen-arena` — filtra eventos de cobrança e vira `source_app` |
@@ -72,22 +73,26 @@ bin/ci                          # tudo acima em sequência
 | `PACK_MAX_BYTES` | tamanho máximo de um pack enviado (padrão 5 MiB) |
 | `CORS_ORIGINS` | origens CORS, separadas por vírgula (padrão `*`) |
 | `SECRET_KEY_BASE` | obrigatório em produção (sem `config/master.key` na imagem) |
+| `PLAY_INTEGRITY_REQUIRED` | `1` em produção: o online exige licença (fila/salas respondem `license_required`). Desligado, todos contam como licenciados |
+| `PLAY_INTEGRITY_PACKAGE` | pacote conferido no veredito (padrão `br.com.conexus.mugenarena`) |
+| `PLAY_INTEGRITY_SERVICE_ACCOUNT` | JSON da conta de serviço do Google Cloud com acesso à Play Integrity API (segredo; sem ele, `verify` → `503 license_unavailable`) |
 | `SOLID_CABLE_POLLING_INTERVAL` | polling do Solid Cable em segundos (padrão `0.05`) |
 
 ## Endpoints
 
 Erros: `{ "error": "<code>", "message": "..." }` — `401 invalid_token`, `403 forbidden`,
-`404 not_found`, `402 premium_required`, `422 validation_failed`, `503 auth_unavailable`.
+`404 not_found`, `422 validation_failed`, `503 auth_unavailable`; licença: `403 <motivo>`, `503 license_unavailable`.
 
 | Método | Caminho | Auth |
 |---|---|---|
 | GET | `/up` | — |
 | GET / PATCH | `/api/v1/me` | Bearer |
 | GET | `/api/v1/characters` | — (última versão aprovada de cada slug) |
-| GET | `/api/v1/characters/:slug/pack` | Bearer premium/admin se o personagem for premium |
+| GET | `/api/v1/characters/:slug/pack` | — (todo personagem aprovado é livre; jogo pago) |
 | POST | `/api/v1/characters` | Bearer (`{ pack }` → `201`, status `pending`) |
 | GET | `/api/v1/admin/characters?status=pending` | admin |
-| PATCH | `/api/v1/admin/characters/:slug` | admin (`{ status, premium?, reason? }`) |
+| PATCH | `/api/v1/admin/characters/:slug` | admin (`{ status, premium?, reason? }`; `premium` é legado) |
+| POST | `/api/v1/license/challenge`, `/api/v1/license/verify` | Bearer (licença do jogo pago — PROTOCOL § Licença) |
 | GET | `/api/v1/leaderboard[?season=N]` | — (top 100 da temporada) |
 | GET | `/api/v1/ranked` | Bearer (rating, liga e posição na temporada) |
 | GET | `/api/v1/matches` | Bearer |
@@ -166,10 +171,9 @@ gh workflow run "Deploy — Production" --ref main -f skip_build=true # só Terr
    ```
 
 3. **Esta API**: `CONEXUS_AUTH_ALLOWED_AUDIENCES=mugen-arena` (o `client_id` acima).
-4. **bff-payment**: adicione o `client_id` a `CONEXUS_AUTH_ALLOWED_AUDIENCES` (o app abre o
-   checkout com o mesmo token) e inclua esta API em `APP_WEBHOOK_TARGETS`
-   (`[..., {"url":"https://<host>/conexus/webhooks","secret":"<CONEXUS_WEBHOOK_SECRET>"}]`).
-   O produto do catálogo precisa ter slug `mugen-arena` (`CONEXUS_PRODUCT_SLUG`).
+4. **bff-payment**: não é mais necessário — o jogo é pago na Google Play e o app não abre checkout. Se o
+   cadastro antigo existir, pode ficar (o webhook só mexe em `Player#premium`, que não libera nada).
+   A licença usa o Play Integrity: veja `PLAY_INTEGRITY_*` acima e `mobile/PLAY_LISTING.md`.
 5. **bff-api**: adicione o `client_id` a `CONEXUS_AUTH_ALLOWED_AUDIENCES` e mapeie-o em
    `CONEXUS_AUTH_AUDIENCE_APPS` (`...,mugen-arena:mugen-arena`, formato `client_id:source_app`).
    O segredo HMAC aceito para o `source_app` `mugen-arena` vai em `CONEXUS_API_WEBHOOK_SECRET` aqui.

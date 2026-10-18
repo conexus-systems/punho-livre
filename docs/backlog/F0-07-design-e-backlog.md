@@ -15,7 +15,7 @@ Files in scope: docs/gdd/, docs/art/, docs/brand/, docs/ROADMAP.md, docs/backlog
 Acceptance criteria: aprovados pelo dono do projeto; comentários do diretor de arte e do designer de combate incorporados quando eles entrarem.
 Tests required: n/a
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: propõe mudança em anúncios (só recompensados) — ver GDD 5.4
+Impacto em determinismo, justiça online, privacidade ou licença: registra o modelo de venda (jogo pago, sem anúncios nem compras no app) — ver GDD 5
 Evidence (commands/logs/devices): commit dos documentos
 Status: REVIEW
 
@@ -27,6 +27,6 @@ Files in scope: docs/gdd/GDD.md
 Acceptance criteria: cada "ponto de partida" vira valor aceito ou tarefa de teste.
 Tests required: n/a
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): diff do GDD
 Status: TODO

@@ -20,7 +20,8 @@ npm run pack -- /caminho/kfm --id kungfu --upload https://mugen-arena.conexus-sy
   (raw, RLE8, RLE5, LZ5, PNG8/24/32).
 - `--upload` envia ao backend (`POST /api/v1/characters`, token do bff-auth). O pack
   fica `pending`; um admin (grupo `mugen-arena-admin` no bff-auth) aprova pelo app em
-  *Personagens → Revisão*, opcionalmente como **premium**. O autor recebe e-mail (bff-api).
+  *Personagens → Revisão*. O autor recebe e-mail (bff-api). (A marca **premium** é legado: com o jogo pago,
+  todo personagem aprovado é livre para todos e o servidor não bloqueia o download.)
 - Aprovado, aparece em *Personagens* para todos baixarem; o app confere o sha256 e
   valida o pack na engine antes de instalar. No online, o oponente baixa automaticamente
   o personagem que você escolheu.

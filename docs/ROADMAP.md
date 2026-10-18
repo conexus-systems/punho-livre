@@ -10,7 +10,9 @@ Documentos relacionados: [gdd/GDD.md](gdd/GDD.md), [gdd/ELENCO_LANCAMENTO.md](gd
 
 - Engine própria, determinística, compatível com um subconjunto do formato MUGEN, com sistema estilo SNK
   (4 botões, MAX, rolamento, blowback, Just Defend, guard crush, equipes 3×3).
-- Online com rollback (relay no Rails), AdMob, conta e cobrança pelos BFFs CONEXUS.
+- Online com rollback (relay no Rails) e conta pelo bff-auth da CONEXUS.
+- Desde a 0.5.0: **jogo pago** — AdMob, ATT e o Premium (bff-payment) saíram do app; o online exige cópia comprada
+  na Google Play (licença pelo Play Integrity, [PROTOCOL.md](PROTOCOL.md) § Licença).
 - 20 lutadores com arte vetorial gerada por código, 8 cenários procedurais, som sintetizado.
 - **Nada foi testado em aparelho real.** Desempenho, toque e som só foram verificados em Node e no navegador.
 
@@ -26,7 +28,7 @@ comercial.
 | Risco de produção | **Fatia vertical** (2 lutadores + 1 cenário finais) antes da produção do elenco. |
 | Combate | Um **designer de combate** humano é dono do frame data e do balanceamento. |
 | Plataforma | **Celular primeiro**: modo de controle **simples** e **clássico**. |
-| Monetização | Justa: nada que dê vantagem. Vende personagem, skin e passe. Anúncio **só com recompensa**. |
+| Modelo de venda | **Jogo pago, compra única de R$ 49,99** na Google Play (decisão de out/2026). Sem anúncios, sem compras no app, sem moedas nem passe; tudo desbloqueável jogando. DLC opcional só se a comunidade aceitar (decisão em aberto). Ver [GDD § 5](gdd/GDD.md#5-progressão-e-modelo-de-venda). |
 | Tecnologia | **Manter a engine** (TypeScript, Expo, Skia, rollback). |
 | Marca | Trocar o nome antes de divulgar. |
 
@@ -37,8 +39,8 @@ comercial.
 | 0 — Fundação | nov/2026 | Nome, equipe, testes de estilo, ferramentas, telemetria e lab de aparelhos |
 | 1 — Fatia vertical | dez/2026 – fev/2027 | 2 lutadores + 1 cenário no padrão final, controles touch e game feel |
 | 2 — Elenco | mar – ago/2027 | Os outros 6 lutadores, cenários, arcade com história, IA, balanceamento |
-| 3 — Online e economia | mai – ago/2027 (em paralelo à 2) | Online robusto, ranqueada, loja, passe, anúncios recompensados |
-| 4 — Soft launch | set – nov/2027 | Brasil e América Latina; medir retenção, estabilidade e economia |
+| 3 — Online e venda | mai – ago/2027 (em paralelo à 2) | Online robusto, ranqueada, licença do jogo pago (Play Integrity), preço e página da loja |
+| 4 — Soft launch | set – nov/2027 | Brasil e América Latina; medir vendas, reembolso, estabilidade e retenção |
 | 5 — Lançamento global | dez/2027 – jan/2028 | Todas as lojas, inglês e espanhol, marketing |
 | 6 — Live ops | a partir de fev/2028 | Temporadas, novos lutadores, eventos, balanceamento contínuo |
 
@@ -84,15 +86,17 @@ comercial.
 **Portão de saída:** 8 lutadores completos; nenhum lutador fora da faixa de 45–55% de vitória nas partidas
 de teste (com amostra mínima definida pelo designer de combate); download dentro da meta.
 
-### Fase 3 — Online e economia (mai – ago/2027, em paralelo)
+### Fase 3 — Online e venda (mai – ago/2027, em paralelo)
 
 - Determinismo comprovado entre aparelhos diferentes (Android × iOS, ARM de fabricantes diferentes).
 - Soak test, reconexão, ranqueada com temporadas, anti-trapaça.
-- Loja, passe de temporada, anúncios recompensados, progressão salva na conta.
+- Licença do online pelo Play Integrity (código pronto), preço por país e página da loja do app pago; progressão
+  salva na conta.
 - Privacidade, políticas das lojas e classificação etária.
 
 **Portão de saída:** taxa de dessincronia e de queda de partida dentro do limite definido pelo netcode;
-compras e anúncios aprovados em teste de loja; revisão de privacidade concluída.
+licença testada na faixa de teste interno com licenças de teste do Play Console; ficha da loja e Segurança dos
+dados aprovadas; revisão de privacidade concluída.
 
 ### Fase 4 — Soft launch BR/LatAm (set – nov/2027)
 
@@ -106,8 +110,9 @@ Abrir para todos os países, com inglês e espanhol, ficha de loja final, impren
 
 ### Fase 6 — Live ops (fev/2028 em diante)
 
-Temporadas com passe, um lutador novo por temporada (vindo do banco de rascunhos), eventos, ajustes de
-balanceamento por dados.
+Temporadas do ranqueado, eventos e ajustes de balanceamento por dados, como atualizações gratuitas. Lutadores
+novos (do banco de rascunhos) entram de graça ou, só se a comunidade aceitar, como DLC opcional — decisão em
+aberto.
 
 ## 4. Metas
 
@@ -118,9 +123,11 @@ Todas são **metas**, não medições. Nenhuma delas foi medida até hoje.
 | Desempenho | 60 fps na luta em Android intermediário | Telemetria de tempo de frame no lab e em campo |
 | Estabilidade | Crash-free ≥ 99,5% (usuários) | Relatório de crash |
 | Tamanho | Download inicial ≤ 150 MB | Tamanho do pacote nas lojas |
-| Retenção | D1 ≥ 40%, D7 ≥ 15%, D30 ≥ 6% | Telemetria por coorte, a partir do soft launch |
+| Retenção | D1 ≥ 40%, D7 ≥ 15%, D30 ≥ 6% (de quem comprou e consentiu a telemetria) | Telemetria por coorte, a partir do soft launch |
 | Onboarding | Conclusão do tutorial ≥ 70% | Funil do tutorial |
-| Satisfação | Nota nas lojas ≥ 4,3 | Lojas |
+| Satisfação | Nota nas lojas ≥ 4,5 | Lojas |
+| Vendas | Conversão da página da loja (visitas → compras) acompanhada desde o soft launch; meta definida com os primeiros dados | Play Console (aquisição da ficha) |
+| Reembolso | Taxa de reembolso ≤ 10% | Play Console (pedidos e reembolsos) |
 | Balanceamento | Taxa de vitória de cada lutador entre 45% e 55% | Partidas online, por faixa de habilidade |
 
 O "Android intermediário" de referência precisa ser escolhido na Fase 0 (tarefa F0-05). Proposta: um
@@ -137,7 +144,9 @@ aparelho de 4 GB de RAM de linha intermediária, com Android 12 ou mais novo.
 | Determinismo entre aparelhos (Hermes/JSC, ARM) | Dessincronia no online | Teste cruzado Android × iOS; evitar funções matemáticas sem garantia de resultado igual no `stepWorld` |
 | Pouca gente na fila no soft launch | Esperas longas, ranqueada vazia | Busca com faixa que se abre com o tempo; casual com CPU sinalizada como CPU; janela de horários |
 | Nome com conflito de marca | Troca tardia, custo de rebrand | Checagem por advogado na Fase 0, antes de publicar |
-| Políticas das lojas para compras digitais | Rejeição na loja | Itens digitais pela cobrança da loja (via bff-payment, se suportar); revisão do security-devops e do jurídico |
+| Preço alto para celular no Brasil (R$ 50 contra jogos gratuitos) | Poucas vendas, reembolsos | Conteúdo fechado e polido no dia 1; primeira sessão forte (reembolso automático em 48 h); ficha honesta com vídeo do jogo real; preço por país; acompanhar conversão e reembolso no soft launch |
+| Pirataria do APK | Venda perdida, online invadido | Online exige licença da Play (Play Integrity: cópia comprada, app reconhecido, aparelho íntegro). Offline pirateável é **aceito** — não vale o custo nem a fricção para quem pagou |
+| Play Integrity fora do ar ou aparelho reprovado (root, ROM custom) | Comprador sem online | Licença vale 7 dias e renova com 1 dia de folga; `license_unavailable` com mensagem clara; offline nunca depende disso |
 | Personagens lembrarem IP de terceiros | Notificação, remoção | Revisão de IP em cada lutador (checklist no [ELENCO_LANCAMENTO.md](gdd/ELENCO_LANCAMENTO.md)) |
 | Representação cultural (folclore, povos indígenas, nordeste) | Rejeição do público | Consultoria cultural para Iara e revisão de todos os textos de história |
 | Dependência de estúdio terceirizado | Atraso, qualidade irregular | Contrato com marcos, guia de estilo, direitos cedidos por escrito |

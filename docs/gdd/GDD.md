@@ -14,7 +14,7 @@ Neste documento:
 
 Um jogo de luta 2D para celular, com cara de fliperama e sotaque latino: lutadores do Brasil e da América
 Latina, golpes que dá para fazer no toque e profundidade de verdade para quem quiser se aprofundar. Partidas
-curtas, online justo com rollback, e uma loja que só vende o que não dá vantagem.
+curtas, online justo com rollback, e um preço só: compra única, sem anúncios e sem compras no app.
 
 ### Pilares
 
@@ -22,8 +22,8 @@ curtas, online justo com rollback, e uma loja que só vende o que não dá vanta
    (hitstop, câmera, som). Se o toque parecer lento, nada mais importa.
 2. **Fácil de começar, difícil de dominar.** Modo simples para quem nunca jogou luta; modo clássico com
    meia-lua, cancelamentos e o sistema completo para quem joga sério. Os dois podem se enfrentar.
-3. **Justo.** Ninguém compra vantagem. Todo lutador pode ser conseguido jogando. Anúncio só quando o jogador
-   escolhe assistir.
+3. **Justo.** Jogo pago, compra única: sem anúncios, sem compras no app, nada bloqueado atrás de pagamento.
+   Tudo o que é desbloqueável se desbloqueia jogando.
 4. **Identidade própria.** Capoeira, muay thai de Fortaleza, vaqueiro do sertão, lucha libre de Guadalajara.
    Cenários, música e falas com sotaque. Nada que lembre personagens de outras empresas.
 
@@ -173,80 +173,84 @@ o lab de aparelhos tiver os controles.
 |---|---|---|---|
 | Tutorial | Não | 3 minutos obrigatórios no primeiro uso (andar, defender, golpe, especial, super), depois lições opcionais (Just Defend, guard cancel, MAX, combos) | Sim |
 | Treino | Sim (básico) | Hoje: caixas de colisão e barra cheia. **Muda:** frame data na tela, gravar e repetir ações do boneco, exibição de comandos, reset de posição | Sim |
-| Arcade | Sim (escada) | **Muda:** história curta por lutador: abertura, rival na 5ª luta, final. 6 lutas. Continue com anúncio recompensado | Sim |
+| Arcade | Sim (escada) | **Muda:** história curta por lutador: abertura, rival na 5ª luta, final. 6 lutas. Continue livre | Sim |
 | Versus CPU | Sim | Escolhe lutadores, cenário e dificuldade | Sim |
 | Equipes 3×3 | Sim (offline) | Eliminação: quem vence continua com a vida que tinha e recupera 30% do perdido; quem entra ganha 1 estoque | Sim (offline); online na Fase 6 |
 | Online casual | Sim (sala com código) | **Muda:** busca rápida sem ranking, além da sala com código para jogar com amigos | Sim |
 | Online ranqueado | Sim (Elo) | **Muda:** temporadas, faixas visíveis (ex.: Bronze → Lenda), Elo escondido para o pareamento, punição de quem abandona | Sim |
 | Eventos | Não | Regras especiais por fim de semana (só supers, vida baixa, lutador da semana) com recompensas cosméticas | Fase 6 (estrutura na Fase 3) |
-| Missões | Não | Diárias e semanais, dão moedas e progresso de passe | Sim |
+| Missões | Não | Diárias e semanais, dão cosméticos e progresso de maestria (sem moeda, sem passe) | Sim |
 
-## 5. Progressão e economia
+## 5. Progressão e modelo de venda
 
-### 5.1 Progressão
+**Decisão do dono do projeto (out/2026): jogo pago, compra única de R$ 50** (R$ 49,99 na Google Play). Sem
+anúncios, sem compras no app, sem moeda paga, sem passe. Já implementado no app: AdMob, rastreamento (ATT) e o
+Premium/assinatura saíram; "continuar" no arcade é livre; personagens do catálogo antes marcados como premium são
+livres. O online confere pela Google Play que a cópia foi comprada (Play Integrity, `docs/PROTOCOL.md` § Licença);
+o offline nunca depende disso.
 
-- **Nível de conta:** sobe jogando qualquer modo; dá moedas e ícones. Não dá vantagem.
+### 5.1 O que o jogador recebe pelos R$ 50
+
+- **Elenco completo** do lançamento (os 8 lutadores) e todos os cenários.
+- **Todos os modos offline**: tutorial, treino, arcade com história, versus CPU, equipes 3×3, sem conta e sem
+  internet.
+- **Online** casual e ranqueado (conta CONEXUS), com temporadas.
+- **Atualizações gratuitas** de balanceamento, correções e ajustes de netcode.
+- Personagens aprovados do catálogo da comunidade, sem custo (enquanto o catálogo existir; ver § 7).
+
+### 5.2 Progressão — tudo se desbloqueia jogando, sem grind
+
+- **Lutadores:** proposta — 4 liberados desde o início e 4 liberados ao terminar o arcade de qualquer lutador
+  (ou de um lutador específico; decisão do designer). Nada exige repetir partidas por horas: quem pagou R$ 50 tem
+  que ver o elenco inteiro numa tarde. *Ponto de partida a validar no playtest.*
 - **Maestria por lutador:** sobe jogando com o lutador; libera cores, títulos, frases de vitória e a
-  ilustração de final do arcade.
+  ilustração de final do arcade. Recompensa por jogar, não portão.
+- **Nível de conta:** sobe jogando qualquer modo; dá ícones e títulos. Não dá vantagem.
 - **Ranque:** por temporada, com recompensa cosmética no fim.
+- **Missões e eventos:** dão cosméticos e progresso de maestria — não moedas, não passe.
+- Sem moeda nenhuma (nem ganha, nem paga): o que existe para desbloquear tem condição clara ("termine o arcade
+  com Kaze", "nível 10 de maestria"), mostrada na tela.
 
-### 5.2 Moedas
+### 5.3 O que R$ 50 exige do jogo
 
-| Moeda | Como ganha | Para que serve |
-|---|---|---|
-| **Moedas** (ganhas jogando) | Partidas, missões, arcade, nível de conta, passe | Lutadores, cores, ícones, títulos |
+R$ 50 é preço alto para jogo de celular no Brasil, onde quase tudo é gratuito. A comparação do jogador vai ser
+com jogo "premium" de console portátil, não com jogo grátis de loja. Isso pede:
 
-**Recomendação: não ter moeda premium.** Itens pagos aparecem com o preço em reais (ou na moeda local) pela
-cobrança da loja. Isso é mais honesto e evita "pacotes" que sobram troco. Se o dono do projeto preferir uma
-moeda premium, ela não pode comprar nada que as Moedas não comprem, exceto skins e passe.
+- **Conteúdo fechado no dia 1:** elenco completo, arcade com história de cada lutador, tutorial, treino com frame
+  data e online funcionando. Nada de "em breve" na tela.
+- **Polimento:** 60 fps estáveis nos aparelhos do lab, impacto que se sente, sem crash, textos revisados, arte
+  e som finais (sem placeholder visível).
+- **Primeira sessão que convence:** a Google Play reembolsa automaticamente em até **48 h**. Abrir rápido,
+  tutorial curto, chegar logo à primeira luta, mostrar o elenco e o online cedo. A taxa de reembolso é métrica
+  de lançamento (meta ≤ 10%, ver `../ROADMAP.md`).
+- **Ficha da loja honesta:** capturas e vídeo do jogo real; o que vem incluso escrito com clareza
+  (`mobile/PLAY_LISTING.md`).
 
-### 5.3 O que se vende
+### 5.4 Conteúdo futuro — decisão em aberto
 
-| Item | Como funciona |
-|---|---|
-| Lutador | Os 8 do lançamento: 4 liberados desde o início, 4 liberados jogando o arcade de cada um ou comprados. Lutadores novos (pós-lançamento): comprados com dinheiro **ou** com Moedas (proposta: equivalente a cerca de 10–15 h de jogo normal; estimativa a validar com telemetria). |
-| Skin | Roupa alternativa completa. Só dinheiro ou passe. Não muda caixas de colisão nem silhueta de leitura. |
-| Cor alternativa | Variação de paleta. Moedas (algumas no passe). |
-| Passe de temporada | Trilha grátis e trilha paga, só cosméticos e Moedas. Itens do passe voltam à loja depois. O passe pago dá também as recompensas extras dos anúncios sem precisar assistir. |
-| Pacote de apoiador (lançamento) | Skin exclusiva de lançamento + ícone. Sem vantagem. |
+Lançar personagens ou cenários novos como **DLC opcional** (compra separada) **não é plano**: só se a comunidade
+aceitar, depois do lançamento, e por decisão do dono do projeto. Se um dia existir, valem as regras do § 5.5
+(lutador de DLC não pode ser mais forte, e quem não compra continua enfrentando ele no online). Até lá, lutadores
+novos pós-lançamento entram como atualização gratuita, se entrarem.
 
-Preços: a definir com pesquisa de mercado (nenhum preço foi cotado ou testado).
+### 5.5 O que NUNCA existe
 
-### 5.4 Anúncios — só com recompensa
-
-**Muda em relação à 0.4.0:** hoje o app mostra banner nos menus e interstitial a cada 2 partidas. Na versão
-comercial isso sai. Ficam só anúncios recompensados, sempre por escolha do jogador:
-
-- continuar no arcade depois de perder (existe);
-- dobrar as Moedas de uma partida (limite diário, *ponto de partida*: 5 por dia);
-- uma troca extra de missão diária por dia.
-
-Nunca durante a luta, nunca no online antes ou depois de uma partida ranqueada, nunca disfarçado de botão
-de jogo. Consentimento UMP (e ATT no iOS) antes de anúncio personalizado, como já existe.
-
-O "Premium" atual (remove anúncios) perde sentido; proposta: ele vira o passe pago ou o pacote de apoiador.
-Decisão do dono do projeto.
-
-### 5.5 O que NUNCA se vende
-
-- Vida, dano, defesa, velocidade, barra, golpes ou qualquer atributo.
-- Lutador que só existe para quem paga (sempre há caminho com Moedas).
-- Caixa de recompensa aleatória paga (loot box, gacha) — nem com moeda comprada.
+- Anúncios, de qualquer tipo.
+- Moeda paga, passe de temporada, pacotes, ofertas por tempo.
+- Vida, dano, defesa, velocidade, barra, golpes ou qualquer atributo à venda.
+- Caixa de recompensa aleatória (loot box, gacha).
 - Energia, vidas ou limite de partidas por dia.
 - Pular ranque, proteger pontos de ranque, "revive" no online.
 - Vantagem de pareamento (fila prioritária com oponentes mais fracos, por exemplo).
-- Dados do jogador.
-
-E também: nada de contador falso de "oferta acaba em", nada de compra sem confirmação, controle parental
-respeitado (compras pela loja).
+- Venda de dados do jogador ou identificador de publicidade.
 
 ## 6. Meta de conteúdo de lançamento
 
 | Item | Meta |
 |---|---|
 | Lutadores | 8 completos (ver [ELENCO_LANCAMENTO.md](ELENCO_LANCAMENTO.md)), cada um com 14 normais, 4 especiais, 2 supers, arremesso, sistema SNK, intro, 2 vitórias, derrota |
-| Cores | 6 cores por lutador (2 liberadas, 4 por maestria/Moedas) |
-| Skins | 1 skin de lançamento por lutador (proposta; depende do custo medido na fatia vertical) |
+| Cores | 6 cores por lutador (2 liberadas, 4 por maestria) |
+| Skins | 1 skin de lançamento por lutador, desbloqueada jogando (proposta; depende do custo medido na fatia vertical) |
 | Cenários | 5 finais (proposta: Pelourinho, Ruínas da Amazônia, Praia de Fortaleza, Arena de lucha em Guadalajara, Sertão do Cariri). Os 8 atuais viram rascunho. |
 | Música | 1 trilha por cenário + menu, seleção, resultado, tutorial (composição original) |
 | Voz | Golpes, vitória e derrota por lutador, no idioma de origem do lutador, com legenda |

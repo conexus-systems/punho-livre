@@ -18,7 +18,7 @@ Files in scope: camadas do cenário; trilha
 Acceptance criteria: comuns + revisão cultural.
 Tests required: aparelho
 Metrics/baseline: tamanho; tempo de frame
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): capturas e números
 Status: TODO
 
@@ -30,7 +30,7 @@ Files in scope: camadas; trilha
 Acceptance criteria: comuns.
 Tests required: aparelho
 Metrics/baseline: tamanho; tempo de frame
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): capturas
 Status: TODO
 
@@ -42,7 +42,7 @@ Files in scope: camadas; trilha
 Acceptance criteria: comuns + as cordas não confundem a borda da tela.
 Tests required: aparelho
 Metrics/baseline: tamanho; tempo de frame
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): capturas
 Status: TODO
 
@@ -54,7 +54,7 @@ Files in scope: camadas; trilha
 Acceptance criteria: comuns.
 Tests required: aparelho
 Metrics/baseline: tamanho; tempo de frame
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): capturas
 Status: TODO
 
@@ -66,6 +66,6 @@ Files in scope: docs/gdd/GDD.md
 Acceptance criteria: decisão registrada com custo e tamanho.
 Tests required: n/a
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): decisão no GDD
 Status: TODO

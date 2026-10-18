@@ -14,7 +14,7 @@ Files in scope: mobile/src/game/ai.ts, testes
 Acceptance criteria: IA determinística (usa o `Random` da engine); comportamento descrito por perfil; usa o sistema (rolamento, Just Defend, MAX) conforme a dificuldade.
 Tests required: testes de IA; lutas CPU × CPU no bench
 Metrics/baseline: taxa de vitória da CPU por dificuldade contra jogadores (telemetria)
-Impacto em determinismo, justiça online, privacidade ou anúncios: a IA não roda no online ranqueado
+Impacto em determinismo, justiça online, privacidade ou licença: a IA não roda no online ranqueado
 Evidence (commands/logs/devices): resultados do bench
 Status: TODO
 
@@ -26,6 +26,6 @@ Files in scope: mobile/src/game/ai.ts, mobile/src/match.ts
 Acceptance criteria: no fácil, um jogador do tutorial vence a primeira luta na maioria das vezes (playtest).
 Tests required: playtest
 Metrics/baseline: % de vitória na 1ª luta do arcade
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): relatório de playtest
 Status: TODO

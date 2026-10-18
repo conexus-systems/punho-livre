@@ -14,7 +14,7 @@ Files in scope: entregas em PNG/WebP por camada + descrição das camadas
 Acceptance criteria: contraste que não esconde os lutadores (teste de leitura com os dois lutadores na frente); sem marcas reais (fachadas, logos, placas de empresas).
 Tests required: composição de teste em 16:9 e 21:9
 Metrics/baseline: horas reais do cenário
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): imagens aprovadas
 Status: TODO
 
@@ -26,7 +26,7 @@ Files in scope: mobile/src/game/stages.ts, stageArt.ts, renderer.ts, scripts/sta
 Acceptance criteria: formato documentado; um cenário de exemplo; os procedurais continuam funcionando até serem retirados.
 Tests required: render de referência; teste de carregamento
 Metrics/baseline: chamadas de desenho por frame
-Impacto em determinismo, justiça online, privacidade ou anúncios: só visual
+Impacto em determinismo, justiça online, privacidade ou licença: só visual
 Evidence (commands/logs/devices): capturas
 Status: TODO
 
@@ -38,6 +38,6 @@ Files in scope: n/a
 Acceptance criteria: p95 de tempo de frame ≤ 16,7 ms numa luta de 3 rounds (a confirmar com o tech-lead); memória medida.
 Tests required: sessão em aparelho com telemetria de desempenho
 Metrics/baseline: meta 60 fps
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): números e modelo do aparelho
 Status: TODO

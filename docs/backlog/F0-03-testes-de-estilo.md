@@ -15,7 +15,7 @@ Files in scope: docs/art/BRIEF_TESTES_DE_ESTILO.md
 Acceptance criteria: 3 contratos de teste assinados; brief revisado pelo diretor de arte.
 Tests required: n/a
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): datas de início e de entrega
 Status: TODO
 
@@ -29,7 +29,7 @@ Acceptance criteria:
 - Eixo estável (o lutador não treme) e escala correta ao lado de um lutador atual.
 Tests required: teste do importador com os 3 pacotes
 Metrics/baseline: tamanho em MB e memória de textura por pacote
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum (só visual)
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum (só visual)
 Evidence (commands/logs/devices): capturas e números
 Status: TODO
 
@@ -41,7 +41,7 @@ Files in scope: n/a
 Acceptance criteria: vídeos nos 2 aparelhos; tempo de frame registrado; leitura avaliada a um braço de distância.
 Tests required: sessão de 10 min por estilo
 Metrics/baseline: tempo de frame p50/p95 por estilo
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): modelos dos aparelhos, vídeos, números
 Status: TODO
 
@@ -53,6 +53,6 @@ Files in scope: docs/art/BRIEF_TESTES_DE_ESTILO.md, docs/ROADMAP.md
 Acceptance criteria: nota por critério; custo e prazo por lutador; plano para a meta de download.
 Tests required: n/a
 Metrics/baseline: horas reais dos testes
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): ata da decisão
 Status: TODO

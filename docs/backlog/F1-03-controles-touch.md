@@ -18,7 +18,7 @@ Acceptance criteria:
 - Alvos ≥ 48 dp; multi-toque (direção + 2 botões) funciona.
 Tests required: testes de macro por botão; teste de tela; teste em aparelho
 Metrics/baseline: conclusão do tutorial ≥ 70% (meta)
-Impacto em determinismo, justiça online, privacidade ou anúncios: a entrada vira inputs normais da engine; a marca de "atalho" segue no input (F1-02.4)
+Impacto em determinismo, justiça online, privacidade ou licença: a entrada vira inputs normais da engine; a marca de "atalho" segue no input (F1-02.4)
 Evidence (commands/logs/devices): vídeo em aparelho
 Status: IN_PROGRESS
 
@@ -30,7 +30,7 @@ Files in scope: mobile/app/fight.tsx, mobile/src/settings.ts
 Acceptance criteria: meia-lua, Z, meia-volta e carga executáveis com taxa de acerto registrada em teste com 5 pessoas.
 Tests required: teste em aparelho com roteiro de comandos
 Metrics/baseline: taxa de acerto por comando
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): planilha do teste
 Status: IN_PROGRESS
 
@@ -42,7 +42,7 @@ Files in scope: mobile/app/settings.tsx (ou tela nova), mobile/src/settings.ts
 Acceptance criteria: funciona em 16:9 a 21:9 e respeita áreas seguras (entalhe, barra de gestos); design W10M nos menus.
 Tests required: testes de tela; aparelho com entalhe
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): capturas em 2 proporções de tela
 Status: IN_PROGRESS
 
@@ -54,7 +54,7 @@ Files in scope: mobile/app/, mobile/src/net/ (troca do modo no início da partid
 Acceptance criteria: troca em Ajustes a qualquer momento; ícone na tela de versus online.
 Tests required: teste de tela; teste da mensagem de início de partida
 Metrics/baseline: % de jogadores em cada modo
-Impacto em determinismo, justiça online, privacidade ou anúncios: justiça online — transparência do modo
+Impacto em determinismo, justiça online, privacidade ou licença: justiça online — transparência do modo
 Evidence (commands/logs/devices): capturas
 Status: IN_PROGRESS
 
@@ -66,6 +66,6 @@ Files in scope: mobile/app/fight.tsx
 Acceptance criteria: controle padrão Android e iOS funcionando na luta e nos menus.
 Tests required: aparelho + controle
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): modelos de controle testados
 Status: TODO

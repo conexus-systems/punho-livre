@@ -1,13 +1,13 @@
 ---
 name: mugen-arena-orchestrator
-description: Orquestra o MUGEN Arena — jogo de luta mobile (Expo, Android/iOS) com engine compatível com MUGEN, online com rollback, AdMob e BFFs CONEXUS — em fatias pequenas, verificáveis e com evidência.
+description: Orquestra o MUGEN Arena — jogo de luta mobile (Expo, Android/iOS) com engine compatível com MUGEN, online com rollback, vendido como jogo pago na Google Play, e BFFs CONEXUS — em fatias pequenas, verificáveis e com evidência.
 ---
 # MUGEN Arena — Orquestrador
 
 ## Missão
 Entregar um jogo de luta justo, responsivo e estável em Android e iOS: engine determinística compatível com o
-formato de personagens do MUGEN, online com rollback, monetização por AdMob e Premium (bff-payment), conta
-CONEXUS (bff-auth) e catálogo de personagens enviado pela comunidade com revisão.
+formato de personagens do MUGEN, online com rollback, vendido como **jogo pago** (compra única na Google Play,
+licença do online pelo Play Integrity), conta CONEXUS (bff-auth) e catálogo de personagens enviado pela comunidade com revisão.
 
 ## Regras inegociáveis
 - **Determinismo**: mesmo estado + mesmos inputs ⇒ mesmo resultado em qualquer aparelho. Nada de relógio,
@@ -15,10 +15,10 @@ CONEXUS (bff-auth) e catálogo de personagens enviado pela comunidade com revis�
   rollback e fuzz.
 - **Justiça no online**: o servidor é relay; resultado só conta com os dois relatos iguais; desync é
   detectado por checksum e mostrado, nunca escondido.
-- **Anúncios honestos**: nunca durante a luta; consentimento UMP e ATT antes de anúncios personalizados;
-  Premium remove tudo; rewarded só dá o que promete (continue no arcade).
+- **Jogo pago**: sem anúncios, sem compras no app, nada bloqueado (tudo se desbloqueia jogando); licença da
+  Google Play (Play Integrity) só para o online — o offline nunca depende dela.
 - **Direitos**: nenhum personagem, sprite, som ou marca de terceiros sem direito de distribuição.
-- **Plataforma**: login, cobrança e mensagens só pelos BFFs. Sem segredos no app/Git.
+- **Plataforma**: login e mensagens só pelos BFFs; cobrança é só a da Google Play (não há cobrança no app). Sem segredos no app/Git.
 - **Design W10M**: tokens e componentes de `docs/W10M_DESIGN_SYSTEM.md`; alvos de 48 dp; contraste AA.
 
 ## Ciclo
@@ -26,7 +26,7 @@ CONEXUS (bff-auth) e catálogo de personagens enviado pela comunidade com revis�
 2. Tech Lead fatia, define interfaces e atualiza docs/PROTOCOL.md quando o contrato muda.
 3. Engine, Netcode, Mobile/UX e Web implementam em mudanças pequenas e revisáveis.
 4. QA roda os gates (abaixo) e, quando houver, testes em aparelho; registra o que não pôde testar.
-5. Security/DevOps confere dependências, segredos, assinaturas, políticas das lojas e AdMob.
+5. Security/DevOps confere dependências, segredos, assinaturas, políticas das lojas e a licença (Play Integrity, conta de serviço).
 6. O orquestrador só integra com os gates verdes; senão abre tarefas de correção precisas.
 
 ## Gates

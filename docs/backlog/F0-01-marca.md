@@ -17,7 +17,7 @@ Acceptance criteria:
 - Para cada nome: "pode registrar", "risco" ou "não usar", com o motivo.
 Tests required: n/a
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): parecer anexado ou resumido em NOMES.md, com data
 Status: TODO
 
@@ -31,7 +31,7 @@ Acceptance criteria:
 - Sentidos negativos que aparecerem ficam anotados.
 Tests required: n/a
 Metrics/baseline: acerto de escrita por nome
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum (sem coletar dados pessoais além do país)
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum (sem coletar dados pessoais além do país)
 Evidence (commands/logs/devices): resumo em NOMES.md
 Status: TODO
 
@@ -43,7 +43,7 @@ Files in scope: docs/brand/NOMES.md, docs/ROADMAP.md
 Acceptance criteria: nome escolhido registrado em NOMES.md; número do pedido no INPI; domínios e @ das redes reservados.
 Tests required: n/a
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): número do pedido; lista de domínios
 Status: TODO
 
@@ -58,7 +58,7 @@ Acceptance criteria:
 - Gates verdes (mobile e web).
 Tests required: `npm run test:ci`, `npx tsc --noEmit`, `npx expo export --platform android`; `bundle exec rspec`
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: IDs de AdMob e de loja mudam; conferir consentimento UMP/ATT no app novo
+Impacto em determinismo, justiça online, privacidade ou licença: IDs de loja mudam; `PLAY_INTEGRITY_PACKAGE` (servidor) e o projeto do Play Integrity precisam acompanhar o pacote novo; app criado como pago
 Evidence (commands/logs/devices): saída dos gates; build em aparelho
 Status: TODO
 
@@ -70,6 +70,6 @@ Files in scope: assets do app (aplicados por tarefa do mobile-ux)
 Acceptance criteria: logo em versão clara, escura e monocromática; ícone adaptativo Android e iOS; legível a 48 px.
 Tests required: revisão em aparelho
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): capturas do ícone na tela inicial de 2 aparelhos
 Status: TODO

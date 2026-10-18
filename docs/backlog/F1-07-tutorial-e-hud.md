@@ -14,7 +14,7 @@ Files in scope: docs/gdd/GDD.md (anexo do roteiro)
 Acceptance criteria: roteiro para modo simples e clássico; tempo-alvo de 3 min.
 Tests required: n/a
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): roteiro aprovado
 Status: TODO
 
@@ -26,7 +26,7 @@ Files in scope: mobile/app/ (tela nova), mobile/src/match.ts
 Acceptance criteria: cada passo dispara evento de telemetria (início, conclusão, abandono); textos nos 3 idiomas.
 Tests required: teste de tela; teste dos gatilhos
 Metrics/baseline: funil do tutorial
-Impacto em determinismo, justiça online, privacidade ou anúncios: telemetria com consentimento
+Impacto em determinismo, justiça online, privacidade ou licença: telemetria com consentimento
 Evidence (commands/logs/devices): funil de um playtest
 Status: TODO
 
@@ -38,7 +38,7 @@ Files in scope: mobile/src/game/renderer.ts
 Acceptance criteria: aprovado pelo diretor de arte; não cobre os controles nem os lutadores.
 Tests required: render de referência; aparelho
 Metrics/baseline: tempo de frame sem piora
-Impacto em determinismo, justiça online, privacidade ou anúncios: só visual
+Impacto em determinismo, justiça online, privacidade ou licença: só visual
 Evidence (commands/logs/devices): capturas
 Status: TODO
 
@@ -50,6 +50,6 @@ Files in scope: mobile/app/fight.tsx, mobile/src/match.ts
 Acceptance criteria: números iguais aos da ferramenta de frame data.
 Tests required: teste comparando com a ferramenta
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum (offline)
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum (offline)
 Evidence (commands/logs/devices): capturas
 Status: TODO

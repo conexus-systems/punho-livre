@@ -15,7 +15,7 @@ Files in scope: arquivos de áudio (formato a definir com o tech-lead), crédito
 Acceptance criteria: todos originais ou com licença comercial documentada; mixagem testada em alto-falante de celular.
 Tests required: escuta em 2 aparelhos
 Metrics/baseline: tamanho total
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): lista de arquivos e licenças
 Status: TODO
 
@@ -27,7 +27,7 @@ Files in scope: arquivo de áudio
 Acceptance criteria: laço sem corte audível; cessão de direitos.
 Tests required: escuta em aparelho
 Metrics/baseline: tamanho
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): arquivo aprovado
 Status: TODO
 
@@ -39,7 +39,7 @@ Files in scope: arquivos de voz, textos de legenda
 Acceptance criteria: contratos com cessão de voz; legendas nos 3 idiomas.
 Tests required: escuta em aparelho
 Metrics/baseline: tamanho
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): lista de falas
 Status: TODO
 
@@ -51,6 +51,6 @@ Files in scope: mobile/src/audio/
 Acceptance criteria: canais separados de música, efeitos e voz em Ajustes; sem atraso perceptível.
 Tests required: testes do diretor de áudio; aparelho
 Metrics/baseline: latência medida
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum (áudio fora da simulação)
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum (áudio fora da simulação)
 Evidence (commands/logs/devices): vídeo com áudio
 Status: TODO

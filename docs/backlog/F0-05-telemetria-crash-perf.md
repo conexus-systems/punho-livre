@@ -18,13 +18,13 @@ Acceptance criteria:
 - Cálculo de crash-free por usuário disponível.
 Tests required: crash forçado em Android e iOS
 Metrics/baseline: crash-free (meta ≥ 99,5%)
-Impacto em determinismo, justiça online, privacidade ou anúncios: privacidade — declarar na ficha de segurança de dados e no consentimento
+Impacto em determinismo, justiça online, privacidade ou licença: privacidade — declarar na ficha de segurança de dados e no consentimento
 Evidence (commands/logs/devices): captura do painel com o crash de teste
 Status: IN_PROGRESS
 
 ## F0-05.2 — Eventos de telemetria do jogo
 Owner: mobile-ux (app) + web (recepção, se for no backend próprio)
-Objective: eventos mínimos: sessão, tutorial (cada passo), partida (modo, lutadores, resultado, duração, modo de controle), compra, anúncio recompensado, erro de online.
+Objective: eventos mínimos: sessão, tutorial (cada passo), partida (modo, lutadores, resultado, duração, modo de controle), erro de online.
 Dependencies: nenhuma
 Files in scope: mobile/src/services/ (novo serviço), web/ (se aplicável), docs/PROTOCOL.md (se o contrato mudar)
 Acceptance criteria:
@@ -33,7 +33,7 @@ Acceptance criteria:
 - Eventos nunca disparam dentro do `stepWorld`.
 Tests required: testes unitários do serviço; verificação em build de teste
 Metrics/baseline: base para D1/D7/D30, tutorial ≥ 70%, win rate por lutador
-Impacto em determinismo, justiça online, privacidade ou anúncios: privacidade (LGPD) — base legal e texto revisados pelo jurídico
+Impacto em determinismo, justiça online, privacidade ou licença: privacidade (LGPD) — base legal e texto revisados pelo jurídico
 Evidence (commands/logs/devices): eventos de uma sessão de teste no painel
 Status: IN_PROGRESS
 
@@ -45,7 +45,7 @@ Files in scope: mobile/src/game/renderer.ts, mobile/app/fight.tsx
 Acceptance criteria: amostragem leve (sem custo visível); dados por modelo de aparelho no painel.
 Tests required: comparação de tempo de frame com e sem medição
 Metrics/baseline: meta 60 fps no Android intermediário
-Impacto em determinismo, justiça online, privacidade ou anúncios: medir fora do `stepWorld`
+Impacto em determinismo, justiça online, privacidade ou licença: medir fora do `stepWorld`
 Evidence (commands/logs/devices): números de um aparelho real
 Status: IN_PROGRESS
 
@@ -59,7 +59,7 @@ Acceptance criteria:
 - Pelo menos: 1 Android de 3 GB, 1 de referência, 1 topo de linha, 1 iPhone antigo suportado, 1 iPhone recente.
 Tests required: build de desenvolvimento instalada em todos
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: permite o teste de determinismo entre aparelhos (F3-01)
+Impacto em determinismo, justiça online, privacidade ou licença: permite o teste de determinismo entre aparelhos (F3-01)
 Evidence (commands/logs/devices): lista com modelo, SO e RAM
 Status: IN_PROGRESS
 
@@ -71,6 +71,6 @@ Files in scope: configuração do serviço de análise (fora do app)
 Acceptance criteria: painel acessível ao PO e ao dono do projeto; números de uma semana de testes internos.
 Tests required: n/a
 Metrics/baseline: todas as metas do ROADMAP
-Impacto em determinismo, justiça online, privacidade ou anúncios: acesso restrito
+Impacto em determinismo, justiça online, privacidade ou licença: acesso restrito
 Evidence (commands/logs/devices): captura do painel
 Status: TODO

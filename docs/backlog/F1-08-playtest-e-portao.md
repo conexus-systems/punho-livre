@@ -14,7 +14,7 @@ Files in scope: docs/ (relatório do playtest)
 Acceptance criteria: roteiro, questionário e gravação de tela com consentimento; relatório com problemas priorizados.
 Tests required: n/a
 Metrics/baseline: conclusão do tutorial; nota de diversão (1–5); compreensão dos controles
-Impacto em determinismo, justiça online, privacidade ou anúncios: consentimento escrito para gravação
+Impacto em determinismo, justiça online, privacidade ou licença: consentimento escrito para gravação
 Evidence (commands/logs/devices): relatório
 Status: TODO
 
@@ -26,7 +26,7 @@ Files in scope: docs/ROADMAP.md, backlog da Fase 2
 Acceptance criteria: cada critério com "atingido", "não atingido + plano" ou "medido diferente"; custo e prazo da Fase 2 recalculados com as horas reais.
 Tests required: n/a
 Metrics/baseline: 60 fps; tutorial ≥ 70%; custo real por lutador
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): ata
 Status: TODO
 
@@ -38,6 +38,6 @@ Files in scope: mobile/app.config.ts, mobile/package.json, docs/UPDATE_X.Y.Z.md
 Acceptance criteria: segue o fluxo de release do AGENTS.md; build nas trilhas de teste interno do Google Play e do TestFlight.
 Tests required: gates completos
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: primeira submissão — revisar políticas
+Impacto em determinismo, justiça online, privacidade ou licença: primeira submissão — revisar políticas
 Evidence (commands/logs/devices): link da release
 Status: TODO

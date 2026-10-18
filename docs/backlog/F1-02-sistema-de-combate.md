@@ -14,7 +14,7 @@ Files in scope: mobile/src/engine/ (HitDef, estado de queda), testes; docs/CHARA
 Acceptance criteria: compatível com o parâmetro do MUGEN; sem combos infinitos no fuzz com a Kaze e a Brasa de rascunho.
 Tests required: teste de limite de juggle; fuzz; `npm run test:ci`
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: muda a simulação
+Impacto em determinismo, justiça online, privacidade ou licença: muda a simulação
 Evidence (commands/logs/devices): testes
 Status: TODO
 
@@ -26,7 +26,7 @@ Files in scope: mobile/src/engine/, constants.ts
 Acceptance criteria: tabela de escalonamento configurável; supers com piso próprio.
 Tests required: teste com combo conhecido e dano esperado
 Metrics/baseline: dano máximo de combo sem barra (definido pelo designer)
-Impacto em determinismo, justiça online, privacidade ou anúncios: muda a simulação
+Impacto em determinismo, justiça online, privacidade ou licença: muda a simulação
 Evidence (commands/logs/devices): testes
 Status: TODO
 
@@ -38,7 +38,7 @@ Files in scope: mobile/src/engine/constants.ts, common1.ts
 Acceptance criteria: cada mecânica com valores aprovados e registrados no UPDATE da versão.
 Tests required: testes de `snk.test.ts` atualizados
 Metrics/baseline: valores atuais da 0.4.0 como base
-Impacto em determinismo, justiça online, privacidade ou anúncios: muda a simulação
+Impacto em determinismo, justiça online, privacidade ou licença: muda a simulação
 Evidence (commands/logs/devices): diff de constantes + testes
 Status: TODO
 
@@ -50,7 +50,7 @@ Files in scope: mobile/src/engine/ (marca de "feito por atalho" no golpe), mobil
 Acceptance criteria: a redução de dano é aplicada na simulação (não só na interface) e vale igual no online; combo automático nunca supera o combo básico do clássico.
 Tests required: teste do mesmo especial por comando e por atalho, com danos diferentes
 Metrics/baseline: win rate por modo de controle (telemetria a partir do playtest)
-Impacto em determinismo, justiça online, privacidade ou anúncios: justiça online — os dois lados precisam aplicar a mesma regra
+Impacto em determinismo, justiça online, privacidade ou licença: justiça online — os dois lados precisam aplicar a mesma regra
 Evidence (commands/logs/devices): testes
 Status: TODO
 
@@ -62,6 +62,6 @@ Files in scope: mobile/src/game/renderer.ts
 Acceptance criteria: legível em tela de 16:9 e 21:9; sem sobrepor os lutadores.
 Tests required: render de referência
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: só visual
+Impacto em determinismo, justiça online, privacidade ou licença: só visual
 Evidence (commands/logs/devices): capturas
 Status: TODO

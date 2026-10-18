@@ -95,7 +95,6 @@ Desliga com Ajustes › Personalização › Animações ou com "Reduzir movimen
 | Personagens | `app/roster.tsx` | `MetroPivot` (catálogo / instalados / enviar ou revisão), `MetroRow`, `MetroMenu`, `MetroDialog` |
 | Perfil | `app/profile.tsx` | `MetroPivot` (conta / ranking / partidas), `MetroTextField` com validação, `MetroDialog` |
 | Ajustes | `app/settings.tsx` | `MetroToggle`, `MetroSlider`, rádios, 20 cores + personalizada, tema, movimento; grupo Controles (modo simples/clássico, direcional, zona morta, vibração em acertos) |
-| Premium | `app/paywall.tsx` | `MetroRow`, `MetroButton` |
 | Luta | `app/fight.tsx`, `components/TouchControls.tsx` | painéis de pausa/resultado no padrão `MetroDialog`; botões quadrados, destaque só no ativo |
 | Editor de controles | `app/controls.tsx` | painel `chrome` com abas (alvo 48 dp), `MetroSlider` (tamanho, opacidade), `MetroButton`; botões editáveis quadrados com ações de acessibilidade (ver `docs/CONTROLS.md`) |
 
@@ -105,5 +104,5 @@ Desliga com Ajustes › Personalização › Animações ou com "Reduzir movimen
 - `tests/__tests__/screens.test.tsx`: todas as telas montam, pivô troca e anuncia, diálogo ordena botões,
   tema claro e cor personalizada.
 - `npm run preview:web`: exporta o app para web, abre no Chromium e captura as telas e uma luta ao vivo
-  (`docs/screenshots/w10m-*.png`). No web o AdMob vira no-op (`*.web.ts(x)`) e o HUD fica sem texto.
+  (`docs/screenshots/w10m-*.png`). No web o HUD fica sem texto. (Não há mais tela de Premium nem banner: o jogo é pago.)
 - Pendente: verificação visual em aparelho/emulador (este ambiente não tem Android SDK nem Xcode).

@@ -15,7 +15,7 @@ negada à integração e precisa ser feita por um admin.
 
 ## 2. Objetivo e decisões do usuário
 
-Jogo de luta para Android e iOS "usando MUGEN", com vários personagens, AdMob, luta online, possibilidade de
+Jogo de luta para Android e iOS "usando MUGEN", com vários personagens, AdMob (removido depois: o jogo passou a ser pago), luta online, possibilidade de
 adicionar personagens, repositório na Conexus e integração com os BFFs. Depois: "montar uma stack de app para
 game usando a stack do W10M". Decisão (do usuário): **manter Expo (Android + iOS)** e adotar a stack W10M no
 visual e no processo, em vez de reescrever em Kotlin nativo (que perderia o iOS).
@@ -29,7 +29,7 @@ personagem de terceiros é distribuído; os 6 nativos são originais.
 |---|---|
 | App | Expo SDK 58, React Native 0.88, expo-router, @shopify/react-native-skia 2.14, Reanimated 4.7 |
 | Visual | W10M: `mobile/src/ui` + `mobile/components/metro` |
-| Anúncios | react-native-google-mobile-ads 17 (IDs de teste por padrão) |
+| Venda | jogo pago na Google Play; `@expo/app-integrity` (Play Integrity) para a licença do online. Sem anúncios nem compras no app |
 | Testes | Jest (jest-expo) + react-test-renderer, `node --test`, Playwright (preview web) |
 | Web | Rails 8.1 API, Postgres, Solid Queue/Cable/Cache, RSpec, `conexus-platform` vendorizada |
 | Infra | `platform-infra` (callers), GHCR, Terraform LKE (`deploy/terraform/linode`), EAS |
@@ -41,7 +41,7 @@ personagem de terceiros é distribuído; os 6 nativos são originais.
 - `mobile/src/net/` — cliente ActionCable, `RollbackSession`, fluxo online.
 - `mobile/src/game/` — renderizador Skia, cenários, IA, macros, atlas.
 - `mobile/src/ui/`, `mobile/components/metro/` — W10M.
-- `mobile/app/` — telas (Iniciar, seleção, luta, online, personagens, perfil, ajustes, premium).
+- `mobile/app/` — telas (Iniciar, seleção, luta, online, personagens, perfil, ajustes).
 - `mobile/scripts/` — gerador do elenco, importador `mugen-pack`, previews.
 - `web/` — API, canais, webhooks, jobs. `deploy/` — Terraform. `.github/` — callers e release.
 
@@ -51,4 +51,4 @@ personagem de terceiros é distribuído; os 6 nativos são originais.
 2. Cadastro nos BFFs + segredos (lista em `web/README.md`), `EXPO_TOKEN`, primeiro deploy e build EAS.
 3. QA em aparelho (matriz em `agents/qa.md`), ajustar desempenho do Skia se preciso.
 4. Engine: Helpers e Explods visuais, sons (.snd), arremessos — com teste cada um.
-5. Ficha da Play/App Store e políticas (`mobile/PLAY_LISTING.md`).
+5. Ficha da Play (app pago, R$ 49,99), Play Integrity no Play Console e políticas (`mobile/PLAY_LISTING.md`).

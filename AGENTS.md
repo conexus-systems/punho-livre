@@ -15,8 +15,12 @@ templates/TASK.md).
   `npm test` (inclui determinismo, clone/rollback e 3000 frames de fuzz por personagem).
 - Elenco nativo: gerado por `npm run roster` (scripts/roster, pintado com Skia em `paint.mjs`); cenários por `npm run stages` (scripts/stages). Nunca edite `mobile/characters/*`, `mobile/assets/stages/*`, `builtin.generated.ts` ou `stages.generated.ts` à mão; o `test:ci` falha se o elenco estiver desatualizado.
 - Contrato app ⇄ web: `docs/PROTOCOL.md`. Mudou lá, muda nos dois lados no mesmo PR.
-- BFFs: identidade (bff-auth), cobrança (bff-payment) e mensagens (bff-api) **não** são implementadas aqui.
-  Sem Devise/OmniAuth, SDK de pagamento, Resend/Twilio. Sem segredos no app ou no Git.
+- BFFs: identidade (bff-auth) e mensagens (bff-api) **não** são implementadas aqui. Sem Devise/OmniAuth, SDK
+  de pagamento, Resend/Twilio.
+- **Jogo pago** (compra única na Google Play): sem anúncios, sem compras no app, sem Premium; nada bloqueado.
+  O app não usa mais o bff-payment. O online exige licença pelo Play Integrity (`docs/PROTOCOL.md` § Licença);
+  o offline nunca depende dela. Não reintroduza SDK de anúncio nem rastreamento (`AD_ID` é bloqueado).
+  Sem segredos no app ou no Git.
 - Não invente endpoints, resultados de teste, paridade com o MUGEN ou métricas de aparelho. Diferencie
   implementado, verificado por teste e pendente (teste em aparelho ainda pendente).
 - Personagens de terceiros: só os que o autor tem direito de distribuir. O app não traz personagens com IP alheio.

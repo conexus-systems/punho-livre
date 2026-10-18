@@ -16,7 +16,7 @@ Acceptance criteria:
 - Determinístico; testes de rollback e fuzz verdes.
 Tests required: teste de hitstop por força; `npm run test:ci`
 Metrics/baseline: valores iniciais da tabela aprovados pelo designer de combate
-Impacto em determinismo, justiça online, privacidade ou anúncios: muda a simulação — todos os jogadores precisam da mesma versão
+Impacto em determinismo, justiça online, privacidade ou licença: muda a simulação — todos os jogadores precisam da mesma versão
 Evidence (commands/logs/devices): saída dos testes
 Status: IN_PROGRESS
 
@@ -28,7 +28,7 @@ Files in scope: mobile/src/engine/input.ts, mobile/src/game/macros.ts, testes
 Acceptance criteria: comando feito até N ticks antes do fim da recuperação sai no primeiro tick possível; N por tipo, configurável; sem disparos acidentais (teste com sequências que não devem sair).
 Tests required: testes de buffer positivos e negativos
 Metrics/baseline: taxa de especiais executados no tutorial (telemetria)
-Impacto em determinismo, justiça online, privacidade ou anúncios: estado do buffer dentro do `WorldState`
+Impacto em determinismo, justiça online, privacidade ou licença: estado do buffer dentro do `WorldState`
 Evidence (commands/logs/devices): testes
 Status: IN_PROGRESS
 
@@ -40,7 +40,7 @@ Files in scope: mobile/src/game/renderer.ts, mobile/src/engine/ (só sinais visu
 Acceptance criteria: câmera não afeta a simulação; opção "Reduzir movimento" desliga tremor e reduz zoom.
 Tests required: render em Node com a câmera; teste de que a simulação é igual com e sem câmera
 Metrics/baseline: tempo de frame sem piora mensurável no aparelho de referência
-Impacto em determinismo, justiça online, privacidade ou anúncios: só visual
+Impacto em determinismo, justiça online, privacidade ou licença: só visual
 Evidence (commands/logs/devices): vídeos em aparelho
 Status: IN_PROGRESS
 
@@ -52,7 +52,7 @@ Files in scope: mobile/src/game/effects.ts, renderer.ts, engine (controladores h
 Acceptance criteria: AfterImage e PalFX deixam de ser "aceitos e ignorados" ([CHARACTERS.md](../CHARACTERS.md)); efeitos fora do estado da simulação ou dentro dele de forma determinística.
 Tests required: testes dos controladores; render de referência
 Metrics/baseline: chamadas de desenho por frame
-Impacto em determinismo, justiça online, privacidade ou anúncios: só visual
+Impacto em determinismo, justiça online, privacidade ou licença: só visual
 Evidence (commands/logs/devices): capturas
 Status: IN_PROGRESS
 
@@ -64,6 +64,6 @@ Files in scope: mobile/src/audio/, mobile/app/fight.tsx, mobile/src/settings.ts
 Acceptance criteria: atraso som/imagem imperceptível no aparelho de referência; vibração desligável.
 Tests required: teste em aparelho
 Metrics/baseline: latência de áudio medida no aparelho
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): vídeo com áudio
 Status: TODO

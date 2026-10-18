@@ -18,7 +18,7 @@ Acceptance criteria:
 - Exporta a tabela (CSV ou JSON) para o designer de combate.
 Tests required: teste que mede inicialização/ativos/recuperação rodando a engine e compara com a tabela; `npm run test:ci`
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: a ferramenta não pode alterar a simulação; dados de frame data mudam a luta online (versão de conteúdo precisa casar entre jogadores)
+Impacto em determinismo, justiça online, privacidade ou licença: a ferramenta não pode alterar a simulação; dados de frame data mudam a luta online (versão de conteúdo precisa casar entre jogadores)
 Evidence (commands/logs/devices): saída do teste; exemplo de tabela exportada
 Status: IN_PROGRESS
 
@@ -33,7 +33,7 @@ Acceptance criteria:
 - Erros claros: arquivo faltando, eixo fora da imagem, ação obrigatória ausente.
 Tests required: testes do importador (válido, inválido, atlas gerado); `npm run test:ci`
 Metrics/baseline: tamanho do atlas por pacote
-Impacto em determinismo, justiça online, privacidade ou anúncios: caixas entram na simulação; o pacote precisa ter hash conferido no online
+Impacto em determinismo, justiça online, privacidade ou licença: caixas entram na simulação; o pacote precisa ter hash conferido no online
 Evidence (commands/logs/devices): teste e captura do pacote de exemplo
 Status: IN_PROGRESS
 
@@ -47,7 +47,7 @@ Acceptance criteria:
 - Salva no manifest sem perder outros campos.
 Tests required: teste de ida e volta (abrir → salvar → abrir igual)
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: caixas mudam a luta online (versão de conteúdo)
+Impacto em determinismo, justiça online, privacidade ou licença: caixas mudam a luta online (versão de conteúdo)
 Evidence (commands/logs/devices): vídeo curto do fluxo
 Status: IN_PROGRESS
 
@@ -59,6 +59,6 @@ Files in scope: n/a
 Acceptance criteria: o designer ajusta um golpe da Kaze de rascunho do começo ao fim sem ajuda de agente; lista de melhorias registrada.
 Tests required: sessão de uso
 Metrics/baseline: tempo para ajustar um golpe
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): lista de melhorias
 Status: TODO

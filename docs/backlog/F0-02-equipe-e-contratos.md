@@ -15,7 +15,7 @@ Files in scope: n/a
 Acceptance criteria: contrato assinado; diretor de arte revisou o [brief](../art/BRIEF_TESTES_DE_ESTILO.md).
 Tests required: n/a
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): data de início
 Status: TODO
 
@@ -27,7 +27,7 @@ Files in scope: n/a
 Acceptance criteria: contrato assinado; leu o [GDD](../gdd/GDD.md) e o [elenco](../gdd/ELENCO_LANCAMENTO.md) e devolveu comentários.
 Tests required: n/a
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): comentários registrados no GDD
 Status: TODO
 
@@ -39,7 +39,7 @@ Files in scope: n/a (fora do repositório)
 Acceptance criteria: modelo aprovado pelo jurídico e pelo dono do projeto.
 Tests required: n/a
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): modelo arquivado
 Status: TODO
 
@@ -51,7 +51,7 @@ Files in scope: n/a
 Acceptance criteria: propostas com prazo e preço recebidas para os 3 testes.
 Tests required: n/a
 Metrics/baseline: cotações reais (substituem a estimativa do brief)
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): cotações arquivadas
 Status: TODO
 
@@ -63,6 +63,6 @@ Files in scope: n/a
 Acceptance criteria: áudio cotado para a fatia vertical; consultoria agendada antes da arte final da Iara (F2-01.4).
 Tests required: n/a
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: nenhum
+Impacto em determinismo, justiça online, privacidade ou licença: nenhum
 Evidence (commands/logs/devices): propostas
 Status: TODO

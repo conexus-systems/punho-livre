@@ -10,8 +10,8 @@ Status: proposta do PO. **Nenhum nome foi registrado nem verificado juridicament
 
 ## Por que trocar
 
-"MUGEN" é o nome do software da Elecbyte, de uso não comercial. Usar o nome num jogo pago ou com anúncios
-pode gerar confusão de marca e associa o jogo a coleções com personagens de terceiros. A troca precisa
+"MUGEN" é o nome do software da Elecbyte, de uso não comercial. Usar o nome num jogo pago (o jogo será vendido
+na Google Play) pode gerar confusão de marca e associa o jogo a coleções com personagens de terceiros. A troca precisa
 acontecer **antes da primeira publicação em loja**, porque o identificador do app
 (`br.com.conexus.mugenarena`) não muda depois de publicado.
 

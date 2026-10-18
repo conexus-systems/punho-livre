@@ -14,7 +14,7 @@ Files in scope: painel de análise
 Acceptance criteria: atualizado semanalmente; amostra mínima por confronto definida pelo designer.
 Tests required: n/a
 Metrics/baseline: meta 45–55% por lutador
-Impacto em determinismo, justiça online, privacidade ou anúncios: dados agregados, sem identificar jogador
+Impacto em determinismo, justiça online, privacidade ou licença: dados agregados, sem identificar jogador
 Evidence (commands/logs/devices): relatório
 Status: TODO
 
@@ -26,7 +26,7 @@ Files in scope: notas de patch internas
 Acceptance criteria: cada problema vira ajuste ou "sem mudança" justificado.
 Tests required: fuzz e testes de frame data depois de cada ajuste
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: muda a simulação
+Impacto em determinismo, justiça online, privacidade ou licença: muda a simulação
 Evidence (commands/logs/devices): notas de patch
 Status: TODO
 
@@ -38,6 +38,6 @@ Files in scope: proposta técnica; docs/PROTOCOL.md se aprovado
 Acceptance criteria: decisão registrada; se aprovado, os dois lados do online sempre usam a mesma versão (conferida no início da partida).
 Tests required: teste de partida com versões diferentes (deve recusar)
 Metrics/baseline: n/a
-Impacto em determinismo, justiça online, privacidade ou anúncios: crítico para determinismo — versão errada = dessincronia
+Impacto em determinismo, justiça online, privacidade ou licença: crítico para determinismo — versão errada = dessincronia
 Evidence (commands/logs/devices): decisão
 Status: TODO

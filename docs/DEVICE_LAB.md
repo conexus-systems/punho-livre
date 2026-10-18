@@ -94,7 +94,8 @@ Cada caso: passos → resultado esperado. Anotar "ok", "falhou (descrição + v�
 | Rotação | Girar o aparelho em todas as telas | Fica em paisagem (rotação travada) |
 | Recortes de tela | Telas com notch/furo e 21:9 | HUD e botões fora do recorte; nada cortado |
 | Fonte grande | Fonte do sistema no máximo | Menus legíveis; a luta não quebra |
-| Primeira abertura | Instalação limpa | UMP (anúncios) e depois a pergunta de telemetria, uma vez cada; "Agora não" funciona |
+| Primeira abertura | Instalação limpa | Só a pergunta de telemetria, uma vez (sem anúncio nem pedido de rastreamento: jogo pago); "Agora não" funciona |
+| Licença do online (Android) | Faixa de teste interno: conta de teste de licença; depois um APK instalado fora da Play | Cópia da Play entra no online; a de fora recebe a mensagem de compra só no online; offline funciona nas duas (`docs/PROTOCOL.md` § Licença) |
 | Falha simulada | Build de dev: forçar um erro numa tela | Painel "algo deu errado" com "Voltar ao menu"; com telemetria aceita, evento `crash` no próximo envio |
 | Bateria/temperatura | 20 min de arcade | Sem queda > 10 % no fps_p5 entre o bench frio e o quente; aparelho não fica quente demais ao toque |
 
@@ -159,7 +160,7 @@ versões no CI, não como número de aparelho.
 | Assets — outros (expo-router) | 0,02 |
 | Por tipo | webp 17,94 · png 1,33 · jpg 0,77 |
 
-**Não medido**: a parte nativa (Hermes, React Native, Skia, Reanimated, AdMob, módulos Expo). Ainda não
+**Não medido**: a parte nativa (Hermes, React Native, Skia, Reanimated, módulos Expo; o AdMob saiu na 0.5.0). Ainda não
 existe release com APK no GitHub (`gh api repos/tantoniazi/mugen/releases` vazio), então não há número
 real de APK/AAB. `size-budget.json` usa `native_estimate_mb: 60` como **hipótese de planejamento** para
 o "download estimado" (26,7 + 60 = 86,7 MB < 150). Assim que houver build EAS:
@@ -209,7 +210,7 @@ pegam crash nativo, ANR e encerramento por memória — usar desde o primeiro te
 ### Falhas nativas e SDK de terceiros
 
 O que existe pega só erro **JS** (handler global, promessas sem tratamento no release, error boundary).
-Não pega crash nativo (Skia, Reanimated, AdMob, JNI), ANR nem processo morto por falta de memória —
+Não pega crash nativo (Skia, Reanimated, JNI), ANR nem processo morto por falta de memória —
 esses aparecem só no Android vitals / Xcode Organizer, sem pilha simbolizada do JS.
 
 Recomendação para antes do lançamento aberto (não adicionado agora, por não haver aparelho para validar
