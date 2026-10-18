@@ -20,10 +20,14 @@ Rails.application.routes.draw do
       end
 
       get "leaderboard", to: "leaderboard#index"
-      resources :matches, only: :index
+      get "ranked", to: "ranked#show"
+      resources :matches, only: :index do
+        get :replay, on: :member
+      end
 
       namespace :admin do
         resources :characters, only: %i[index update], param: :slug, constraints: { slug: slug }
+        resources :match_reviews, only: %i[index update]
       end
     end
   end

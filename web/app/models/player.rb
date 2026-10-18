@@ -1,22 +1,22 @@
 # frozen_string_literal: true
 
 # Jogador. A identidade vem do bff-auth (`sub` do JWT = conexus_user_id);
-# aqui ficam apelido, rating Elo, vitórias/derrotas e o flag premium
+# aqui ficam apelido, rating exibido (Glicko-2 da temporada atual, ver
+# SeasonRating), vitórias/derrotas da vida toda e o flag premium
 # (mantido pelos webhooks do bff-payment).
 class Player < ApplicationRecord
-  DEFAULT_RATING = 1000
+  DEFAULT_RATING = 1500
   DISPLAY_NAME_RANGE = (2..24)
 
   has_many :submitted_characters, class_name: "Character", foreign_key: :submitted_by_id,
                                   inverse_of: :submitted_by, dependent: :nullify
   has_one :matchmaking_ticket, dependent: :delete
+  has_many :season_ratings, dependent: :delete_all
 
   # Unicidade garantida pelo índice único (create_or_find_by! depende disso).
   validates :conexus_user_id, presence: true
   validates :display_name, presence: true, length: { in: DISPLAY_NAME_RANGE }
   validates :rating, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
-
-  scope :ranked, -> { where("wins + losses > 0").order(rating: :desc, wins: :desc, id: :asc) }
 
   # Upsert a partir dos claims de um access token verificado. Concorrência:
   # create_or_find_by se apoia no índice único de conexus_user_id.

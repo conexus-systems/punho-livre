@@ -1,6 +1,11 @@
 /**
  * Cliente mínimo do protocolo ActionCable (actioncable-v1-json) sobre WebSocket.
  * Sem dependências: o React Native já tem WebSocket.
+ *
+ * Vigia a conexão: o servidor manda `ping` a cada 3 s; sem nenhuma mensagem
+ * por `staleAfterMs` a conexão é dada como morta (rede caiu sem fechar o
+ * socket, comum no celular) e `onClose("stale")` dispara para quem estiver
+ * usando reconectar (ver online.ts).
  */
 
 type Listener = (msg: Record<string, unknown>) => void;
@@ -16,9 +21,17 @@ export class CableClient {
   private subs = new Map<string, { onMessage: Listener; onConfirm?: () => void; onReject?: () => void }>();
   private pending: string[] = [];
   private open = false;
+  private lastMessageAt = 0;
+  private watchdog: ReturnType<typeof setInterval> | null = null;
   onClose: ((reason: string) => void) | null = null;
+  /** Sem mensagens por este tempo durante uma partida = conexão morta. */
+  staleAfterMs = 6000;
 
   constructor(private readonly url: string) {}
+
+  get connected(): boolean {
+    return this.open;
+  }
 
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -26,6 +39,7 @@ export class CableClient {
       this.ws = ws;
       let welcomed = false;
       ws.onmessage = (ev) => {
+        this.lastMessageAt = Date.now();
         let msg: Record<string, unknown>;
         try {
           msg = JSON.parse(String(ev.data));
@@ -38,12 +52,13 @@ export class CableClient {
             this.open = true;
             this.pending.forEach((p) => ws.send(p));
             this.pending = [];
+            this.startWatchdog();
             resolve();
             return;
           case "ping":
             return;
           case "disconnect":
-            this.onClose?.(String(msg.reason ?? "disconnect"));
+            this.drop(String(msg.reason ?? "disconnect"));
             return;
           case "confirm_subscription":
             this.subs.get(String(msg.identifier))?.onConfirm?.();
@@ -61,17 +76,48 @@ export class CableClient {
         if (!welcomed) reject(new Error("Não foi possível conectar ao servidor online."));
       };
       ws.onclose = () => {
-        this.open = false;
         if (!welcomed) reject(new Error("Conexão recusada (login expirado?)."));
-        else this.onClose?.("closed");
+        else this.drop("closed");
       };
     });
+  }
+
+  private startWatchdog(): void {
+    this.stopWatchdog();
+    this.watchdog = setInterval(() => {
+      if (this.open && Date.now() - this.lastMessageAt > this.staleAfterMs) this.drop("stale");
+    }, 1000);
+  }
+
+  private stopWatchdog(): void {
+    if (this.watchdog) clearInterval(this.watchdog);
+    this.watchdog = null;
+  }
+
+  /** Conexão perdida (fechou, servidor mandou `disconnect` ou ficou muda). */
+  private drop(reason: string): void {
+    if (!this.open) return;
+    this.open = false;
+    this.stopWatchdog();
+    const ws = this.ws;
+    this.ws = null;
+    if (ws) {
+      ws.onclose = null;
+      ws.onmessage = null;
+      try {
+        ws.close();
+      } catch {
+        // já fechado
+      }
+    }
+    this.onClose?.(reason);
   }
 
   private send(payload: Record<string, unknown>): void {
     const text = JSON.stringify(payload);
     if (this.open && this.ws) this.ws.send(text);
-    else this.pending.push(text);
+    else if (this.ws) this.pending.push(text);
+    // sem socket (conexão perdida): descarta; a reconexão reenvia o que importa
   }
 
   subscribe(
@@ -94,6 +140,7 @@ export class CableClient {
 
   close(): void {
     this.onClose = null;
+    this.stopWatchdog();
     this.ws?.close();
     this.ws = null;
     this.open = false;

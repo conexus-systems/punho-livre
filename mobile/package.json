@@ -19,6 +19,7 @@
     "bench": "node scripts/bench.mjs",
     "bench:web": "node scripts/bench-web.mjs",
     "size": "node scripts/size.mjs",
+    "soak": "node scripts/soak.mjs",
     "test:ci": "jest --ci --forceExit && node --test scripts/__tests__/*.test.mjs && node scripts/check-roster.mjs",
     "preview:web": "node scripts/preview-web.mjs",
     "play:build": "node play/build.mjs",

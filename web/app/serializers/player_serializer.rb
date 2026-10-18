@@ -19,8 +19,4 @@ module PlayerSerializer
       admin: admin
     }
   end
-
-  def leaderboard_entry(player)
-    { display_name: player.display_name, rating: player.rating, wins: player.wins, losses: player.losses }
-  end
 end

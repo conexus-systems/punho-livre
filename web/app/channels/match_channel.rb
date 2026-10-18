@@ -2,18 +2,26 @@
 
 # Relay de uma partida 1v1 (docs/PROTOCOL.md → MatchChannel).
 #
-# Só os dois participantes assinam; `stream_for match`. As mensagens de jogo
-# (input/checksum) são relayadas sem tocar no banco; cada cliente ignora as
-# que têm o próprio `side`.
+# Só os dois participantes assinam; `stream_for match`. As entradas (`input`)
+# são relayadas sem tocar no banco; cada cliente ignora as mensagens com o
+# próprio `side`. O banco recebe só o registro de entradas em blocos
+# (`input_log`, ~1/s por lado) e os checksums (~1/s por lado), usados na
+# reconexão, no anti-trapaça e como replay.
 class MatchChannel < ApplicationCable::Channel
   START_DELAY_MS = 1000
+  # Teto de quadros devolvidos no `resume` (≈ 10 min de luta).
+  MAX_RESUME_FRAMES = 36_000
 
+  # params: { match_id, resume?: true, from?: <primeiro quadro remoto que falta> }
   def subscribed
     @match = Match.includes(:player1, :player2).find_by(id: params[:match_id])
     @side = @match&.side_of(current_player)
     return reject if @side.nil? || !@match.open?
 
     stream_for @match
+    @connection_token = SecureRandom.hex(8)
+    was_down = Matches::Connection.connected!(match_id: @match.id, side: @side, token: @connection_token)
+    resume! if params[:resume] || was_down
   end
 
   # Quando os dois lados estão prontos: { type: "start", at: <epoch ms> }.
@@ -43,12 +51,27 @@ class MatchChannel < ApplicationCable::Channel
     broadcast({ type: "input", side: @side, frames: frames, ack: integer_or_nil(data["ack"]) })
   end
 
-  # { frame, value } → { type: "checksum", side, frame, value }
+  # { frame, value, inputs_hash } → relay { type: "checksum", side, frame, value, inputs_hash };
+  # divergência com o outro lado → { type: "voided", reason } (Matches::Checksums).
   def checksum(data)
     frame = integer_or_nil(data["frame"])
     return if frame.nil?
 
-    broadcast({ type: "checksum", side: @side, frame: frame, value: data["value"] })
+    broadcast({ type: "checksum", side: @side, frame: frame, value: data["value"], inputs_hash: data["inputs_hash"] })
+    payload = Matches::Checksums.record(match_id: @match.id, side: @side, frame: frame, value: data["value"],
+                                        inputs_hash: data["inputs_hash"])
+    broadcast(payload) if payload
+  rescue ArgumentError => e
+    logger.info("[match] invalid checksum from side #{@side}: #{e.message}")
+  end
+
+  # { from, bits: [...] } — registro das entradas deste lado (Matches::InputLog).
+  # Buraco (bloco perdido na queda) → só para o remetente { type: "input_log_gap", next }.
+  def input_log(data)
+    result = Matches::InputLog.append(match_id: @match.id, side: @side, from: data["from"], bits: data["bits"])
+    transmit({ type: "input_log_gap", next: result[:next] }) unless result[:ok]
+  rescue Matches::InputLog::Invalid => e
+    logger.info("[match] invalid input_log from side #{@side}: #{e.message}")
   end
 
   # { winner_side: 0|1|null } — ver Matches::ReportResult.
@@ -65,14 +88,44 @@ class MatchChannel < ApplicationCable::Channel
     transmit({ type: "pong", t: data["t"] })
   end
 
-  # Saiu com a partida em aberto: abandoned (quem saiu perde) + opponent_left.
-  def unsubscribed
-    return unless @match && !@side.nil?
+  # Saída voluntária (desistiu): abandono imediato, sem tolerância.
+  def leave(_data = {})
+    @left = true
+    broadcast({ type: "opponent_left", side: @side }) if Matches::Abandon.call(match_id: @match.id, leaver_side: @side)
+  end
 
-    broadcast({ type: "opponent_left" }) if Matches::Abandon.call(match_id: @match.id, leaver_side: @side)
+  # Caiu sem `leave`:
+  # - luta em andamento → tolerância de reconexão ({ type: "opponent_disconnected", side, grace_ms });
+  # - partida que nem começou → abandonada sem rating + opponent_left.
+  def unsubscribed
+    return if @match.nil? || @side.nil? || @left
+
+    if Match.where(id: @match.id).pick(:status) == "active"
+      if Matches::Connection.disconnected!(match_id: @match.id, side: @side, token: @connection_token)
+        broadcast({ type: "opponent_disconnected", side: @side, grace_ms: Matches::Connection.grace.in_milliseconds.to_i })
+      end
+    elsif Matches::Abandon.call(match_id: @match.id, leaver_side: @side)
+      broadcast({ type: "opponent_left", side: @side })
+    end
   end
 
   private
+
+  # Reconexão: devolve ao cliente as entradas do oponente registradas desde
+  # `from` e de onde continuar o próprio registro; avisa o oponente para
+  # reenviar o resto (`resync`).
+  def resume!
+    from = params[:from].is_a?(Integer) && params[:from].positive? ? params[:from] : 1
+    frames = Matches::InputLog.frames_from(@match.id, 1 - @side, from).first(MAX_RESUME_FRAMES)
+    transmit({
+      type: "resume",
+      status: @match.reload.status,
+      from: from,
+      frames: frames,
+      log_next: Matches::InputLog.next_frame(@match.id, @side)
+    })
+    broadcast({ type: "resync", side: @side, from: from })
+  end
 
   def broadcast(payload)
     MatchChannel.broadcast_to(@match, payload)

@@ -6,6 +6,7 @@
 import { advanceAnim, animTime, resetAnim } from "./anim";
 import { getAnim } from "./character";
 import { GROUND_Y, SCREEN_W, STAGE_LEFT, STAGE_RIGHT } from "./constants";
+import * as dm from "./detmath";
 import { evalBool, evalNum, evaluate, parseExpr, toNum, type EvalContext, type Expr, type Value } from "./expr";
 import { INPUT_HISTORY } from "./input";
 import { matchCommand } from "./mugen/cmd";
@@ -357,23 +358,23 @@ export class FighterCtx implements EvalContext {
       case "sqrt":
         return Math.sqrt(Math.max(0, n(0)));
       case "sin":
-        return Math.sin(n(0));
+        return dm.sin(n(0));
       case "cos":
-        return Math.cos(n(0));
+        return dm.cos(n(0));
       case "tan":
-        return Math.tan(n(0));
+        return dm.tan(n(0));
       case "asin":
-        return Math.asin(n(0));
+        return dm.asin(n(0));
       case "acos":
-        return Math.acos(n(0));
+        return dm.acos(n(0));
       case "atan":
-        return Math.atan(n(0));
+        return dm.atan(n(0));
       case "exp":
-        return Math.exp(n(0));
+        return dm.exp(n(0));
       case "ln":
-        return n(0) > 0 ? Math.log(n(0)) : 0;
+        return n(0) > 0 ? dm.ln(n(0)) : 0;
       case "log":
-        return n(0) > 0 && n(1) > 0 ? Math.log(n(1)) / Math.log(n(0)) : 0;
+        return n(0) > 0 && n(1) > 0 ? dm.ln(n(1)) / dm.ln(n(0)) : 0;
       case "ifelse":
       case "cond":
         return toNum(args[0] ?? 0) !== 0 ? (args[1] ?? 0) : (args[2] ?? 0);

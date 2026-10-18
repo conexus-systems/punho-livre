@@ -3,8 +3,10 @@
 module Matches
   # Ação `result` do MatchChannel. Cada lado relata `winner_side`; quando os
   # dois relatos chegam:
-  # - iguais → partida `finished`, Elo aplicado, payload `finished` com ratings;
-  # - diferentes → partida `disputed`, payload `finished` com disputed: true.
+  # - iguais → confere o replay (VerifyReplay); se bater, partida `finished`,
+  #   Glicko-2 aplicado, payload `finished` com ratings; se não, `void`;
+  # - diferentes → partida `disputed` (fila de revisão), payload `finished`
+  #   com disputed: true.
   # Devolve o payload para broadcast, ou nil enquanto falta um relato.
   class ReportResult
     def self.call(...)
@@ -33,9 +35,10 @@ module Matches
         end
 
         if match.reports["0"] == match.reports["1"]
-          finish!(match, match.reports["0"])
+          conclude!(match, match.reports["0"])
         else
           match.update!(status: "disputed", winner_side: nil, finished_at: Time.current)
+          MatchReview.create!(match: match, reason: "result_mismatch", details: { reports: match.reports })
           { type: "finished", winner_side: nil, disputed: true }
         end
       end
@@ -48,13 +51,19 @@ module Matches
         match = Match.lock.find_by(id: match_id)
         return nil unless match&.active? && match.reports.size == 1
 
-        new(match_id: match.id, side: nil, winner_side: nil).send(:finish!, match, match.reports.values.first)
+        new(match_id: match.id, side: nil, winner_side: nil).send(:conclude!, match, match.reports.values.first)
       end
     end
 
     private
 
-    def finish!(match, winner_side)
+    def conclude!(match, winner_side)
+      mismatch = VerifyReplay.call(match)
+      if mismatch
+        match.save!
+        return Void.call(match_id: match.id, reason: "replay_mismatch", details: mismatch)
+      end
+
       p1, p2 = Outcome.apply!(match, winner_side)
       match.update!(status: "finished", winner_side: winner_side, finished_at: Time.current)
       { type: "finished", winner_side: winner_side, ratings: { "0" => p1.rating, "1" => p2.rating } }

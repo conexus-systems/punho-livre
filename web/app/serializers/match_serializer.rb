@@ -20,11 +20,32 @@ module MatchSerializer
     }
   end
 
-  # Partida "disputed" (relatos divergentes) não tem vencedor: vira "draw".
+  # Partida "disputed" (relatos divergentes) não tem vencedor: vira "draw";
+  # "void" (anulada pelo anti-trapaça) aparece como "void".
   def result_for(match, side)
+    return "void" if match.status == "void"
     return "abandoned" if match.status == "abandoned"
     return "draw" if match.status == "disputed" || match.winner_side.nil?
 
     match.winner_side == side ? "win" : "loss"
+  end
+
+  # Replay para disputas: seed + personagens + versão + entradas registradas
+  # de cada lado (índice 0 = quadro 1) + checksums relatados.
+  def replay(match)
+    inputs = Match::SIDES.map { |side| Matches::InputLog.frames_from(match.id, side, 1) }
+    {
+      match_id: match.id,
+      status: match.status,
+      mode: match.mode,
+      seed: match.seed,
+      engine_version: match.engine_version,
+      characters: [ match.p1_character, match.p2_character ],
+      pack_sha256: [ match.p1_pack_sha256, match.p2_pack_sha256 ],
+      winner_side: match.winner_side,
+      frames: inputs.map(&:size).min,
+      inputs: inputs,
+      checksums: match.checksums.order(:frame, :side).pluck(:frame, :side, :value, :inputs_hash)
+    }
   end
 end

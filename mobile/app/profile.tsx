@@ -4,16 +4,17 @@ import { router, useLocalSearchParams } from "expo-router";
 import * as AuthSession from "expo-auth-session";
 
 import { MetroButton, MetroDialog, MetroEmpty, MetroGroup, MetroHeader, MetroPage, MetroPivot, MetroProgress, MetroRow, MetroTextField } from "@/components/metro";
-import { fetchLeaderboard, fetchMatches, fetchMe, updateDisplayName, type MatchSummary } from "@/src/services/api";
+import { leagueName } from "@/src/net/leagues";
+import { fetchLeaderboard, fetchMatches, fetchMe, fetchRanked, updateDisplayName, type LeaderboardEntry, type MatchSummary, type RankedStanding, type Season } from "@/src/services/api";
 import { authRequestConfig, completeLogin, discovery, logout } from "@/src/services/auth";
 import { refreshEntitlements } from "@/src/services/payments";
 import { app } from "@/src/store";
-import { count, number, relative, signed } from "@/src/ui/formats";
+import { count, number, relative, shortDate, signed } from "@/src/ui/formats";
 import { validate } from "@/src/ui/rules";
 import { TYPE } from "@/src/ui/type";
 import { space, useTokens } from "@/src/ui/theme";
 
-const RESULT = { win: "Vitória", loss: "Derrota", draw: "Empate", abandoned: "Abandono" } as const;
+const RESULT = { win: "Vitória", loss: "Derrota", draw: "Empate", abandoned: "Abandono", void: "Anulada" } as const;
 
 export default function Profile() {
   const t = useTokens();
@@ -26,7 +27,8 @@ export default function Profile() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
-  const [board, setBoard] = useState<{ display_name: string; rating: number; wins: number; losses: number }[] | null>(null);
+  const [board, setBoard] = useState<{ season: Season | null; players: LeaderboardEntry[] } | null>(null);
+  const [standing, setStanding] = useState<RankedStanding | null>(null);
   const [history, setHistory] = useState<MatchSummary[] | null>(null);
   const [confirmLogout, setConfirmLogout] = useState(false);
 
@@ -47,7 +49,10 @@ export default function Profile() {
   }, [response, request]);
 
   useEffect(() => {
-    void fetchLeaderboard().then(setBoard).catch(() => setBoard([]));
+    void fetchLeaderboard()
+      .then((b) => setBoard({ season: b?.season ?? null, players: Array.isArray(b?.players) ? b.players : [] }))
+      .catch(() => setBoard({ season: null, players: [] }));
+    if (session) void fetchRanked().then((s) => setStanding(s?.season && s?.league ? s : null)).catch(() => setStanding(null));
     if (session) void fetchMatches().then(setHistory).catch(() => setHistory([]));
   }, [session]);
 
@@ -73,6 +78,14 @@ export default function Profile() {
                     Rating <Text style={{ color: t.accentText }}>{player ? number(player.rating) : "…"}</Text> · {count(player?.wins ?? 0, "vitória", "vitórias")} ·{" "}
                     {count(player?.losses ?? 0, "derrota", "derrotas")}
                   </Text>
+                  {standing ? (
+                    <Text style={[TYPE.BODY, { color: t.muted }]}>
+                      {standing.season.name}: <Text style={{ color: t.accentText }}>{standing.league.name}</Text>
+                      {standing.placement_remaining > 0
+                        ? ` · faltam ${count(standing.placement_remaining, "partida", "partidas")} de colocação`
+                        : `${standing.rank ? ` · ${standing.rank}º lugar` : ""} · recorde ${number(standing.peak_rating)}`}
+                    </Text>
+                  ) : null}
                   <View style={{ maxWidth: 360, marginTop: space.md }}>
                     <MetroTextField label="Nome de lutador" value={name} onChangeText={setName} maxLength={24} error={nameError} help="Aparece no ranking e para o oponente." />
                   </View>
@@ -95,19 +108,25 @@ export default function Profile() {
           {pivot === 1 ? (
             board === null ? (
               <MetroProgress />
-            ) : board.length === 0 ? (
-              <MetroEmpty title="Ranking vazio" detail="Jogue uma partida ranqueada para abrir o placar." />
+            ) : board.players.length === 0 ? (
+              <MetroEmpty
+                title="Ranking vazio"
+                detail="Termine as 5 partidas de colocação da ranqueada para entrar no placar da temporada."
+              />
             ) : (
-              board.map((p, i) => (
-                <MetroRow
-                  key={`${p.display_name}-${i}`}
-                  title={`${i + 1}. ${p.display_name}`}
-                  secondary={`${count(p.wins, "vitória", "vitórias")} · ${count(p.losses, "derrota", "derrotas")}`}
-                  right={number(p.rating)}
-                  selected={p.display_name === player?.display_name}
-                  glyph={i < 3 ? "ranking" : undefined}
-                />
-              ))
+              <>
+                {board.season ? <MetroGroup title={`${board.season.name} · até ${shortDate(new Date(board.season.ends_at))}`} /> : null}
+                {board.players.map((p, i) => (
+                  <MetroRow
+                    key={`${p.display_name}-${i}`}
+                    title={`${i + 1}. ${p.display_name}`}
+                    secondary={`${leagueName(p.league)} · ${count(p.wins, "vitória", "vitórias")} · ${count(p.losses, "derrota", "derrotas")}`}
+                    right={number(p.rating)}
+                    selected={p.display_name === player?.display_name}
+                    glyph={i < 3 ? "ranking" : undefined}
+                  />
+                ))}
+              </>
             )
           ) : null}
 

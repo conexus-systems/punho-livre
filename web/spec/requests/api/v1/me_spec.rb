@@ -36,7 +36,7 @@ RSpec.describe "GET/PATCH /api/v1/me" do
 
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body["player"]).to include(
-      "conexus_user_id" => sub, "display_name" => "Ryo Sakazaki", "rating" => 1000,
+      "conexus_user_id" => sub, "display_name" => "Ryo Sakazaki", "rating" => 1500,
       "wins" => 0, "losses" => 0, "premium" => false, "admin" => true
     )
 

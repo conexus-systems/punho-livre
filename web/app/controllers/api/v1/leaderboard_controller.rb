@@ -2,13 +2,19 @@
 
 module Api
   module V1
-    # GET /api/v1/leaderboard — top 100 por rating (só quem já jogou ranqueada).
+    # GET /api/v1/leaderboard[?season=<número>] — top 100 da temporada (padrão:
+    # a atual), só quem já terminou as partidas de colocação.
     class LeaderboardController < BaseController
       LIMIT = 100
 
       def index
-        players = Player.ranked.limit(LIMIT)
-        render json: { players: players.map { |p| PlayerSerializer.leaderboard_entry(p) } }
+        season = params[:season].present? ? Season.find_by!(number: params[:season].to_i) : Season.current
+        ratings = SeasonRating.placed.where(season: season).includes(:player)
+                              .order(rating: :desc, wins: :desc, id: :asc).limit(LIMIT)
+        render json: {
+          season: season.summary,
+          players: ratings.map { |r| RankedSerializer.leaderboard_entry(r) }
+        }
       end
     end
   end

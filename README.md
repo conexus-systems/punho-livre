@@ -35,7 +35,7 @@ teste em aparelho.*
   (incluindo `.sff` v1/v2 e paleta `.act`) num pack e envia ao backend; após aprovação
   de um admin ele aparece no catálogo do app para download. Ver [docs/CHARACTERS.md](docs/CHARACTERS.md).
 - **Modos**: Arcade (escada de oponentes, continue com anúncio premiado), Versus CPU, Equipes 3×3,
-  Treino (caixas de colisão, barra cheia) e Online (ranqueada por Elo ou sala com código).
+  Treino (caixas de colisão, barra cheia) e Online (ranqueada com Glicko-2, ligas e temporadas, ou sala com código).
 - **Online**: netcode com rollback (input delay + predição + re-simulação + checksum
   anti-dessincronia) sobre ActionCable (Solid Cable, sem Redis).
 - **Controles touch**: direcional flutuante, 4 botões SNK (A B C D + atalhos A+B e C+D) ou os 6 do
