@@ -1,0 +1,157 @@
+'use strict';
+// Stage Mode: os jogadores (time 1) atravessam o cenário em trechos.
+// Cada trecho só libera o próximo ("GO →") quando todos os inimigos caem.
+// Os dados 1.9 não trazem os inimigos exclusivos do modo história do LF2 2.0
+// (Hunter, Mark, Jack...), então os chefes são lutadores do próprio elenco.
+
+const STAGES = [
+  { bg: 2, phases: [['30', '30', '30'], ['30', '30', '30', '30'], ['30', '30', '!9']] },
+  { bg: 3, phases: [['30', '30', '30', '30'], ['30', '30', '!10'], ['30', '30', '!4', '!10']] },
+  { bg: 5, phases: [['30', '30', '30', '30'], ['30', '30', '30', '!8'], ['30', '30', '!7', '!8']] },
+  { bg: 6, phases: [['30', '30', '30', '30', '30'], ['30', '30', '!2'], ['30', '!1', '!2']] },
+  { bg: 7, phases: [['30', '30', '30', '30', '30'], ['30', '30', '!6', '!5'], ['!11', '!5', '!6']] },
+];
+
+const ENEMY_TEAM = 99;
+
+class StageLogic {
+  constructor(heroes, stageIndex, onEnd) {
+    this.heroSpecs = heroes;
+    this.stageIndex = stageIndex;
+    this.onEnd = onEnd;
+  }
+
+  init(m) {
+    this.m = m;
+    this.heroes = m.characters().filter((c) => c.team === 1);
+    this.loadStage(this.stageIndex, true);
+  }
+
+  loadStage(i, first) {
+    const m = this.m, S = STAGES[i];
+    this.stageIndex = i;
+    m.bg = new Background(Assets.backgrounds.find((b) => b.id === S.bg) || Assets.backgrounds[0]);
+    for (const o of [...m.live]) if (o.team !== 1 || o.type !== 'character') m.remove(o);
+    m.effects = [];
+    m.tasks = [];
+    this.sectionW = m.bg.width / S.phases.length;
+    this.heroes.forEach((h, k) => {
+      if (!first) {
+        if (h.health.hp <= 0) {
+          h.health.hp = h.health.hp_bound = Math.round(h.health.hp_full * 0.4);
+          h.dead = false;
+          h.visible = true;
+        } else {
+          h.health.hp_bound = Math.max(h.health.hp_bound, Math.min(h.health.hp_full, h.health.hp + 150));
+          h.health.hp = Math.min(h.health.hp_bound, h.health.hp + 150);
+        }
+        h.trans.frame(999, 99);
+        h.hold = null;
+      }
+      h.ps.dir = 1;
+      h.ps.vx = h.ps.vy = h.ps.vz = 0;
+      h.setPos(80 + k * 30, 0, m.bg.pos(0, (k + 1) / (this.heroes.length + 1)).z);
+    });
+    m.bg.camX = 0;
+    this.cleared = false;
+    this.clearT = 0;
+    this.startPhase(0);
+    this.banner = { text: `Stage ${i + 1}`, t: 90 };
+  }
+
+  startPhase(p) {
+    this.phase = p;
+    this.queue = STAGES[this.stageIndex].phases[p].slice();
+    this.locked = true;
+    this.goArrow = false;
+    this.spawnT = 20;
+    this.setBounds(p * this.sectionW, (p + 1) * this.sectionW);
+    if (this.m.random() < 0.6) {
+      const ids = Assets.data.objects.filter((o) => o.id >= 100 && o.id < 200).map((o) => o.id);
+      const z = this.m.bg.pos(0, this.m.random()).z;
+      if (ids.length) this.m.createWeapon(ids[Math.floor(this.m.random() * ids.length)], { x: p * this.sectionW + 200 + this.m.random() * 300, y: -600, z });
+    }
+  }
+
+  setBounds(min, max) {
+    this.m.bound = { team: 1, min: min + 10, max: max - 10 };
+    this.m.camBound = { min, max: Math.max(min, max - LF.W) };
+  }
+
+  spawn(spec) {
+    const m = this.m, boss = spec[0] === '!', id = Number(boss ? spec.slice(1) : spec);
+    if (!Assets.obj(id)) return;
+    const fromLeft = this.phase > 0 && m.random() < 0.4;
+    const x = fromLeft ? m.bg.camX - 60 : m.bg.camX + LF.W + 60;
+    const c = m.addCharacter(id, ENEMY_TEAM, new Controller(), { removeOnDeath: true, label: boss ? 'Chefe' : 'COM' });
+    c.setPos(Math.max(0, Math.min(m.bg.width, x)), 0, m.bg.pos(0, m.random()).z);
+    c.switchDir(fromLeft ? 1 : -1);
+    if (!boss) {
+      c.health.hp = c.health.hp_full = c.health.hp_bound = 250 + 50 * Game.difficulty;
+    }
+    m.ais.push(new AI(c, m, boss ? Game.difficulty : Math.max(0, Game.difficulty - 1)));
+  }
+
+  TU(m) {
+    if (this.banner && --this.banner.t <= 0) this.banner = null;
+    // painel: jogadores primeiro, depois os inimigos em campo
+    const enemies = m.characters().filter((c) => c.team === ENEMY_TEAM && c.uid >= 0);
+    m.panel = [...this.heroes, ...enemies].slice(0, 8).map((c) => ({ ch: c, name: c.label }));
+
+    if (m.summary) {
+      if (m.time > this.overAt + 60 && (Input.anyHit('att') || Input.anyHit('jump'))) m.end();
+      return;
+    }
+    if (!this.heroes.some((h) => h.health.hp > 0)) {
+      if (!this.overAt) this.overAt = m.time;
+      if (m.time === this.overAt + 45) { m.panel = this.heroes.map((c) => ({ ch: c, name: c.label })); m.showSummary('Game Over'); }
+      return;
+    }
+    const alive = enemies.filter((c) => c.health.hp > 0);
+    if (this.cleared) {
+      if (++this.clearT === 90) {
+        if (this.stageIndex + 1 < STAGES.length) this.loadStage(this.stageIndex + 1, false);
+        else {
+          this.overAt = m.time;
+          m.panel = this.heroes.map((c) => ({ ch: c, name: c.label }));
+          m.showSummary('Todas as fases concluídas!');
+        }
+      }
+      return;
+    }
+    if (this.locked) {
+      if (this.queue.length && alive.length < 5 && --this.spawnT <= 0) {
+        this.spawn(this.queue.shift());
+        this.spawnT = 25 + Math.floor(m.random() * 20);
+      }
+      if (!this.queue.length && !alive.length) {
+        if (this.phase === STAGES[this.stageIndex].phases.length - 1) {
+          this.cleared = true;
+          this.banner = { text: 'Stage Clear!', t: 90 };
+          Sound.play('1/m_end');
+        } else {
+          this.locked = false;
+          this.goArrow = true;
+          this.setBounds(this.phase * this.sectionW, (this.phase + 2) * this.sectionW);
+        }
+      }
+    } else if (this.heroes.some((h) => h.health.hp > 0 && h.ps.x > (this.phase + 1) * this.sectionW + 60)) {
+      this.startPhase(this.phase + 1);
+    }
+  }
+
+  draw(ctx, m) {
+    if (this.goArrow && Math.floor(m.time / 10) % 2 === 0) {
+      text(ctx, 'GO →', LF.W - 30, 300, { align: 'right', size: 34, color: '#ffffff', shadow: '#1946ff' });
+    }
+    if (this.banner) text(ctx, this.banner.text, LF.W / 2, 300, { align: 'center', size: 40, color: '#ffffff', shadow: '#1946ff' });
+    text(ctx, `Stage ${this.stageIndex + 1}-${this.phase + 1}`, 10, LF.H - 14, { size: 13, color: '#ffffff', shadow: '#000' });
+  }
+}
+
+function startStage(players, stageIndex, back) {
+  for (const p of players) p.team = 1;
+  const m = startMatch({ players, bg: STAGES[stageIndex].bg, mode: 'stage', weapons: false, onEnd: back });
+  m.modeLogic = new StageLogic(players, stageIndex, back);
+  m.modeLogic.init(m);
+}

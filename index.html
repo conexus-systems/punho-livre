@@ -3,16 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Mugen Brawl</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Chakra+Petch:wght@500;700&display=swap">
-<link rel="stylesheet" href="css/style.css">
+<title>Little Fighter 2 (port HTML5)</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<!--BUILD:BODY-->
 <main id="wrap">
-  <canvas id="game" width="960" height="540" aria-label="Mugen Brawl, jogo de luta"></canvas>
+  <canvas id="game" width="794" height="550" aria-label="Little Fighter 2"></canvas>
   <div id="touch" hidden>
     <div class="pad">
       <button type="button" data-key="T_up" class="up" aria-label="Cima">▲</button>
@@ -21,29 +17,36 @@
       <button type="button" data-key="T_down" class="down" aria-label="Baixo">▼</button>
     </div>
     <div class="sys">
-      <button type="button" data-key="T_pause" aria-label="Pausa">II</button>
-      <button type="button" data-key="T_start" aria-label="Confirmar">OK</button>
+      <button type="button" data-key="Escape" aria-label="Sair da luta">Esc</button>
+      <button type="button" data-key="F1" aria-label="Pausa">II</button>
     </div>
     <div class="btns">
-      <button type="button" data-key="T_d" class="d" aria-label="Defesa">D</button>
-      <button type="button" data-key="T_j" class="j" aria-label="Pulo">J</button>
-      <button type="button" data-key="T_a" class="a" aria-label="Ataque">A</button>
+      <button type="button" data-key="T_def" class="d" aria-label="Defesa">D</button>
+      <button type="button" data-key="T_jump" class="j" aria-label="Pulo">J</button>
+      <button type="button" data-key="T_att" class="a" aria-label="Ataque">A</button>
     </div>
   </div>
 </main>
-<!--/BUILD:BODY-->
-<script src="js/util.js"></script>
-<script src="js/audio.js"></script>
-<script src="js/input.js"></script>
-<script src="js/draw.js"></script>
-<script src="js/projectiles.js"></script>
-<script src="js/items.js"></script>
-<script src="js/characters.js"></script>
-<script src="js/fighter.js"></script>
-<script src="js/ai.js"></script>
-<script src="js/stages.js"></script>
-<script src="js/game.js"></script>
-<script src="js/menu.js"></script>
-<script src="js/main.js"></script>
+<script>
+  // ?assets=caminho/ usa outra pasta de dados (útil em desenvolvimento)
+  (function () {
+    var m = /[?&]assets=([^&]+)/.exec(location.search);
+    if (m) window.LF2_ASSETS = decodeURIComponent(m[1]);
+  })();
+</script>
+<script src="src/global.js"></script>
+<script src="src/assets.js"></script>
+<script src="src/input.js"></script>
+<script src="src/object.js"></script>
+<script src="src/character.js"></script>
+<script src="src/weapon.js"></script>
+<script src="src/ball.js"></script>
+<script src="src/effects.js"></script>
+<script src="src/background.js"></script>
+<script src="src/ai.js"></script>
+<script src="src/match.js"></script>
+<script src="src/stage.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/main.js"></script>
 </body>
 </html>

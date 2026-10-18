@@ -1,113 +1,108 @@
-# Mugen Brawl
+# Little Fighter 2 — port HTML5
 
-Jogo de luta 2.5D para navegador, inspirado em **Little Fighter 2**: arena com profundidade,
-combos, golpes especiais por sequência de botões, itens para pegar e arremessar, partidas de
-até 8 lutadores, modo história e sobrevivência.
+Port do **Little Fighter 2** (v1.9) para navegador e Android. O motor foi reescrito em
+JavaScript e roda os **dados originais do LF2**: quadros (`frame`), caixas de golpe (`itr`),
+corpos (`bdy`), pontos de arma, agarrão e objetos (`wpoint`, `cpoint`, `opoint`), sprites,
+cenários e sons. Assim, cada golpe, especial e reação se comporta como no jogo original.
 
-Tudo é original e feito em código: personagens desenhados proceduralmente no Canvas, cenários
-com paralaxe e efeitos sonoros sintetizados com WebAudio. O jogo não usa imagens nem áudio
-externos e não depende de nenhuma biblioteca.
+O que está implementado:
+
+- **Personagens:** Davis, Woody, Dennis, Freeze, Firen, Louis, Rudolf, Henry, John e Deep,
+  além do Bandit, com todos os especiais dos dados (D→A, D↑A, D↓A, D→J, D↑J, D↓J, DJA).
+  Inclui a transformação do Rudolf (agarrar + D J A) e os clones dele.
+- **Mecânicas do LF2:** combos e corrida com toque duplo, pulo, avanço, rolamento,
+  defesa e quebra de defesa, tontura e agarrão (socos e arremessos), quedas e quiques,
+  fogo, gelo, rebater bolas de energia, bolas que perseguem o alvo, flauta e redemoinho
+  do Henry. Também a vida que se recupera até a barra escura, a regeneração de MP e a
+  pausa do golpe ao acertar.
+- **Armas:** bastão, enxada, espada de gelo, pedra e caixa de madeira. Dá para pegar,
+  golpear, arremessar, rebater e quebrar.
+- **Cenários:** HK Coliseum, Lion Forest, Stanley Prison, The Great Wall, Queen's Island,
+  Forbidden Tower, CUHK e Tai Hom Village, com paralaxe e câmera seguindo os jogadores.
+- **Modos:** VS Mode (até 8 lutadores, times, de 0 a 7 computadores, 4 níveis de
+  dificuldade), Stage Mode (5 fases com trechos, "GO →" e chefes) e Demo.
+- **Interface:** seleção de lutadores com 8 vagas, "How many computer players?", menu
+  Fight / Reset All / Reset Random / Background / Difficulty / Exit, painel de vida e
+  MP e resumo do fim da luta, tudo com as imagens da interface do pacote.
+- **Teclas F do LF2:** F1 pausa, F2 avança um quadro, F4/Esc sai da luta, F6 MP
+  infinito, F7 recupera a vida, F8 joga armas e F9 some com as armas.
+- Até 4 jogadores no mesmo teclado, teclas configuráveis e controles de toque no celular.
+
+## Dados do LF2
+
+Os sprites, sons e dados são do **Little Fighter 2 © Marti Wong & Starsky Wong** e **não
+estão neste repositório**. O script abaixo baixa a versão 1.9 já convertida pelo
+[projeto F.LF](https://github.com/Project-F/LF2_19) e gera a pasta `assets/`, que fica
+fora do git:
+
+```
+./tools/fetch-lf2.sh
+```
+
+O conversor (`tools/import-lf2.mjs`) só lê os arquivos de dados como texto, sem
+executá-los. Ele junta tudo em `assets/data.js` e embute os sons em `assets/sound-*.js`.
+Também torna o preto transparente nas imagens que o LF2 desenha com transparência.
 
 ## Como jogar
 
-- **Rápido:** abra `dist/mugen-brawl.html` no navegador (é um arquivo único).
-- **Android:** instale `dist/mugen-brawl.apk` (Android 7.0 ou mais novo). No celular, permita
-  "instalar apps de fontes desconhecidas" para o navegador ou gerenciador de arquivos usado.
-- **Código-fonte:** abra `index.html` diretamente ou sirva a pasta:
-  `python3 -m http.server` e acesse `http://localhost:8000`.
+Depois de gerar `assets/`, abra `index.html` direto no navegador (funciona via `file://`)
+ou sirva a pasta com `python3 -m http.server`.
 
-## Controles
+| Ação        | 1P (padrão do LF2) | 2P           |
+|-------------|--------------------|--------------|
+| Mover       | `W` `X` `A` `D`    | Setas        |
+| Ataque (A)  | `S`                | `Enter`      |
+| Pulo (J)    | `Q`                | `Shift dir.` |
+| Defesa (D)  | `Z`                | `Ctrl dir.`  |
 
-| Ação         | 1P                | 2P                   |
-|--------------|-------------------|----------------------|
-| Mover        | `W` `A` `S` `D`   | Setas                |
-| Ataque (A)   | `J` ou `F`        | `Num 1` ou `,`       |
-| Pulo (J)     | `K` ou `G`        | `Num 2` ou `.`       |
-| Defesa (D)   | `L` ou `H`        | `Num 3` ou `/`       |
+O 3P e o 4P também têm teclas padrão, e todas podem ser trocadas em *control settings*
+na tela inicial. `M` liga e desliga o som.
 
-`Esc`/`P` pausa · `M` liga/desliga o som · `Enter` confirma nos menus.
-Em celulares e tablets aparecem botões de toque depois do primeiro toque na tela.
+Especiais: aperte **Defesa, direção, Ataque/Pulo** em sequência (ex.: `Z D S` = D→A).
 
-Para dois jogadores no mesmo teclado, o 1P usa `WASD` + `F G H` e o 2P usa as setas + `Num 1 2 3`.
+## APK Android
 
-### Movimentos
+```
+./tools/fetch-lf2.sh
+./android/build.sh
+```
 
-- **Correr:** toque duas vezes ← ou →
-- **Combo:** A, A, A (o terceiro golpe derruba)
-- **Voadora:** correndo + A · **chute aéreo:** pulo + A
-- **Pulo longo:** correndo + J · **rolamento:** correndo + D
-- **Defesa:** segure D de frente para o golpe (defender demais quebra a guarda)
-- **Especiais:** D, depois uma direção, depois A ou J, em sequência rápida
-  (ex.: `D → A`). Gastam MP, que se recupera com o tempo.
-- **Itens:** A perto de um item pega. Bastão: A golpeia, correndo/no ar + A arremessa.
-  Pedra: A arremessa. Leite recupera vida e suco recupera MP.
-
-## Lutadores
-
-| Lutador | Estilo | D → A | Outros especiais |
-|---------|--------|-------|------------------|
-| **Kai** | equilibrado | Onda Ki | D ↑ A Gancho do Dragão · D → J Rajada de Socos |
-| **Brasa** | fogo, agressivo | Bola de Fogo | D → J Cometa Flamejante · D ↓ J Anel de Chamas |
-| **Neve** | gelo, congela | Rajada Gélida | D ↓ A Pilares de Gelo · D → J Deslize Glacial |
-| **Trovão** | o mais rápido | Faísca | D ↑ A Relâmpago · D ↓ J Teleporte |
-| **Rocha** | pesado, muita vida | Pedregulho | D ↓ A Terremoto · D → J Investida do Touro |
-| **Sombra** | ninja | Shurikens | D ↑ A Chute Tornado · D ↓ J Bomba de Fumaça |
-
-## Modos
-
-- **VS:** 1 ou 2 jogadores e até 8 lutadores no total. Cada jogador escolhe o time
-  (ou "Independente"). Também dá para configurar quantos computadores entram, o time deles,
-  a dificuldade e o cenário.
-- **História:** 5 fases com 3 trechos de inimigos cada e um chefe no final. Jogável a dois.
-- **Sobrevivência:** ondas infinitas de inimigos, cada vez mais fortes, com um chefe a cada 5 ondas.
+Gera `dist/lf2.apk` (Android 7.0+) sem precisar do Android SDK. As ferramentas vêm do
+Maven Central: aapt2 e o framework Android que acompanham o `apktool-lib`, `smali` e
+`apksig`. O app abre o jogo numa WebView em tela cheia, deitada e funciona offline.
+O botão voltar pausa ou sai da luta, volta dos menus e fecha o app na tela inicial.
+O APK contém os dados do LF2, então é para uso pessoal: não publique o arquivo nem o
+coloque no repositório (`dist/` está no `.gitignore`).
 
 ## Estrutura
 
 ```
-index.html          página e ordem dos scripts
-css/style.css       layout da página e botões de toque
-js/util.js          constantes e utilitários
-js/audio.js         efeitos sonoros sintetizados
-js/input.js         teclado, toque e mapeamento por jogador
-js/draw.js          esqueleto articulado, poses e retratos
-js/projectiles.js   projéteis e partículas
-js/items.js         bastão, pedra e garrafas
-js/characters.js    personagens e golpes especiais
-js/fighter.js       máquina de estados do lutador, golpes e dano
-js/ai.js            inteligência artificial
-js/stages.js        cenários e roteiro do modo história
-js/game.js          mundo, colisões, câmera, HUD e modos de jogo
-js/menu.js          telas de título, seleção, controles e resultados
-js/main.js          laço principal (60 quadros por segundo)
-tools/build.mjs     gera dist/mugen-brawl.html em arquivo único
-android/            projeto do app Android e script build.sh do APK
+index.html, style.css   página do jogo
+src/global.js           constantes do LF2 (gravidade, quedas, defesa, combos...)
+src/assets.js           carrega dados, imagens e sons; desenha quadros das folhas de sprite
+src/input.js            teclado, toque, controles por jogador e detector de combos
+src/object.js           base dos objetos: transição de quadros com autoridade, física, efeitos
+src/character.js        estados do personagem, golpes, defesa, quedas, agarrão, armas
+src/weapon.js           armas leves e pesadas
+src/ball.js             ataques especiais (bolas, flechas, colunas de gelo, redemoinho)
+src/effects.js          faíscas, sangue, fogo e pedaços de objetos quebrados
+src/background.js       cenários em camadas com paralaxe e câmera
+src/match.js            a partida: ordem de processamento, colisões, painel, resumo
+src/ai.js               computador (aperta as mesmas teclas que um jogador)
+src/stage.js            Stage Mode
+src/ui.js               telas: inicial, modos, seleção, teclas
+tools/                  download e conversão dos dados do LF2
+android/                app Android e build do APK
 ```
 
-Depois de alterar o código, rode `node tools/build.mjs` para atualizar a versão em arquivo único.
+## Créditos e limitações
 
-### APK Android
-
-```
-./android/build.sh
-```
-
-Gera `dist/mugen-brawl.apk` **sem precisar do Android SDK**. Precisa de Java, Maven, Node,
-Python 3, curl e unzip. As ferramentas (aapt2 e o framework Android que vêm no `apktool-lib`,
-`smali` e `apksig`) são baixadas do Maven Central e ficam em cache em `android/.tools`.
-
-- `android/AndroidManifest.xml`, `android/res/` (ícone e nome) e
-  `android/smali/.../MainActivity.smali`: uma Activity que abre o jogo numa WebView em
-  tela cheia, deitada e com a tela sempre acesa. O botão voltar pausa a luta ou volta de
-  menu, e na tela de título fecha o app.
-- O jogo vai em `assets/index.html` com as fontes locais (`android/assets/fonts`, licença
-  SIL Open Font License), então funciona sem internet.
-- A assinatura é só v2, por isso o mínimo é Android 7.0. Sem configuração, o script cria uma
-  chave local em `android/.tools/debug.p12`. Para publicar com a sua chave, defina
-  `KEYSTORE` (PKCS12), `KEYSTORE_PASS` e `KEY_ALIAS`. Para uma nova versão, use
-  `VERSION_CODE` e `VERSION_NAME`.
-
-### Criar um personagem novo
-
-Adicione uma entrada em `CHARACTERS` (`js/characters.js`) com aparência (`look`), atributos e
-especiais. Os golpes usam poses de `POSES` (`js/draw.js`) como quadros-chave, caixas de acerto
-(`hit`) e eventos por quadro para criar projéteis (`PROJ` em `js/projectiles.js`).
+- Little Fighter 2 é de Marti Wong & Starsky Wong (lf2.net).
+- As regras do motor seguem o "LF2 standard" e o motor do [F.LF](https://github.com/Project-F/F.LF)
+  (GPLv3), que documentaram o comportamento do LF2. Se for redistribuir este código,
+  publique-o sob a GPLv3.
+- O pacote 1.9 não traz os personagens e inimigos que só existem no LF2 2.0 (Jan, Firzen,
+  Julian, Louis EX, Hunter, Mark, Jack, Sorcerer, Monk, Knight, Justin...), nem as
+  garrafas de leite e cerveja. Por isso o Stage Mode usa o Bandit e o próprio elenco
+  como chefes, e a transformação do Louis em Louis EX fica desativada.
+- Jogo em rede, Championship e Battle Mode não foram portados.
