@@ -108,7 +108,7 @@ Mesma stack de app da frota (conexus-launcher, multi-miner), adaptada a jogo mul
 | Infra | `platform-infra` (workflows reutilizáveis, GHCR, Terraform LKE em `deploy/terraform/linode`), EAS |
 | Processo | `AGENTS.md`, `HANDOFF.md`, `SKILL.md` + `agents/` + `templates/TASK.md`, `docs/UPDATE_X.Y.Z.md`, release por tag |
 
-Versão atual: **0.4.0** (20 lutadores, 8 cenários, som e compatibilidade MUGEN ampliada) — notas em [docs/UPDATE_0.4.0.md](docs/UPDATE_0.4.0.md); antes: arte nova — notas em [docs/UPDATE_0.3.0.md](docs/UPDATE_0.3.0.md) e [docs/UPDATE_0.2.0.md](docs/UPDATE_0.2.0.md) (sistema SNK).
+Versão atual: **0.5.0** (fundação do jogo comercial: jogo pago sem anúncios, ferramentas de produção, sensação de impacto, controles touch, online em produção) — notas em [docs/UPDATE_0.5.0.md](docs/UPDATE_0.5.0.md); antes: 20 lutadores e som em [docs/UPDATE_0.4.0.md](docs/UPDATE_0.4.0.md); arte nova — notas em [docs/UPDATE_0.3.0.md](docs/UPDATE_0.3.0.md) e [docs/UPDATE_0.2.0.md](docs/UPDATE_0.2.0.md) (sistema SNK).
 
 ## CI e deploy
 

@@ -49,6 +49,10 @@ module "app" {
     RATED_ROOM_MATCHES             = tostring(var.rated_room_matches)
     PACK_MAX_BYTES                 = tostring(var.pack_max_bytes)
     CORS_ORIGINS                   = var.cors_origins
+    # Jogo pago: licença da Google Play para o online (docs/PROTOCOL.md → Licença).
+    PLAY_INTEGRITY_REQUIRED        = var.play_integrity_required ? "1" : "0"
+    PLAY_INTEGRITY_PACKAGE         = var.play_integrity_package
+    PLAY_INTEGRITY_SERVICE_ACCOUNT = var.play_integrity_service_account
     # Inputs de luta são relayados pelo Solid Cable: polling curto (s).
     SOLID_CABLE_POLLING_INTERVAL = var.solid_cable_polling_interval
   }

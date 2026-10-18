@@ -123,6 +123,25 @@ variable "admin_notify_emails" {
   default     = ""
 }
 
+variable "play_integrity_required" {
+  description = "Jogo pago: o online exige cópia comprada na Google Play (Play Integrity)."
+  type        = bool
+  default     = false
+}
+
+variable "play_integrity_package" {
+  description = "Pacote Android verificado no Play Integrity."
+  type        = string
+  default     = "br.com.conexus.mugenarena"
+}
+
+variable "play_integrity_service_account" {
+  description = "JSON da conta de serviço do Google Cloud com acesso à Play Integrity API (secret PLAY_INTEGRITY_SERVICE_ACCOUNT)."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "rated_room_matches" {
   description = "Partidas de sala privada contam para o rating?"
   type        = bool
