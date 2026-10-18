@@ -1,33 +1,34 @@
 # Punho Livre
 
 Jogo de luta 2.5D para navegador e Android, para até 8 lutadores. Dá para jogar com até
-4 pessoas no mesmo aparelho ou pela internet. O motor foi escrito em JavaScript e
-executa dados de quadros no formato do Little Fighter 2: quadros, caixas de golpe e de
-corpo, e pontos de arma, agarrão e objetos.
+4 pessoas no mesmo aparelho ou pela internet. Todo o conteúdo — lutadores, golpes,
+cenários, efeitos e sons — é gerado por código ao abrir o jogo (`src/content/`), então o
+repositório não tem arte nem áudio de terceiros.
 
 ## O que tem
 
-- **15 lutadores:** Davis, Woody, Dennis, Freeze, Firen, Louis, Rudolf, Henry, John,
-  Deep e Bandit, além de 5 lutadores novos do Punho Livre:
+- **8 lutadores e um capanga:**
 
-  | Lutador | Base | Estilo |
-  |---------|------|--------|
-  | **Brasa** | Davis | rajadas viram bolas de fogo; o gancho (D↑A) queima |
-  | **Geada** | Dennis | bolas de gelo; o chute giratório (D→J) congela |
-  | **Corvo** | Woody | bolas que perseguem o alvo; mais rápido |
-  | **Titã** | Louis | mais vida e golpes 20% mais fortes, porém mais lento |
-  | **Faísca** | John | o mais rápido e o que pula mais alto, com rajada de energia |
+  | Lutador | Estilo | Especiais |
+  |---------|--------|-----------|
+  | **Brasa** | lutador de rua com fogo | Bola de fogo (D→A), Gancho flamejante (D↑A), Rajada de socos (D→J) |
+  | **Geada** | gelo, congela quem chega perto | Estilhaço de gelo (D→A), Explosão congelante (D↓A), Gancho (D↑A) |
+  | **Corvo** | ninja | Estrelas ninja (D→A), Sombra: reaparece atrás do inimigo (D↑J), Chute giratório (D↓A) |
+  | **Titã** | grandalhão, mais vida, mais lento | Investida (D→A), Tremor (D↓A), Gancho do titã (D↑A) |
+  | **Faísca** | o mais rápido | Raio (D→A), Rajada relâmpago (D→J), Giro elétrico (D↑J) |
+  | **Jade** | mestra de chutes | Chuva de chutes (D→A), Chute crescente (D↑A), Meditação: cura (D↓J) |
+  | **Lua** | energia | Orbe caçador que persegue (D→A), Onda lunar (D↓A), Luz curativa (D↓J) |
+  | **Bala** | boxeador | Metralhadora (D→A), Gancho (D↑A), Direto voador (D→J) |
+  | Capanga | inimigo do modo História | — |
 
-  Os lutadores novos usam o corpo de um lutador existente com outras cores e têm
-  golpes, atributos e especiais próprios (`tools/new-characters.mjs`).
 - **Mecânicas:** combos, corrida com toque duplo, pulo, avanço, rolamento, defesa e
-  quebra de defesa, tontura e agarrão, quedas, fogo, gelo, rebater bolas de energia,
-  bolas que perseguem o alvo, armas (pegar, golpear, arremessar), transformação e
-  clones do Rudolf.
+  quebra de defesa, tontura e agarrão (socar e arremessar), quedas, fogo, gelo,
+  rebater bolas de energia, armas (bastão, cano, pedra e caixa: pegar, golpear,
+  arremessar).
 - **Modos:** Versus (até 8 lutadores, times, computadores com 4 níveis), História
   (5 fases com chefes), Demonstração e **Jogo em rede**. No Fácil e no Normal os
   computadores reagem mais devagar e os jogadores levam menos dano.
-- **Seleção de lutadores** mostra os golpes especiais de cada um e o que fazem.
+- **6 cenários:** Praia, Rua da Cidade, Floresta, Templo da Montanha, Porto e Dojô.
 - **Celular:** controles de toque com direcional de 8 direções; levar o dedo até a
   borda do direcional faz correr. Botões de golpe especial fazem a sequência inteira
   (D → A, D ↑ A...) num toque e ficam apagados sem MP. Deitado, os controles ficam
@@ -36,24 +37,10 @@ corpo, e pontos de arma, agarrão e objetos.
 - Teclas configuráveis para até 4 jogadores no teclado e teclas de função (F1 pausa,
   F7 recupera a vida, F8 joga armas...).
 
-## Dados do jogo
-
-Os sprites, cenários e sons dos lutadores originais são do **Little Fighter 2 © Marti
-Wong & Starsky Wong** e **não estão neste repositório**. O script abaixo baixa a versão
-1.9 já convertida pelo [projeto F.LF](https://github.com/Project-F/LF2_19). Ele também
-gera os lutadores novos e a pasta `assets/`, que fica fora do git:
-
-```
-./tools/fetch-lf2.sh
-```
-
-O conversor (`tools/import-lf2.mjs`) só lê os arquivos de dados como texto, sem
-executá-los.
-
 ## Como jogar
 
-Depois de gerar `assets/`, abra `index.html` no navegador ou rode o servidor (abaixo)
-e acesse `http://localhost:8080/`.
+Abra `index.html` no navegador ou rode o servidor (abaixo) e acesse
+`http://localhost:8080/`. Não há nada para baixar ou gerar antes.
 
 | Ação        | 1P              | 2P           |
 |-------------|-----------------|--------------|
@@ -70,7 +57,8 @@ As teclas podem ser trocadas em *Controles*. `M` liga e desliga o som.
 Todos os aparelhos simulam a mesma partida ao mesmo tempo (*lockstep*). Cada um envia
 só as próprias teclas, e o servidor repassa essas teclas para os outros. As teclas valem
 4 quadros (~130 ms) depois de apertadas, para dar tempo de chegarem. A cada 2 segundos
-os aparelhos comparam o estado da luta e avisam se algo divergir.
+os aparelhos comparam o estado da luta e avisam se algo divergir. Todos precisam estar
+na mesma versão do jogo.
 
 1. Rode o servidor (Node 18+):
    ```
@@ -89,35 +77,38 @@ Endereços: `192.168.0.10:8080` (mesmo Wi-Fi, usa `ws://`), `meujogo.onrender.co
 
 **Hospedar na internet (ex.: Render, Railway, VPS):** use a pasta `server/`, com
 `npm install` para instalar e `npm start` para iniciar. A porta vem da variável `PORT`.
-O servidor também entrega os arquivos do jogo. Para jogar pelo navegador nesse
-endereço, gere `assets/` no servidor (`./tools/fetch-lf2.sh`). Para quem joga pelo APK,
-o servidor só precisa repassar as salas.
+O servidor também entrega os arquivos do jogo, então dá para jogar pelo navegador no
+mesmo endereço.
 
 ## APK Android
 
 ```
-./tools/fetch-lf2.sh
 ./android/build.sh
 ```
 
 Gera `dist/punho-livre.apk` (Android 7.0+) sem precisar do Android SDK. As ferramentas
 vêm do Maven Central (aapt2 do `apktool-lib`, `smali` e `apksig`). O app abre o jogo
 numa WebView em tela cheia e deitada, funciona offline e tem permissão de internet para
-o jogo em rede. O APK contém os dados do LF2, então é para uso pessoal: não publique o
-arquivo nem o coloque no repositório (`dist/` está no `.gitignore`).
+o jogo em rede. Para publicar numa loja, assine com a sua própria chave (`KEYSTORE`,
+`KEYSTORE_PASS`, `KEY_ALIAS`).
 
 ## Estrutura
 
 ```
 index.html, style.css   página do jogo (canvas, controles de toque, formulário de rede)
+src/content/painter.js  desenho por código: lutadores, retratos, armas, efeitos
+src/content/moves.js    golpes e animações (poses, hitboxes, especiais)
+src/content/roster.js   elenco: aparência, atributos e especiais; armas
+src/content/scenes.js   cenários em camadas
+src/content/build.js    monta os dados e as folhas de sprites
 src/global.js           constantes do motor (gravidade, quedas, defesa, combos...)
 src/logo.js             logo do Punho Livre
-src/assets.js           carrega dados, imagens e sons
+src/assets.js           dados gerados, folhas de sprites e sons sintetizados
 src/input.js            teclado, toque, controles por jogador e detector de combos
 src/object.js           base dos objetos: transição de quadros, física, efeitos
 src/character.js        estados do lutador, golpes, defesa, quedas, agarrão, armas
 src/weapon.js, ball.js  armas e ataques especiais
-src/effects.js          faíscas, sangue, fogo e pedaços
+src/effects.js          faíscas, fogo e pedaços
 src/background.js       cenários com paralaxe e câmera
 src/match.js            a partida: ordem de processamento, colisões, desenho
 src/hud.js              painel de vida/MP, mensagens e resumo da luta
@@ -126,15 +117,15 @@ src/stage.js            modo História
 src/ui.js               telas: inicial, modos, seleção, controles
 src/net.js              jogo em rede: conexão, sala e partida em lockstep
 server/                 servidor de salas (Node + ws) e dos arquivos do jogo
-tools/                  download e conversão dos dados e lutadores novos
 android/                app Android e build do APK
 fonts/                  fonte Bangers (SIL Open Font License)
 ```
 
 ## Créditos e licença
 
-- Lutadores originais, cenários e sons: Little Fighter 2, de Marti Wong & Starsky Wong.
-- As regras do motor seguem o "LF2 standard" e o motor do
-  [F.LF](https://github.com/Project-F/F.LF) (GPLv3). Se for redistribuir este código,
-  publique-o sob a GPLv3.
+- Lutadores, golpes, cenários, efeitos e sons: criados para o Punho Livre (gerados por
+  código em `src/content/`).
+- As regras do motor (estados, transições de quadro, colisões) foram escritas tomando
+  como referência o motor do [F.LF](https://github.com/Project-F/F.LF) (GPLv3). Se for
+  redistribuir este código, publique-o sob a GPLv3.
 - Fonte Bangers de Vernon Adams (SIL Open Font License 1.1).

@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
 # Gera o APK do Punho Livre sem precisar do Android SDK.
-#
-# Antes, gere os dados do jogo com ./tools/fetch-lf2.sh (pasta assets/).
-# Os lutadores, cenários e sons vêm do Little Fighter 2 (Marti Wong & Starsky
-# Wong): o APK gerado é para uso pessoal e não deve ser publicado nem enviado
-# para o repositório.
+# Toda a arte e os sons são gerados pelo próprio jogo (src/content/), então o
+# APK leva só index.html, style.css, src/ e fonts/.
 #
 # Requisitos: Java 11+ (java, javac, keytool), Maven, Python 3, curl, unzip.
 # As ferramentas vêm do Maven Central e ficam em cache em android/.tools:
@@ -13,7 +10,6 @@
 #   - apksig (assinatura v2, por isso o mínimo é Android 7.0 / API 24)
 #
 # Variáveis opcionais:
-#   LF2_ASSETS     pasta com os dados gerados (padrão: assets/)
 #   OUT            caminho do APK (padrão: dist/punho-livre.apk)
 #   KEYSTORE (PKCS12), KEYSTORE_PASS, KEY_ALIAS   para assinar com a sua chave
 #   VERSION_CODE, VERSION_NAME
@@ -23,16 +19,10 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 AND="$ROOT/android"
 TOOLS="$AND/.tools"
 BUILD="$AND/build"
-LF2_ASSETS="${LF2_ASSETS:-$ROOT/assets}"
 OUT="${OUT:-$ROOT/dist/punho-livre.apk}"
 APKTOOL_VERSION=3.0.3
-VERSION_CODE="${VERSION_CODE:-1}"
-VERSION_NAME="${VERSION_NAME:-1.0}"
-
-if [ ! -f "$LF2_ASSETS/data.js" ]; then
-  echo "Dados do jogo não encontrados em $LF2_ASSETS. Rode ./tools/fetch-lf2.sh primeiro." >&2
-  exit 1
-fi
+VERSION_CODE="${VERSION_CODE:-2}"
+VERSION_NAME="${VERSION_NAME:-2.0}"
 
 mkdir -p "$TOOLS"
 if [ ! -x "$TOOLS/aapt2" ]; then
@@ -50,13 +40,11 @@ fi
 CP="$TOOLS/lib/*"
 
 rm -rf "$BUILD"
-mkdir -p "$BUILD/assets/assets" "$BUILD/res"
+mkdir -p "$BUILD/assets" "$BUILD/res"
 
 echo "Empacotando o jogo..."
 cp "$ROOT/index.html" "$ROOT/style.css" "$BUILD/assets/"
 cp -r "$ROOT/src" "$ROOT/fonts" "$BUILD/assets/"
-cp -r "$LF2_ASSETS"/. "$BUILD/assets/assets/"
-rm -f "$BUILD/assets/assets/sound-mp3.js"   # a WebView do Android toca o .ogg
 cp -r "$AND/res/." "$BUILD/res/"
 
 echo "Compilando recursos..."

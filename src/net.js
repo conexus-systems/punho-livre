@@ -160,7 +160,7 @@ class NetLobbyScreen {
     const S = { ...Net.room.settings };
     const row = rows[this.row];
     if (d) {
-      Sound.play('1/m_pass');
+      Sound.play('m_pass');
       if (row === 'char') {
         const N = this.chars.length;
         this.me.char = ((this.me.char + 1 + d + N + 1) % (N + 1)) - 1;
@@ -179,7 +179,7 @@ class NetLobbyScreen {
       }
     }
     if (att) {
-      if (row === 'ready') { this.me.ready = !this.me.ready; this.sendPick(); Sound.play('1/m_join'); }
+      if (row === 'ready') { this.me.ready = !this.me.ready; this.sendPick(); Sound.play('m_join'); }
       if (row === 'fight') this.fight();
     }
   }
@@ -197,7 +197,7 @@ class NetLobbyScreen {
     const bgs = Assets.backgrounds;
     const bg = S.bg < 0 ? bgs[Math.floor(Math.random() * bgs.length)].id : bgs[S.bg].id;
     Net.send({ t: 'start', setup: { players, bg, difficulty: S.difficulty } });
-    Sound.play('1/m_ok');
+    Sound.play('m_ok');
   }
 
   draw(ctx) {

@@ -1,5 +1,5 @@
 'use strict';
-// Laço principal: a lógica roda a 30 TU por segundo (como o LF2) e o desenho
+// Laço principal: a lógica roda a 30 TU por segundo  e o desenho
 // acompanha a tela.
 
 (function boot() {
@@ -34,7 +34,7 @@
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-  window.LF2 = { Game, Assets, Input };
+  window.PUNHO = { Game, Assets, Input };
 
   // Botão voltar do app Android: fecha na tela inicial, senão age como Esc.
   window.androidBack = function () {

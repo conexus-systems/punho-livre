@@ -1,14 +1,12 @@
 'use strict';
-// Constantes do jogo. Os valores seguem o comportamento observado do LF2 original
-// (documentado pela comunidade LF-Empire e pelo projeto F.LF).
+// Constantes do motor: física, quedas, defesa e combos (referência: motor F.LF).
 
 const LF = {
-  W: 794,          // largura da janela do LF2
+  W: 794,          // largura da tela do jogo
   H: 470,          // altura da tela do jogo
   HUD_H: 58,       // painel de vida compacto no topo
-  WORLD_Y: 84,     // a cena sobe 84px (os cenários do LF2 começam em y=128)
-  FPS: 30,         // o LF2 roda a 30 quadros (TU) por segundo
-  ASSETS: (window.LF2_ASSETS || 'assets/'),
+  WORLD_Y: 84,     // a cena sobe 84px (os cenários começam em y=128)
+  FPS: 30,         // a lógica roda a 30 quadros (TU) por segundo
 };
 
 const GC = {
@@ -47,7 +45,7 @@ const GC = {
   weapon_reverse_vy: -2,
   weapon_reverse_vz: -0.4,
   unspecified: -842150451,
-  projectiles: [201, 202],   // ataques especiais com física (flechas, armas do Rudolf)
+  projectiles: [],           // ataques especiais com gravidade (nenhum por enquanto)
   disappear_shadow: 120,
   disappear_body: 150,
   camera_speed: 1 / 18,

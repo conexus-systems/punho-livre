@@ -1,8 +1,8 @@
 'use strict';
-// Personagem do LF2: estados (parado, andando, correndo, pulando, defendendo,
+// Lutador: estados (parado, andando, correndo, pulando, defendendo,
 // agarrando, caindo...), combos, golpes, agarrões e armas.
 //
-// Quadros importantes (padrão dos dados do LF2):
+// Quadros importantes (protocolo dos dados, ver src/content/moves.js):
 //   0-3 parado · 5-8 andando · 9-11 correndo · 12-19 com objeto pesado
 //   20-58 golpes e arremessos com arma · 60-73 socos · 80-91 ataques no ar/correndo
 //   100-109 rolamento · 110-114 defesa · 115-117 pegar arma · 120-144 agarrão
@@ -87,7 +87,6 @@ const CHAR_STATES = {
           case 'left': case 'right': case 'left-left': case 'right-right':
             break;
           default: {
-            if (K === 'DJA' && $.transformed) { $.revertTransform(); return 1; }
             const tag = COMBO_TAG[K];
             if (tag && $.frame.D[tag]) {
               if (!$.idUpdate('generic_combo', K, tag)) {
@@ -274,8 +273,12 @@ const CHAR_STATES = {
         return $.idUpdate('state3_hit_stop');
       case 'frame_force':
         return $.idUpdate('state3_frame_force');
+      case 'fall_onto_ground':
+        // golpes que terminam ao tocar o chão (ex.: soco no chão)
+        if ($.frame.D.land) return $.frame.D.land;
+        break;
       case 'TU': {
-        // flauta / redemoinho do Henry (itr kind 10/11): levanta todos ao redor
+        // redemoinho (itr kind 10/11): levanta todos ao redor
         const itrs = makeArray($.frame.D.itr);
         if (itrs.some((I) => I.kind === 10 || I.kind === 11) && $.match.time % 2 === 0) {
           const I = makeArray($.data.frame[251] && $.data.frame[251].itr)[0];
@@ -415,7 +418,6 @@ const CHAR_STATES = {
         switch ($.frame.N) {
           case 123: $.statemem.attacks++; $.statemem.counter += 3; $.trans.incWait(1); break;
           case 233: case 234: $.trans.incWait(-1); break;
-          case 240: $.idUpdate('rudolf_transform'); break;
         }
         if ($.catching && $.frame.D.cpoint) {
           $.catching.caughtB($.point($.frame.D.cpoint), $.frame.D.cpoint, $.ps.dir, $.dirv());
@@ -550,7 +552,7 @@ const CHAR_STATES = {
           $.injury($.caughtThrowInjury);
           $.caughtThrowInjury = null;
         }
-        Sound.play('1/016');
+        Sound.play('fall');
         const ps = $.ps, N = $.frame.N;
         if ($.speed() > GC.bounce_xy || ps.vy > GC.bounce_y_limit) {
           $.linearFriction(lookupAbs(LOOKUP.bounce_absorb, ps.vx), lookupAbs(LOOKUP.bounce_absorb, ps.vz));
@@ -648,7 +650,7 @@ const CHAR_STATES = {
   17(event) { // bebendo
     const $ = this;
     if (event === 'TU' && $.hold && $.hold.type === 'drink') {
-      const w = $.hold, isMilk = w.id === 122;
+      const w = $.hold, isMilk = !!Assets.prop(w.id, 'milk');
       if ($.match.time % 2 === 0) {
         if (isMilk) { $.health.hp = Math.min($.health.hp_bound, $.health.hp + 2); $.health.mp = Math.min($.health.mp_full, $.health.mp + 1); }
         else $.health.mp = Math.min($.health.mp_full, $.health.mp + 4);
@@ -664,17 +666,8 @@ const CHAR_STATES = {
     if (event === 'fall_onto_ground' || event === 'fell_onto_ground') return CHAR_STATES[12].call(this, event, K);
   },
 
-  19(event) { // corrida em chamas do Firen
+  19(event) { // corrida em chamas
     if (event === 'TU') this.ps.vz = this.dirv() * this.data.bmp.running_speedz;
-  },
-
-  301(event) { // Deep
-    const $ = this;
-    switch (event) {
-      case 'frame_force': if ($.frame.N !== 290) return 1; break;
-      case 'TU': $.ps.vz = $.dirv() * $.data.bmp.walking_speedz; break;
-      case 'hit_stop': $.effectStuck(1, 2); $.trans.incWait(1); return 1;
-    }
   },
 
   400(event) { // teletransporte até o inimigo mais próximo
@@ -693,67 +686,8 @@ const CHAR_STATES = {
     }
   },
 
-  501(event) { // Rudolf
-    const $ = this;
-    if (event === 'frame' && $.frame.N === 298 && $.trans.next() === 999) $.idUpdate('rudolf_transform');
-  },
-
   1700(event) { // cura
     if (event === 'frame') this.effect.heal = GC.heal_max;
-  },
-};
-
-// Ajustes específicos de alguns personagens (comportamentos fixos no LF2 original).
-const CHAR_ID_UPDATES = {
-  1(event, K, tag) { // Deep
-    const $ = this;
-    switch (event) {
-      case 'state3_frame':
-        if ($.frame.N === 267) { $.ps.vy += 1; return 1; }
-        break;
-      case 'state15_crouch':
-        if ($.frame.PN >= 267 && $.frame.PN <= 272) $.trans.incWait(-1);
-        break;
-      case 'generic_combo':
-        if (tag === 'hit_Fj') $.switchDir(K === 'D>J' || K === 'D>AJ' ? 1 : -1);
-        break;
-    }
-  },
-  5(event) { // Rudolf
-    const $ = this;
-    switch (event) {
-      case 'state3_frame':
-        if ($.frame.N >= 273 && $.frame.N <= 276) $.ps.vy = -6.8;
-        break;
-      case 'rudolf_transform': {
-        const target = $.catching ? $.catching.id : $.transformInto;
-        if (target && target !== 5) $.transformTo(target);
-        break;
-      }
-      case 'state1280_disappear':
-        if ($.frame.N === 257) {
-          $.visible = false;
-          $.effect.super = true;
-          $.counter.disappear = 0;
-        }
-        break;
-    }
-  },
-  6(event, K, tag) { // Louis: a transformação em Louis EX não existe nos dados 1.9
-    if (event === 'generic_combo' && tag === 'hit_ja') return 1;
-  },
-  10(event) { // Woody
-    if (event === 'state3_fly_crash') this.trans.setWait(0);
-  },
-  11(event) { // Davis
-    const $ = this;
-    if (event === 'state3_hit_stop') {
-      switch ($.frame.N) {
-        case 271: case 276: case 280: $.effectStuck(1, 2); $.trans.incWait(1); return 1;
-        case 273: $.effectStuck(0, 2); return 1;
-      }
-    }
-    if (event === 'state3_frame_force' && [275, 278, 279].includes($.frame.N)) return 1;
   },
 };
 
@@ -798,11 +732,8 @@ class Character extends Living {
     this.setup();
   }
 
-  idUpdate(event, K, tag) {
-    // lutadores novos herdam os ajustes do lutador em que foram baseados
-    const f = CHAR_ID_UPDATES[Assets.obj(this.id).base || this.id];
-    return f ? f.call(this, event, K, tag) : undefined;
-  }
+  // ganchos para comportamentos próprios de um lutador (nenhum por enquanto)
+  idUpdate() { return undefined; }
 
   destroy() { if (this.decoder) this.decoder.detach(); }
 
@@ -927,7 +858,7 @@ class Character extends Living {
       $.effectCreate(effectnum, vanish, efDvx, efDvy);
       // efeitos especiais: sangue, fogo, gelo
       if (defended) {
-        if (effectnum === 0 || effectnum === 1) Sound.play('1/002');
+        if (effectnum === 0 || effectnum === 1) Sound.play('block');
       } else {
         switch (effectnum) {
           case 0: case 1:
@@ -939,12 +870,12 @@ class Character extends Living {
           // continua
           case 20:
             $.trans.frame(203, 36);
-            Sound.play('1/070');
+            Sound.play('fire');
             break;
           case 3: case 30:
             $.dropWeapon(efDvx, efDvy);
-            if ($.state() !== 13) { $.trans.frame(200, 38); Sound.play('1/065'); }
-            else { $.trans.frame(182, 21); Sound.play('1/066'); }
+            if ($.state() !== 13) { $.trans.frame(200, 38); Sound.play('freeze'); }
+            else { $.trans.frame(182, 21); Sound.play('shatter'); }
             break;
           case 4:
             $.dropWeapon(efDvx, efDvy);
@@ -1107,11 +1038,6 @@ class Character extends Living {
     const $ = this;
     const ops = makeArray($.frame.D.opoint);
     for (const op of ops) {
-      if (op.oid === 5) { // clones (Rudolf)
-        const n = Math.floor(Math.abs(op.facing) / 10);
-        for (let i = 0; i < n; i++) $.match.spawnClone($, i);
-        continue;
-      }
       if (Math.abs(op.facing) > 10) $.match.createMultiple(op, $, Math.floor(op.facing / 10), op.dvz || 3);
       else $.match.createObject(op, $);
     }
@@ -1161,35 +1087,5 @@ class Character extends Living {
     this.effect.dvy = -3;
     this.effect.timein = -1;
     this.effect.timeout = 0;
-  }
-
-  // ---- transformação do Rudolf ----
-
-  transformTo(id) {
-    if (!Assets.obj(id) || Assets.obj(id).type !== 'character') return;
-    if (!this.transformed) this.originalId = this.id;
-    this.transformed = id !== this.originalId;
-    this.transformInto = id;
-    this.swapData(id);
-    this.match.createObject({ kind: 1, x: 41, y: 70, action: 70, dvx: 0, dvy: 0, oid: 204, facing: 0 }, this);
-  }
-
-  revertTransform() {
-    if (!this.transformed) return;
-    this.transformed = false;
-    this.swapData(this.originalId);
-    this.match.createObject({ kind: 1, x: 41, y: 70, action: 70, dvx: 0, dvy: 0, oid: 204, facing: 0 }, this);
-  }
-
-  swapData(id) {
-    this.id = id;
-    this.data = Assets.obj(id).data;
-    this.name = this.data.bmp.name;
-    this.sheet = this.match.sheet(id);
-    this.spw = this.sheet.w;
-    this.frame.N = 0;
-    this.frame.D = this.data.frame[0];
-    this.trans.frame(999, 99);
-    this.updateScreenPos();
   }
 }

@@ -2,20 +2,7 @@
 // Cenário com camadas em paralaxe. Cada camada rola na proporção
 // (largura_da_camada - largura_da_tela) / (largura_do_cenário - largura_da_tela).
 
-// Cores de 16 bits (RGB565) usadas nos retângulos dos cenários do LF2.
-const BG_COLORS = {
-  4706: 'rgb(16,79,16)', 40179: 'rgb(159,163,159)', 29582: 'rgb(119,119,119)', 37773: 'rgb(151,119,111)',
-  33580: 'rgb(135,107,103)', 25356: 'rgb(103,103,103)', 21096: 'rgb(90,78,75)', 37770: 'rgb(154,110,90)',
-  16835: 'rgb(66,56,24)', 34816: 'rgb(143,7,7)',
-};
-
-function bgColor(rect) {
-  if (typeof rect === 'string') return rect;
-  if (BG_COLORS[rect]) return BG_COLORS[rect];
-  const r = (rect >> 11) << 3, g = ((rect >> 6) & 31) << 3, b = (rect & 31) << 3;
-  const f = (v) => v + (v > 64 || v === 0 ? 7 : 0);
-  return `rgb(${f(r)},${f(g) + ((rect >> 5) & 1 && g > 80 ? 4 : 0)},${f(b)})`;
-}
+function bgColor(rect) { return rect; }
 
 class Background {
   constructor(entry) {
@@ -28,14 +15,12 @@ class Background {
     this.timer = 0;
     this.camX = 0;
     this.layers = d.layer.map((l, i) => ({ ...l, i, img: l.rect ? null : Assets.img(l.pic) }));
-    // no HK Coliseum as camadas (menos a do fundo) ficam 8px mais altas no LF2
-    if (d.name === 'HK Coliseum') for (const l of this.layers) if (l.pic && !l.pic.includes('back1')) l.y -= 8;
     this.layers.sort((a, b) => a.width - b.width || a.i - b.i);
     const span = this.width - LF.W;
     for (const l of this.layers) l.ratio = span > 0 ? (l.width - LF.W) / span : 0;
   }
 
-  // atualiza a câmera seguindo os personagens (algoritmo de Azriel, LF-Empire)
+  // atualiza a câmera seguindo os personagens (segue a média dos lutadores, adiantada para onde olham)
   updateCamera(chars, bound) {
     let avg = 0, facing = 0;
     for (const c of chars) { avg += c.ps.x; facing += c.dirh(); }
@@ -49,7 +34,7 @@ class Background {
     this.timer++;
   }
 
-  // borda de baixo do cenário (abaixo dela o LF2 deixava preto)
+  // borda de baixo do cenário (abaixo dela a tela ficaria preta)
   bottom() {
     let b = 0;
     for (const l of this.layers) {

@@ -114,7 +114,7 @@ const BALL_STATES = {
         }
         break;
       case 'state_exit':
-        if ($.id === 212) $.brokenEffect($.id);
+        if (Assets.prop($.id, 'shatter')) $.brokenEffect(212);
         break;
     }
   },
@@ -198,7 +198,7 @@ class Ball extends Living {
             $.arestUpdate(I);
             $.stateUpdate('hit_others', I, T);
             if (I.arest) break;
-            if (T.type === 'character' && I.kind === 9) $.health.hp = 0; // escudo do John se desfaz
+            if (T.type === 'character' && I.kind === 9) $.health.hp = 0; // escudo se desfaz ao tocar alguém
           }
         } else if (I.kind === 8 && T.type === 'character') {
           if (T.heal(I.injury)) $.trans.frame(I.dvx);

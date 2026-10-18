@@ -116,10 +116,6 @@ class Match {
 
   destroyObject(o) { this.tasks.push({ task: 'destroy', o }); }
 
-  spawnClone(parent, i) {
-    this.tasks.push({ task: 'clone', parent, i });
-  }
-
   makeObject(T) {
     const entry = Assets.obj(T.opoint.oid);
     if (!entry) return null;
@@ -147,16 +143,6 @@ class Match {
           o.ps.vx += (T.dir === -1 ? 1 : -1) * Math.abs(vz);
         }
       } else if (T.task === 'destroy') this.remove(T.o);
-      else if (T.task === 'clone') {
-        const p = T.parent;
-        const con = new Controller();
-        const c = this.addCharacter(p.id, p.team, con, { parent: p, removeOnDeath: true, label: p.name });
-        c.health.hp = c.health.hp_full = c.health.hp_bound = 20;
-        c.health.mp = 100;
-        c.setPos(p.ps.x - 20 * T.i, p.ps.y, p.ps.z);
-        c.switchDir(p.ps.dir);
-        this.ais.push(new AI(c, this, 2));
-      }
     }
   }
 
@@ -273,7 +259,7 @@ class Match {
           win: teams.has(c.team), alive };
       }),
     };
-    Sound.play('1/m_end');
+    Sound.play('m_end');
   }
 
   end() {
@@ -288,7 +274,7 @@ class Match {
   draw(ctx) {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, LF.W, LF.H);
-    // o cenário do LF2 começa em y=128; a cena sobe para caber sob o painel compacto
+    // o cenário começa em y=128; a cena sobe para caber sob o painel compacto
     ctx.save();
     ctx.translate(0, -LF.WORLD_Y);
     this.bg.draw(ctx);

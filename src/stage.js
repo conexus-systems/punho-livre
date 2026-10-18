@@ -1,15 +1,14 @@
 'use strict';
 // Stage Mode: os jogadores (time 1) atravessam o cenário em trechos.
 // Cada trecho só libera o próximo ("GO →") quando todos os inimigos caem.
-// Os dados 1.9 não trazem os inimigos exclusivos do modo história do LF2 2.0
-// (Hunter, Mark, Jack...), então os chefes são lutadores do próprio elenco.
+// Os chefes de cada fase são lutadores do elenco.
 
 const STAGES = [
-  { bg: 2, phases: [['30', '30', '30'], ['30', '30', '30', '30'], ['30', '30', '!9']] },
-  { bg: 3, phases: [['30', '30', '30', '30'], ['30', '30', '!10'], ['30', '30', '!4', '!10']] },
-  { bg: 5, phases: [['30', '30', '30', '30'], ['30', '30', '30', '!8'], ['30', '30', '!7', '!8']] },
-  { bg: 6, phases: [['30', '30', '30', '30', '30'], ['30', '30', '!2'], ['30', '!1', '!2']] },
-  { bg: 7, phases: [['30', '30', '30', '30', '30'], ['30', '30', '!6', '!5'], ['!11', '!5', '!6']] },
+  { bg: 1, phases: [['30', '30', '30'], ['30', '30', '30', '30'], ['30', '30', '!8']] },
+  { bg: 3, phases: [['30', '30', '30', '30'], ['30', '30', '!6'], ['30', '30', '!3', '!6']] },
+  { bg: 5, phases: [['30', '30', '30', '30'], ['30', '30', '30', '!5'], ['30', '30', '!4', '!5']] },
+  { bg: 2, phases: [['30', '30', '30', '30', '30'], ['30', '30', '!2'], ['30', '!7', '!2']] },
+  { bg: 4, phases: [['30', '30', '30', '30', '30'], ['30', '30', '!3', '!4'], ['!1', '!7', '!8']] },
 ];
 
 const ENEMY_TEAM = 99;
@@ -128,7 +127,7 @@ class StageLogic {
         if (this.phase === STAGES[this.stageIndex].phases.length - 1) {
           this.cleared = true;
           this.banner = { text: 'Fase concluída!', t: 90 };
-          Sound.play('1/m_end');
+          Sound.play('m_end');
         } else {
           this.locked = false;
           this.goArrow = true;

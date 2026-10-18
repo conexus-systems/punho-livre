@@ -130,16 +130,16 @@ canvas {
 /* golpes especiais: um toque faz a sequência inteira */
 #touch .specials {
   display: grid;
-  grid-template-columns: repeat(2, 76px);
+  grid-template-columns: repeat(2, 80px);
   gap: 6px;
 }
 #touch .specials[hidden] { display: none; }
 #touch .specials button {
-  width: 76px;
-  height: 40px;
+  width: 80px;
+  height: 46px;
   border-radius: 10px;
-  font: bold 12px Arial, sans-serif;
-  line-height: 1.1;
+  font: bold 11px Arial, sans-serif;
+  line-height: 1.05;
   border-color: rgba(255, 176, 0, 0.55);
 }
 #touch .specials small { display: block; font-size: 10px; color: var(--amber); }
@@ -182,7 +182,7 @@ canvas {
   body.has-touch #wrap { width: 100%; }
   body.has-touch #touch { position: static; padding: 14px 0 0; flex-wrap: wrap; row-gap: 14px; }
   body.has-touch #touch .sys { order: -1; width: 100%; justify-content: center; }
-  body.has-touch #touch .specials { order: 2; width: 100%; grid-template-columns: repeat(4, 76px); justify-content: center; }
+  body.has-touch #touch .specials { order: 2; width: 100%; grid-template-columns: repeat(4, 80px); justify-content: center; }
   body.has-touch .dpad { width: 140px; height: 140px; }
   body.has-touch #touch .btns { grid-template-columns: repeat(2, 66px); grid-template-rows: repeat(2, 66px); }
   body.has-touch #touch .btns button { width: 66px; height: 66px; }

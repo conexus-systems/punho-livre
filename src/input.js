@@ -4,7 +4,7 @@
 const KEY_ACTIONS = ['up', 'down', 'left', 'right', 'att', 'jump', 'def'];
 const KEY_LABELS = { up: 'Cima', down: 'Baixo', left: 'Esquerda', right: 'Direita', att: 'Ataque', jump: 'Pulo', def: 'Defesa' };
 
-// Padrões: o 1P usa as teclas originais do LF2 (W X A D, S ataca, Q pula, Z defende).
+// Padrões: o 1P usa W X A D para mover, S ataca, Q pula e Z defende.
 const DEFAULT_KEYS = [
   { up: 'KeyW', down: 'KeyX', left: 'KeyA', right: 'KeyD', att: 'KeyS', jump: 'KeyQ', def: 'KeyZ' },
   { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', att: 'Enter', jump: 'ShiftRight', def: 'ControlRight' },
@@ -92,7 +92,7 @@ const Input = {
 
   init() {
     try {
-      const saved = JSON.parse(localStorage.getItem('lf2.keys') || 'null');
+      const saved = JSON.parse(localStorage.getItem('punho.keys') || 'null');
       if (Array.isArray(saved) && saved.length === 4) this.keys = saved;
     } catch (e) { /* sem armazenamento local */ }
     window.addEventListener('keydown', (e) => {
@@ -108,7 +108,7 @@ const Input = {
   },
 
   save() {
-    try { localStorage.setItem('lf2.keys', JSON.stringify(this.keys)); } catch (e) { /* ignora */ }
+    try { localStorage.setItem('punho.keys', JSON.stringify(this.keys)); } catch (e) { /* ignora */ }
   },
 
   isGameKey(code) {

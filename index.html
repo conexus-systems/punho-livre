@@ -47,15 +47,13 @@
   <button type="button" id="net-back" class="secondary">Voltar</button>
 </form>
 
-<script>
-  // ?assets=caminho/ usa outra pasta de dados (útil em desenvolvimento)
-  (function () {
-    var m = /[?&]assets=([^&]+)/.exec(location.search);
-    if (m) window.LF2_ASSETS = decodeURIComponent(m[1]);
-  })();
-</script>
 <script src="src/global.js"></script>
 <script src="src/logo.js"></script>
+<script src="src/content/painter.js"></script>
+<script src="src/content/moves.js"></script>
+<script src="src/content/roster.js"></script>
+<script src="src/content/scenes.js"></script>
+<script src="src/content/build.js"></script>
 <script src="src/assets.js"></script>
 <script src="src/input.js"></script>
 <script src="src/object.js"></script>
