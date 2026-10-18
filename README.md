@@ -29,7 +29,8 @@ teste em aparelho.*
   Determinístico, vale no online. Ver [docs/UPDATE_0.2.0.md](docs/UPDATE_0.2.0.md).
 - **8 personagens originais** (sem IP de terceiros): Kaze, Brasa, Titã, Yuki, Volt, Sombra, Kenshi
   (espadachim) e Lua (muay thai), cada um com 14 golpes normais, 3 especiais, 1 super e as animações do
-  sistema, escritos no formato MUGEN (`mobile/characters/<id>/`) e com sprites gerados por um rig esquelético.
+  sistema, escritos no formato MUGEN (`mobile/characters/<id>/`), com sprites pintados com Skia a partir de um rig esquelético (`scripts/roster/paint.mjs`).
+- **3 cenários pintados em camadas com paralaxe** (dojo ao entardecer, Pelourinho, metrópole à noite), com plateia — `scripts/stages/paint-stages.mjs`.
 - **Adicionar personagens**: `npm run pack` converte uma pasta de personagem MUGEN
   (incluindo `.sff` v1/v2 e paleta `.act`) num pack e envia ao backend; após aprovação
   de um admin ele aparece no catálogo do app para download. Ver [docs/CHARACTERS.md](docs/CHARACTERS.md).
@@ -105,7 +106,7 @@ Mesma stack de app da frota (conexus-launcher, multi-miner), adaptada a jogo mul
 | Infra | `platform-infra` (workflows reutilizáveis, GHCR, Terraform LKE em `deploy/terraform/linode`), EAS |
 | Processo | `AGENTS.md`, `HANDOFF.md`, `SKILL.md` + `agents/` + `templates/TASK.md`, `docs/UPDATE_X.Y.Z.md`, release por tag |
 
-Versão atual: **0.2.0** (sistema SNK) — notas em [docs/UPDATE_0.2.0.md](docs/UPDATE_0.2.0.md).
+Versão atual: **0.3.0** (arte nova) — notas em [docs/UPDATE_0.3.0.md](docs/UPDATE_0.3.0.md) e [docs/UPDATE_0.2.0.md](docs/UPDATE_0.2.0.md) (sistema SNK).
 
 ## CI e deploy
 

@@ -13,8 +13,7 @@ templates/TASK.md).
 - Engine: `mobile/src/engine/` é **determinística** (rollback online depende disso). Nada de `Math.random`,
   relógio ou estado fora de `WorldState` dentro do `stepWorld`. Toda mudança de engine roda
   `npm test` (inclui determinismo, clone/rollback e 3000 frames de fuzz por personagem).
-- Elenco nativo: gerado por `npm run roster` (scripts/roster). Nunca edite `mobile/characters/*` ou
-  `builtin.generated.ts` à mão; o `test:ci` falha se estiverem desatualizados.
+- Elenco nativo: gerado por `npm run roster` (scripts/roster, pintado com Skia em `paint.mjs`); cenários por `npm run stages` (scripts/stages). Nunca edite `mobile/characters/*`, `mobile/assets/stages/*`, `builtin.generated.ts` ou `stages.generated.ts` à mão; o `test:ci` falha se o elenco estiver desatualizado.
 - Contrato app ⇄ web: `docs/PROTOCOL.md`. Mudou lá, muda nos dois lados no mesmo PR.
 - BFFs: identidade (bff-auth), cobrança (bff-payment) e mensagens (bff-api) **não** são implementadas aqui.
   Sem Devise/OmniAuth, SDK de pagamento, Resend/Twilio. Sem segredos no app ou no Git.

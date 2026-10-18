@@ -20,10 +20,21 @@ test("renderiza cenas de luta", async () => {
   for (const id of BUILTIN_ORDER) roster[id] = loadCharacter(BUILTIN[id].pack);
   const atlases: Record<string, any[]> = {};
   for (const id of BUILTIN_ORDER) {
-    atlases[id] = [0].map((i) => {
+    atlases[id] = BUILTIN[id].pack.sprites!.atlas.map((_: string, i: number) => {
       const bytes = require("node:fs").readFileSync(`${__dirname}/../../characters/${id}/sprites${i}.png`);
       return state.Skia.Image.MakeImageFromEncoded(state.Skia.Data.fromBytes(new Uint8Array(bytes)));
     });
+  }
+  // camadas pintadas dos cenários, lidas do disco
+  const { STAGE_ART } = require("@/src/game/stages.generated");
+  const fs = require("node:fs");
+  const stageImages: Record<string, Record<string, any>> = {};
+  for (const id of Object.keys(STAGE_ART)) {
+    stageImages[id] = {};
+    for (const l of STAGE_ART[id].layers) {
+      const file = ["jpg", "png"].map((ext) => `${__dirname}/../../assets/stages/${id}-${l.name}.${ext}`).find((f) => fs.existsSync(f));
+      if (file) stageImages[id][l.name] = state.Skia.Image.MakeImageFromEncoded(state.Skia.Data.fromBytes(new Uint8Array(fs.readFileSync(file))));
+    }
   }
   mkdirSync(OUT, { recursive: true });
   const W = 844, H = 390;
@@ -86,7 +97,7 @@ test("renderiza cenas de luta", async () => {
     void canvas;
     const rec = state.Skia.PictureRecorder();
     const c = rec.beginRecording(state.Skia.XYWHRect(0, 0, W, H));
-    r.draw(c, { world: w, roster, atlases, width: W, height: H, debugBoxes: sc.name === "soco" });
+    r.draw(c, { world: w, roster, atlases, stageImages: stageImages[sc.stage], width: W, height: H, debugBoxes: sc.name === "soco" });
     const pic = rec.finishRecordingAsPicture();
     const skCanvas = surface.getCanvas();
     skCanvas.drawPicture(pic.ref);

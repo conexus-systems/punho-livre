@@ -26,7 +26,8 @@ import { getAnim } from "@/src/engine/character";
 import { GUARD_MAX, POWER_PER_LEVEL } from "@/src/engine/constants";
 import type { Box, CharacterData, FighterState, GameEvent, ProjectileState, WorldState } from "@/src/engine/types";
 
-import { StageCache, stageById } from "./stages";
+import { STAGE_ART } from "./stages.generated";
+import { StageCache, stageById, type StageImages } from "./stages";
 
 export interface RenderInput {
   world: WorldState;
@@ -36,6 +37,8 @@ export interface RenderInput {
   names?: [string, string];
   width: number;
   height: number;
+  /** Camadas pintadas do cenário já carregadas (ver stageArt.ts); sem elas, desenho procedural. */
+  stageImages?: StageImages;
   /** Mostrar caixas Clsn (modo treino). */
   debugBoxes?: boolean;
   /** Mensagem central extra (ex.: "AGUARDANDO OPONENTE"). */
@@ -181,7 +184,7 @@ export class FightRenderer {
     const sx = (x: number) => (x - cam) * k + width / 2 + shakeX;
     const sy = (y: number) => groundPx + y * k;
 
-    this.stage.draw(c, stageById(w.stageId), { k, width, height, groundPx, cam, shakeX, frame: this.frame });
+    this.stage.draw(c, stageById(w.stageId), { k, width, height, groundPx, cam, shakeX, frame: this.frame }, STAGE_ART[w.stageId], input.stageImages);
 
     if (this.superFlash > 0) {
       c.drawRect(Skia.XYWHRect(0, 0, width, height), paint(this.superColor, Math.min(0.55, this.superFlash / 40)));
@@ -450,6 +453,14 @@ export class FightRenderer {
     const top = H * 0.05;
     const margin = W * 0.06;
     const panel = this.solid("#0B0B12", 0.85);
+    // faixa escura atrás do HUD: nomes e barras legíveis em qualquer cenário
+    const band = this.gradients.get(`band:${H}`) ?? (() => {
+      const p = Skia.Paint();
+      p.setShader(Skia.Shader.MakeLinearGradient({ x: 0, y: 0 }, { x: 0, y: H * 0.26 }, [Skia.Color("rgba(5,4,12,0.72)"), Skia.Color("rgba(5,4,12,0)")], null, TileMode.Clamp));
+      this.gradients.set(`band:${H}`, p);
+      return p;
+    })();
+    c.drawRect(Skia.XYWHRect(0, 0, W, H * 0.26), band);
     const names = input.names && !w.teams ? input.names : w.fighters.map((p) => input.roster[p.charId]?.displayName ?? p.charId);
 
     w.fighters.forEach((p, i) => {

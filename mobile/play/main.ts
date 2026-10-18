@@ -15,6 +15,7 @@ import { CpuController } from "@/src/game/ai";
 import { findCommand, macroFromCommand, MacroPlayer } from "@/src/game/macros";
 import { FightRenderer } from "@/src/game/renderer";
 import { STAGES } from "@/src/game/stages";
+import { STAGE_ART } from "@/src/game/stages.generated";
 
 import { Canvas2D } from "./skia-canvas2d";
 
@@ -30,17 +31,37 @@ const roster: Roster = {};
 for (const id of BUILTIN_ORDER) roster[id] = loadCharacter(BUILTIN[id].pack);
 
 const atlases: Record<string, HTMLImageElement[]> = {};
-const atlasReady: Promise<void> = Promise.all(
-  BUILTIN_ORDER.map(
-    (id) =>
-      new Promise<void>((resolve) => {
-        const img = new Image();
-        img.onload = () => resolve();
-        img.onerror = () => resolve();
-        img.src = String(BUILTIN[id].atlasModules[0]);
-        atlases[id] = [img];
-      }),
+// camadas pintadas dos cenários (o adaptador desenha HTMLImageElement como SkImage)
+const stageImages: Record<string, Record<string, HTMLImageElement>> = {};
+const stagesReady: Promise<void> = Promise.all(
+  Object.entries(STAGE_ART).flatMap(([id, art]) =>
+    art.layers.map(
+      (l) =>
+        new Promise<void>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+          img.src = String(l.module);
+          (stageImages[id] ??= {})[l.name] = img;
+        }),
+    ),
   ),
+).then(() => undefined);
+// todas as páginas do atlas de cada personagem
+const atlasReady: Promise<void> = Promise.all(
+  BUILTIN_ORDER.flatMap((id) => {
+    atlases[id] = [];
+    return BUILTIN[id].atlasModules.map(
+      (mod, page) =>
+        new Promise<void>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+          img.src = String(mod);
+          atlases[id][page] = img;
+        }),
+    );
+  }),
 ).then(() => undefined);
 
 /** Desenha o primeiro frame parado do personagem num canvas pequeno (retratos). */
@@ -575,6 +596,7 @@ function frame(t: number) {
     world: fight.world,
     roster,
     atlases: atlases as never,
+    stageImages: stageImages[fight.world.stageId] as never,
     names: fight.names,
     width: cssW,
     height: cssH,
@@ -618,7 +640,7 @@ function frame(t: number) {
 if (matchMedia("(pointer: coarse)").matches) document.body.classList.add("touch");
 window.addEventListener("touchstart", () => document.body.classList.add("touch"), { once: true, passive: true });
 
-atlasReady.then(() => {
+Promise.all([atlasReady, stagesReady]).then(() => {
   document.querySelectorAll<HTMLCanvasElement>("canvas[data-hero]").forEach((c) => drawPortrait(c, c.dataset.hero!, c.dataset.flip === "1"));
   $("loading").hidden = true;
   show("menu");

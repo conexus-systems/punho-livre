@@ -16,6 +16,8 @@ import type { WorldState } from "@/src/engine/types";
 import { createWorld, stepWorld } from "@/src/engine/world";
 import { CpuController } from "@/src/game/ai";
 import { loadAtlases } from "@/src/game/atlas";
+import { loadStageArt } from "@/src/game/stageArt";
+import type { StageImages } from "@/src/game/stages";
 import { findCommand, macroFromCommand, MacroPlayer, motionCommands } from "@/src/game/macros";
 import { FightRenderer } from "@/src/game/renderer";
 import { STAGES } from "@/src/game/stages";
@@ -84,6 +86,7 @@ export default function Fight() {
   const onlineRef = useRef<OnlineMatchHandle | null>(null);
   const cpu = useRef<CpuController | null>(null);
   const atlases = useRef<Record<string, SkImage[]>>({});
+  const stageImages = useRef<Record<string, StageImages>>({});
   const pausedRef = useRef(false);
   const reported = useRef(false);
 
@@ -111,7 +114,12 @@ export default function Fight() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      atlases.current = await loadAtlases(everyone);
+      const [loadedAtlases, art] = await Promise.all([
+        loadAtlases(everyone),
+        Promise.all(STAGES.map(async (s) => [s.id, await loadStageArt(s.id)] as const)),
+      ]);
+      atlases.current = loadedAtlases;
+      stageImages.current = Object.fromEntries(art);
       if (cancelled) return;
       if (online) {
         const handle = joinMatch(setup.online!, roster, STAGES[setup.online!.matchId % STAGES.length].id, settings.inputDelay);
@@ -193,6 +201,7 @@ export default function Fight() {
         world: w,
         roster,
         atlases: atlases.current,
+        stageImages: stageImages.current[w.stageId],
         names,
         width,
         height,

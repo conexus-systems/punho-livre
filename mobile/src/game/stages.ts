@@ -8,7 +8,34 @@
  * redesenhadas a cada frame.
  */
 
-import { PaintStyle, Skia, TileMode, type SkCanvas, type SkPaint, type SkPicture } from "@shopify/react-native-skia";
+import { PaintStyle, Skia, TileMode, type SkCanvas, type SkImage, type SkPaint, type SkPicture } from "@shopify/react-native-skia";
+
+/**
+ * Arte pintada do cenário (scripts/stages/paint-stages.mjs): camadas de imagem
+ * com paralaxe, posição e tamanho em unidades do mundo. Quando as imagens não
+ * carregaram (ou não existem), vale o desenho procedural das `layers`.
+ */
+export interface StageArt {
+  sky: [string, string];
+  layers: {
+    name: string;
+    parallax: number;
+    /** Canto superior esquerdo e tamanho, em unidades do mundo. */
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    /** Tamanho da imagem em pixels. */
+    pw: number;
+    ph: number;
+    /** Balanço vertical (plateia), em unidades. */
+    bob: number;
+    module: unknown;
+  }[];
+}
+
+/** Imagens já carregadas de um cenário, por nome da camada. */
+export type StageImages = Record<string, SkImage | undefined>;
 
 /** Desenho de uma camada em coordenadas da própria camada (x = 0 no centro do cenário). */
 export interface LayerPainter {
@@ -283,7 +310,11 @@ export class StageCache {
   /** Camadas gravadas desde a criação (para testes e diagnóstico). */
   recorded = 0;
 
-  draw(c: SkCanvas, stage: StageDef, v: StageView): void {
+  draw(c: SkCanvas, stage: StageDef, v: StageView, art?: StageArt, images?: StageImages): void {
+    if (art && images && art.layers.every((l) => images[l.name])) {
+      this.drawArt(c, art, images, v);
+      return;
+    }
     const key = `${stage.id}:${v.width}x${v.height}`;
     if (key !== this.key) {
       this.key = key;
@@ -327,6 +358,36 @@ export class StageCache {
     }
 
     rect(c, 0, v.groundPx - 2 * v.k, v.width, v.height - v.groundPx + 2 * v.k, this.floor!);
+    this.floorLines(c, v);
+  }
+
+  /** Arte pintada: um drawImageRect por camada, deslocado pela câmera. */
+  private drawArt(c: SkCanvas, art: StageArt, images: StageImages, v: StageView): void {
+    if (!this.artSky || this.artKey !== `${art.sky.join()}:${v.groundPx}`) {
+      this.artKey = `${art.sky.join()}:${v.groundPx}`;
+      this.artSky = gradient(0, 0, 0, v.groundPx, art.sky);
+      this.artPaint = Skia.Paint();
+      this.artPaint.setAntiAlias(true);
+    }
+    rect(c, 0, 0, v.width, v.height, this.artSky);
+    for (const l of art.layers) {
+      const img = images[l.name]!;
+      const bob = l.bob ? Math.sin(v.frame / 9) * l.bob : 0;
+      const dx = v.width / 2 + v.shakeX + (l.x - v.cam * l.parallax) * v.k;
+      c.drawImageRect(
+        img,
+        Skia.XYWHRect(0, 0, l.pw, l.ph),
+        Skia.XYWHRect(dx, v.groundPx + (l.y + bob) * v.k, l.w * v.k, l.h * v.k),
+        this.artPaint!,
+      );
+    }
+  }
+
+  private artKey = "";
+  private artSky: SkPaint | null = null;
+  private artPaint: SkPaint | null = null;
+
+  private floorLines(c: SkCanvas, v: StageView): void {
     // linhas de perspectiva do chão
     const sx = (x: number) => (x - v.cam) * v.k + v.width / 2 + v.shakeX;
     for (let i = -20; i <= 20; i++) c.drawLine(sx(i * 40), v.groundPx, sx(i * 40 * 1.6), v.height, this.line!);

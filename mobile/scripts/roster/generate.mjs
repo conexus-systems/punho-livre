@@ -13,12 +13,13 @@ import { fileURLToPath } from "node:url";
 
 import { ROSTER } from "./characters.mjs";
 import { POSES } from "./poses.mjs";
+import { initPainter, paintFighter, paintProjectile } from "./paint.mjs";
 import { packAtlas } from "./raster.mjs";
-import { boxes, projectileShapes, proportions, renderShapes, shapes, solve } from "./rig.mjs";
+import { boxes, proportions, solve } from "./rig.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.resolve(here, "../../characters");
-const SCALE = 2; // pixels por unidade do MUGEN
+const SCALE = 3; // pixels por unidade do MUGEN
 const H_ = true; // marca frame ativo (Clsn1)
 
 // --------------------------------------------------------- animações
@@ -28,7 +29,8 @@ const F = (frames, loopStart = 0) => ({ frames, loopStart });
 function commonAnims() {
   const walk = ["walk1", "walk2", "walk3", "walk4", "walk5", "walk6"].map((p) => [p, 5]);
   return {
-    0: F([["stand1", 10], ["stand2", 10], ["stand3", 10], ["stand2", 10]]),
+    // respiração com quadros intermediários (pose "a~b" = meio caminho)
+    0: F([["stand1", 5], ["stand1~stand2", 5], ["stand2", 5], ["stand2~stand3", 5], ["stand3", 5], ["stand3~stand2", 5], ["stand2", 5], ["stand2~stand1", 5]]),
     5: F([["turn", 3]]),
     6: F([["crouch1", 3]]),
     10: F([["crouchDown", 3]]),
@@ -647,6 +649,20 @@ function airFile(ch, anims, spriteOf, P, solved) {
   return out.join("\n");
 }
 
+/** Pose no meio do caminho entre duas (ângulos e deslocamentos interpolados). */
+function blend(a, b) {
+  if (!a || !b) return undefined;
+  const out = { ...a };
+  for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    const x = a[k];
+    const y = b[k];
+    if (typeof x === "number" && typeof y === "number") out[k] = (x + y) / 2;
+    else if (Array.isArray(x) && Array.isArray(y)) out[k] = x.map((v, i) => (v + y[i]) / 2);
+    else if (x === undefined) out[k] = y;
+  }
+  return out;
+}
+
 function generate(ch) {
   const P = proportions(ch.H, ch.build);
   const poses = { ...POSES, ...(ch.poses ?? {}) };
@@ -682,7 +698,7 @@ function generate(ch) {
   const cache = new Map();
   const solved = (name) => {
     if (!cache.has(name)) {
-      const pose = poses[name];
+      const pose = name.includes("~") ? blend(...name.split("~").map((n) => poses[n])) : poses[name];
       if (!pose) throw new Error(`${ch.id}: pose desconhecida "${name}"`);
       cache.set(name, solve(P, pose));
     }
@@ -691,15 +707,14 @@ function generate(ch) {
 
   const air = airFile(ch, anims, spriteOf, P, solved);
   const items = spriteKeys.map((key) => {
-    let list;
+    let r;
     if (key.startsWith("proj:")) {
       const [, kind, frame] = key.split(":");
-      list = projectileShapes(kind, ch.look, ch.H, Number(frame));
+      r = paintProjectile(kind, ch.look, ch.H, Number(frame), SCALE);
     } else {
-      list = shapes(P, solved(key), ch.look);
+      r = paintFighter(P, solved(key), ch.look, SCALE);
     }
-    const { canvas, axisX, axisY } = renderShapes(list, SCALE);
-    return { key, canvas, axisX, axisY };
+    return { key, canvas: r.canvas, axisX: r.axisX, axisY: r.axisY };
   });
   const { pages, places } = packAtlas(items, 2048);
   const frames = {};
@@ -738,6 +753,7 @@ function generate(ch) {
   return { id: ch.id, sprites: items.length, pages: pages.length };
 }
 
+await initPainter();
 const only = process.argv.slice(2);
 for (const ch of ROSTER) {
   if (only.length && !only.includes(ch.id)) continue;

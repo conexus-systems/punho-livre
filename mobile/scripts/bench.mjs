@@ -18,7 +18,7 @@ await build({
   target: "node20",
   outfile: out,
   tsconfig: path.join(here, "..", "tsconfig.json"),
-  loader: { ".png": "empty" },
+  loader: { ".png": "empty", ".jpg": "empty" },
   logLevel: "warning",
 });
 execFileSync(process.execPath, [out], { stdio: "inherit", env: process.env });

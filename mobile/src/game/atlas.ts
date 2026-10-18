@@ -7,7 +7,7 @@ import { builtinAtlasModules, getPack } from "@/src/characters/registry";
 
 const cache = new Map<string, Promise<SkImage[]>>();
 
-async function imageFrom(src: string, moduleId?: unknown): Promise<SkImage | null> {
+export async function imageFrom(src: string, moduleId?: unknown): Promise<SkImage | null> {
   try {
     let data;
     if (moduleId !== undefined) {

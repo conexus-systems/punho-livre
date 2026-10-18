@@ -23,7 +23,7 @@ await build({
     "@shopify/react-native-skia": path.join(here, "skia-canvas2d.ts"),
     "react-native": path.join(here, "react-native-shim.ts"),
   },
-  loader: { ".png": "file" },
+  loader: { ".png": "file", ".jpg": "file" },
   assetNames: "[name]-[hash]",
   publicPath: "./",
   define: { "process.env.NODE_ENV": '"production"' },
