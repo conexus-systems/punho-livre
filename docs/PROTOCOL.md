@@ -33,6 +33,7 @@ Erros seguem `{ "error": "<code>", "message": "..." }`:
 | GET | `/api/v1/leaderboard` | não | `{ players: [{ display_name, rating, wins, losses }] }` (top 100) |
 | GET | `/api/v1/matches` | sim | `{ matches: [{ id, opponent, my_character, opponent_character, result: "win"\|"loss"\|"draw"\|"abandoned", rating_delta, finished_at }] }` |
 | POST | `/conexus/webhooks` | HMAC | webhooks do bff-auth e bff-payment |
+| POST | `/api/telemetry/batch` | não (anônimo, só com consentimento) | `202 { accepted, rejected }` — ver § Telemetria |
 
 `player`:
 ```json
@@ -77,6 +78,50 @@ páginas e cada frame pode ter um 7º número com o índice da página.
 
 `sounds` (opcional, desde a 0.4.0): `{ "<grupo>,<índice>": "data:audio/wav;base64,..." }` com os sons do `.snd`
 usados pelos estados (PlaySnd, hitsound, guardsound). Packs sem esse campo continuam válidos.
+
+## Telemetria — `POST /api/telemetry/batch`
+
+Eventos anônimos do app, **só com consentimento** do jogador (diálogo da primeira abertura ou
+Ajustes › Sobre › "Enviar dados de uso e falhas"; recusar apaga a fila local). Sem autenticação de
+propósito: o lote não é ligado a conta. O app nunca manda `Authorization`, nome, e-mail, `sub`, IP,
+ID de aparelho ou de anúncio; `session_id` é um UUID v4 aleatório por abertura do app. Textos
+(mensagem/pilha de erro) passam por limpeza de e-mail, JWT, Bearer, UUID e query string no app.
+
+Corpo (≤ 64 KB, 1–100 eventos; o app manda lotes de até 50):
+```json
+{
+  "schema": 1,
+  "session_id": "3f2b8c1e-5d4a-4f6b-9c7e-1a2b3c4d5e6f",
+  "app": { "version": "0.4.0", "platform": "android", "os_version": "14", "build": "release", "screen_aspect": 2.22 },
+  "events": [ { "name": "fight_end", "at": "2026-10-18T12:00:00Z", "props": { "mode": "arcade", "result": "win", "duration_s": 74 } } ]
+}
+```
+
+Eventos e props (todas opcionais; chave fora da lista, tipo errado ou texto maior que o limite ⇒ evento descartado):
+
+| Evento | Props |
+|---|---|
+| `session_start` | — |
+| `session_end` | `duration_s` int (tempo em primeiro plano; enviado a cada ida para segundo plano, vale o maior por `session_id`) |
+| `tutorial` | `step` str(32), `completed` bool — reservado, o jogo ainda não tem tutorial |
+| `fight_start` | `mode` (`arcade`\|`versus`\|`training`\|`team`\|`online`\|`bench`), `p1`, `p2`, `stage` str(32), `difficulty` int |
+| `fight_end` | `mode`, `p1`, `p2`, `result` (`win`\|`loss`\|`draw`\|`abandoned`\|`quit`), `duration_s` int |
+| `online_queue` | `mode` (`ranked`\|`room`), `outcome` (`matched`\|`canceled`\|`error`), `wait_s` int, `error` str(64) |
+| `perf` | `mode`, `frames`, `fps_avg`, `fps_p5`, `frame_ms_p95`, `frame_ms_max`, `sim_ms_p95`, `draw_ms_p95`, `rollbacks`, `long_frames` (resumo da luta inteira) |
+| `crash` | `message` str(300), `stack` str(2000), `fatal` bool, `source` (`global`\|`boundary`\|`promise`), `screen` str(64), `previous_session` bool |
+
+Esquema único nos dois lados: `mobile/src/services/telemetrySchema.ts` ⇄ `web/app/services/telemetry/schema.rb`.
+
+Respostas:
+- `202 { "accepted": n, "rejected": m }` — os válidos são gravados, os inválidos descartados (o app não reenvia).
+- `413 payload_too_large` — corpo > 64 KB.
+- `422 validation_failed` + `details` — envelope inválido (`schema` ≠ 1, `session_id` não é UUID, `app` sem
+  `version`/`platform`, `events` vazio ou > 100, JSON inválido). O app descarta o lote.
+- `429 rate_limited` — mais de 30 lotes/min por IP (o IP só é chave do limite no cache, não é gravado).
+  O app guarda a fila e tenta de novo com espera crescente (30 s … 5 min), como em erro de rede/5xx.
+
+Servidor também descarta evento com `at` fora de [agora − 90 dias, agora + 1 dia] ou texto com cara de
+e-mail. Guarda em `telemetry_events` (sem `player_id`) por 90 dias (`TelemetryPurgeJob`, diário).
 
 ## Online — ActionCable
 

@@ -20,6 +20,10 @@ import { STAGE_ART } from "@/src/game/stages.generated";
 import { AudioDirector } from "@/src/audio/director";
 import { WebAudio } from "@/src/audio/web";
 
+import { BENCH, createBenchFight } from "@/src/services/benchFight";
+import { now, PerfMonitor } from "@/src/services/perf";
+
+import { benchRequested, buildReport, downloadJson, mountPerfLabel, perfRequested, reportLines } from "./bench";
 import { Canvas2D } from "./skia-canvas2d";
 
 type Mode = "arcade" | "versus" | "training" | "team";
@@ -424,6 +428,8 @@ interface Fight {
   assistsFor: string;
   assists: Assist[];
   over: boolean;
+  /** Bench (?bench=1): CPU também no P1 e relógio da medição. */
+  bench?: { cpu0: CpuController; start: number; steps: number; fights: number; startedAt: string };
 }
 
 let fight: Fight | null = null;
@@ -498,6 +504,69 @@ function startFight() {
 }
 
 const MAX_MACRO = [Btn.x | Btn.a | Btn.z, Btn.x | Btn.a | Btn.z, Btn.x | Btn.a | Btn.z, 0];
+
+// ---------------------------------------------------------- bench (QA)
+
+const perf = new PerfMonitor();
+
+/** Luta fixa CPU × CPU de src/services/benchFight.ts (docs/DEVICE_LAB.md). */
+function startBench(n = 0, prev?: Fight["bench"]) {
+  const b = createBenchFight(roster, n);
+  const [p1, p2] = BENCH.chars;
+  fight = {
+    mode: "versus",
+    world: b.world,
+    cpu: b.cpus[1],
+    macro: new MacroPlayer(),
+    renderer: new FightRenderer(),
+    names: [roster[p1].displayName, roster[p2].displayName],
+    assistsFor: p1,
+    assists: [],
+    over: false,
+    bench: prev ? { ...prev, cpu0: b.cpus[0], fights: n } : { cpu0: b.cpus[0], start: 0, steps: 0, fights: 0, startedAt: new Date().toISOString() },
+  };
+  if (!prev) perf.reset();
+  paused = false;
+  debugBoxes = false;
+  $("overlay").hidden = true;
+  $("arcade-step").textContent = `bench ${BENCH.seconds} s · CPU × CPU`;
+  renderAssists();
+  show("fight");
+  resize();
+}
+
+function finishBench(t: number) {
+  if (!fight?.bench) return;
+  const report = buildReport(perf.totalSnapshot(), {
+    duration_s: Math.round((t - fight.bench.start) / 100) / 10,
+    sim_steps: fight.bench.steps,
+    started_at: fight.bench.startedAt,
+    pixel_ratio: Math.min(maxDpr, window.devicePixelRatio || 1),
+  });
+  (window as unknown as { __MUGEN_BENCH__?: unknown }).__MUGEN_BENCH__ = report;
+  console.log("[bench]", JSON.stringify(report));
+  fight.over = true;
+  const overlay = $("overlay");
+  overlay.hidden = false;
+  $("panel-title").textContent = `bench · ${BENCH.seconds} s`;
+  const text = $("panel-text");
+  text.hidden = false;
+  text.replaceChildren(...reportLines(report).flatMap((l) => [l, document.createElement("br")]));
+  const actions = $("panel-actions");
+  actions.replaceChildren();
+  for (const [label, fn] of [
+    ["Baixar JSON", () => downloadJson(report)],
+    ["Repetir", () => startBench()],
+    ["Menu", () => show("menu")],
+  ] as const) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = label === "Baixar JSON" ? "btn primary" : "btn";
+    btn.textContent = label;
+    btn.addEventListener("click", fn);
+    actions.append(btn);
+  }
+}
 
 function assist(i: number) {
   if (!fight || paused) return;
@@ -632,14 +701,24 @@ function frame(t: number) {
     return;
   }
   if (last === 0) last = t;
+  const bench = fight.bench;
+  if (bench && bench.start === 0) bench.start = t;
+  if (bench && !fight.over && t - bench.start >= BENCH.seconds * 1000) finishBench(t);
+  if (bench && fight.over) {
+    last = t;
+    return;
+  }
   if (!paused) adapt(t - last);
   acc += Math.min(100, t - last);
   last = t;
+  if (!paused) perf.frame(t);
+  else perf.pause();
+  const simStart = now();
   let steps = 0;
   while (acc >= STEP && steps < 4) {
     if (!paused) {
       const w = fight.world;
-      const local = fight.macro.next() ?? keyboardBits();
+      const local = bench ? bench.cpu0.next(w) : (fight.macro.next() ?? keyboardBits());
       const cpu = fight.cpu ? fight.cpu.next(w) : 0;
       stepWorld(w, [local, cpu], roster);
       fight.renderer.addEvents(w.events, w, roster);
@@ -648,6 +727,13 @@ function frame(t: number) {
     acc -= STEP;
     steps++;
   }
+  if (steps > 0 && !paused) perf.sim(now() - simStart);
+  if (bench) {
+    bench.steps += steps;
+    // a luta do bench acabou antes dos 60 s: recomeça com semente derivada
+    if (fight.world.matchWinner >= 0 && fight.world.roundStateTime > 120) startBench(bench.fights + 1, bench);
+  }
+  const drawStart = now();
   if (cssW === 0) resize();
   ctx2d.clearRect(0, 0, cssW, cssH);
   fight.renderer.draw(skCanvas as never, {
@@ -660,8 +746,9 @@ function frame(t: number) {
     height: cssH,
     debugBoxes,
   });
+  if (!paused) perf.draw(now() - drawStart);
 
-  if (t - lastUi > 150) {
+  if (t - lastUi > 150 && !fight.bench) {
     lastUi = t;
     const me = fight.world.fighters[0];
     if (me.charId !== fight.assistsFor) {
@@ -701,6 +788,8 @@ window.addEventListener("touchstart", () => document.body.classList.add("touch")
 Promise.all([atlasReady, stagesReady]).then(() => {
   document.querySelectorAll<HTMLCanvasElement>("canvas[data-hero]").forEach((c) => drawPortrait(c, c.dataset.hero!, c.dataset.flip === "1"));
   $("loading").hidden = true;
-  show("menu");
+  if (perfRequested) mountPerfLabel($("fight"), perf);
+  if (benchRequested) startBench();
+  else show("menu");
   requestAnimationFrame(frame);
 });

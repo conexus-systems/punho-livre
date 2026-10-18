@@ -11,3 +11,4 @@ dist/
 coverage/
 /dist-web
 /play/dist
+/out

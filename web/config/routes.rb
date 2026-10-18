@@ -9,6 +9,9 @@ Rails.application.routes.draw do
   slug = /[a-z0-9][a-z0-9_-]{1,31}/
 
   namespace :api do
+    # Telemetria anônima com consentimento (fora do /v1: o esquema tem versão própria no corpo).
+    post "telemetry/batch", to: "telemetry#batch"
+
     namespace :v1 do
       resource :me, only: %i[show update], controller: "me"
 
