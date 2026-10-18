@@ -4,7 +4,7 @@ import { characterFrameData, frameDataMarkdown, listMoves, measureMove } from ".
 import type { CharacterData } from "../types";
 
 const roster: Record<string, CharacterData> = {};
-for (const id of ["kaze", "kenshi"]) roster[id] = loadCharacter(BUILTIN[id].pack);
+for (const id of ["kaze", "kenshi", "bento"]) roster[id] = loadCharacter(BUILTIN[id].pack);
 
 function move(id: string, state: number) {
   const m = listMoves(BUILTIN[id].pack, roster[id]).find((x) => x.state === state);
@@ -58,6 +58,13 @@ describe("frame data", () => {
   it("golpe que não encosta no boneco em pé fica sem vantagem", () => {
     // o gancho do Kenshi passa por cima da cabeça de um oponente em pé
     expect(move("kenshi", 220)).toMatchObject({ onHit: null, onBlock: null, distance: null, startup: 7 });
+  });
+
+  it("HitDef num quadro infinito (-1) não rearma depois de cada acerto", () => {
+    // Shiko do Bento: HitDef em AnimElem = 5, e o elemento 5 dura para sempre (pisão + onda)
+    const m = move("bento", 1200);
+    expect(m.hits).toBeLessThanOrEqual(2);
+    expect(m.damage).toBeLessThan(200);
   });
 
   it("é determinística: duas gerações dão o mesmo resultado", () => {
