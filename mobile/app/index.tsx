@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, useWindowDimensions, View } from "react-native";
 import { router } from "expo-router";
 
-import { AdBannerSlot } from "@/components/AdBannerSlot";
 import { CharacterPortrait } from "@/components/CharacterPortrait";
 import { LiveTile, MetroPage } from "@/components/metro";
 import { BUILTIN, BUILTIN_ORDER } from "@/src/characters/builtin.generated";
@@ -36,7 +35,6 @@ export default function Start() {
   const { width, height } = useWindowDimensions();
   const player = app.use((s) => s.player);
   const session = app.use((s) => s.session);
-  const premium = app.use((s) => s.premium);
   const installed = rosterStore.use((s) => s.installed);
   const [hero, setHero] = useState(0);
   useEffect(() => {
@@ -97,15 +95,14 @@ export default function Start() {
       { id: "profile", title: session ? player?.display_name ?? "Perfil" : "Entrar", size: "medium", glyph: "profile", onPress: () => router.push("/profile") },
       { id: "ranking", title: "Ranking", size: "small", glyph: "ranking", onPress: () => router.push({ pathname: "/profile", params: { tab: "1" } }) },
     ];
-    if (!premium) list.push({ id: "premium", title: "Premium", size: "small", glyph: "premium", onPress: () => router.push("/paywall"), color: "#A20025" });
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [champion, player, session, premium, installed.length, cell]);
+  }, [champion, player, session, installed.length, cell]);
 
   const { placed, rows } = pack(tiles, columns);
 
   return (
-    <MetroPage footer={<AdBannerSlot />}>
+    <MetroPage>
       <View style={{ flex: 1, flexDirection: "row", gap: space.lg }}>
         <View style={{ width: 200, paddingTop: space.md, justifyContent: "space-between", paddingBottom: space.md }}>
           <View style={{ gap: space.sm }}>
@@ -115,7 +112,6 @@ export default function Start() {
           </View>
           <Text style={[TYPE.CAPTION, { color: t.muted }]}>
             {session ? `${player?.display_name ?? session.name ?? ""}${player ? ` · ${number(player.rating)} pts` : ""}` : "Jogando como convidado"}
-            {premium ? " · Premium" : ""}
           </Text>
         </View>
         <ScrollView contentContainerStyle={{ paddingVertical: space.md }}>

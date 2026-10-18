@@ -16,6 +16,8 @@ module PlayerSerializer
       wins: player.wins,
       losses: player.losses,
       premium: player.premium,
+      licensed_until: player.licensed_until&.iso8601,
+      license_required: Integrity::License.required?,
       admin: admin
     }
   end

@@ -12,11 +12,9 @@ import { TelemetryConsentDialog } from "@/components/TelemetryConsentDialog";
 import { initAudio } from "@/src/audio";
 import { initRegistry } from "@/src/characters/registry";
 import { fetchMe } from "@/src/services/api";
-import { initAds } from "@/src/services/ads";
 import { restoreSession } from "@/src/services/auth";
 import { installCrashHandler, sendPendingCrash, setCurrentScreen } from "@/src/services/crash";
 import { loadDevOptions } from "@/src/services/devOptions";
-import { refreshEntitlements } from "@/src/services/payments";
 import { initTelemetry } from "@/src/services/telemetry";
 import { watchOnlineQueue } from "@/src/services/telemetryWatchers";
 import { bootSkia } from "@/src/platform/skiaBoot";
@@ -45,11 +43,9 @@ export default function RootLayout() {
       watchOnlineQueue();
       void initAudio();
       if (app.get().session) {
-        // perfil (backend) e premium (bff-payment) em paralelo; falha de rede não bloqueia o jogo offline
-        await Promise.allSettled([fetchMe(), refreshEntitlements()]);
+        // perfil (backend); falha de rede não bloqueia o jogo offline
+        await Promise.allSettled([fetchMe()]);
       }
-      await initAds();
-      // depois do consentimento de anúncios (UMP/ATT), para não empilhar diálogos
       setAskTelemetry(true);
     })();
   }, []);

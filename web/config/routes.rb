@@ -19,6 +19,9 @@ Rails.application.routes.draw do
         get :pack, on: :member
       end
 
+      post "license/challenge", to: "license#challenge"
+      post "license/verify", to: "license#verify"
+
       get "leaderboard", to: "leaderboard#index"
       get "ranked", to: "ranked#show"
       resources :matches, only: :index do

@@ -34,6 +34,9 @@ export interface Player {
   losses: number;
   premium: boolean;
   admin: boolean;
+  /** Jogo pago: compra comprovada na Google Play até esta data (só o online exige). */
+  licensed_until?: string | null;
+  license_required?: boolean;
 }
 
 export interface Session {
@@ -49,10 +52,6 @@ export interface Session {
 export interface AppState {
   session: Session | null;
   player: Player | null;
-  /** Entitlement ativo no bff-payment para o produto. */
-  premium: boolean;
-  /** Partidas offline concluídas desde o último interstitial. */
-  matchesSinceAd: number;
   settings: {
     assist: boolean;
     vibration: boolean;
@@ -72,7 +71,5 @@ export interface AppState {
 export const app = createStore<AppState>({
   session: null,
   player: null,
-  premium: false,
-  matchesSinceAd: 0,
   settings: { assist: true, vibration: true, difficulty: 2, inputDelay: 2, buttons: "snk", music: true, sfx: true, controls: DEFAULT_CONTROLS, reduceMotion: false },
 });

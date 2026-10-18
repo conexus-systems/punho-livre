@@ -28,11 +28,11 @@ export interface MatchSummary {
   finished_at: string | null;
 }
 
-const url = (p: string) => `${config.apiUrl}${p}`;
+export const url = (p: string) => `${config.apiUrl}${p}`;
 
 export async function fetchMe(): Promise<Player> {
   const { player } = await requestJson<{ player: Player }>(url("/api/v1/me"), { auth: true });
-  app.set({ player, premium: app.get().premium || player.premium });
+  app.set({ player });
   return player;
 }
 
@@ -53,12 +53,9 @@ export async function fetchCatalog(): Promise<CharacterSummary[]> {
 
 /** Corpo cru do pack (o sha256 é calculado sobre estes bytes). */
 export async function fetchPackText(c: CharacterSummary): Promise<string> {
-  const { accessToken } = await import("./auth");
-  const token = c.premium ? await accessToken() : null;
-  const res = await fetch(c.pack_url, { headers: token ? { Authorization: `Bearer ${token}` } : {} }).catch(() => {
+  const res = await fetch(c.pack_url).catch(() => {
     throw new Error("Sem conexão com o servidor. Verifique a internet e tente de novo.");
   });
-  if (res.status === 402) throw new Error("Personagem premium — assine para baixar.");
   if (!res.ok) throw new Error(`Falha ao baixar ${c.name} (${res.status})`);
   return res.text();
 }

@@ -121,5 +121,5 @@ export async function logout(): Promise<void> {
     }
   }
   await persist(null);
-  app.set({ player: null, premium: false });
+  app.set({ player: null });
 }

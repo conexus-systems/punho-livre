@@ -7,7 +7,6 @@ import { MetroButton, MetroDialog, MetroEmpty, MetroGroup, MetroHeader, MetroPag
 import { leagueName } from "@/src/net/leagues";
 import { fetchLeaderboard, fetchMatches, fetchMe, fetchRanked, updateDisplayName, type LeaderboardEntry, type MatchSummary, type RankedStanding, type Season } from "@/src/services/api";
 import { authRequestConfig, completeLogin, discovery, logout } from "@/src/services/auth";
-import { refreshEntitlements } from "@/src/services/payments";
 import { app } from "@/src/store";
 import { count, number, relative, shortDate, signed } from "@/src/ui/formats";
 import { validate } from "@/src/ui/rules";
@@ -21,7 +20,6 @@ export default function Profile() {
   const params = useLocalSearchParams<{ tab?: string }>();
   const session = app.use((s) => s.session);
   const player = app.use((s) => s.player);
-  const premium = app.use((s) => s.premium);
   const [request, response, promptAsync] = AuthSession.useAuthRequest(authRequestConfig(), discovery);
   const [pivot, setPivot] = useState(Number(params.tab ?? 0) || 0);
   const [busy, setBusy] = useState(false);
@@ -39,7 +37,7 @@ export default function Profile() {
     (async () => {
       try {
         await completeLogin(response.params.code, request.codeVerifier!);
-        await Promise.allSettled([fetchMe(), refreshEntitlements()]);
+        await Promise.allSettled([fetchMe()]);
       } catch (err) {
         setError((err as Error).message);
       } finally {
@@ -72,7 +70,7 @@ export default function Profile() {
                 <>
                   <Text style={[TYPE.TITLE, { color: t.text }]}>{player?.display_name ?? session.name ?? "Lutador"}</Text>
                   <Text style={[TYPE.BODY, { color: t.muted }]}>
-                    {session.email ?? ""} · {premium ? "Premium" : "Gratuito"}
+                    {session.email ?? ""}
                   </Text>
                   <Text style={[TYPE.BODY, { color: t.text }]}>
                     Rating <Text style={{ color: t.accentText }}>{player ? number(player.rating) : "…"}</Text> · {count(player?.wins ?? 0, "vitória", "vitórias")} ·{" "}
@@ -91,7 +89,6 @@ export default function Profile() {
                   </View>
                   <View style={{ flexDirection: "row", gap: space.sm }}>
                     <MetroButton kind="primary" label="Salvar nome" disabled={!!nameError || name === player?.display_name} onPress={() => void updateDisplayName(name.trim()).catch((e) => setError(e.message))} />
-                    {!premium ? <MetroButton label="Premium" glyph="premium" onPress={() => router.push("/paywall")} /> : null}
                     <MetroButton label="Sair da conta" onPress={() => setConfirmLogout(true)} />
                   </View>
                 </>

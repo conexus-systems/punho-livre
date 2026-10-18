@@ -210,8 +210,8 @@ export default function Settings() {
                 secondary="Inspirado nos jogos da SNK: rolamento, blowback, arremesso com escape, guard cancel, Just Defend, guard crush, modo MAX e equipes 3×3. Personagens e arte originais."
               />
               <MetroRow title="Elenco nativo" secondary="20 lutadores originais da CONEXUS, de Kaze a Kai." />
-              <MetroRow title="Conta, pagamentos e mensagens" secondary="Plataforma CONEXUS (bff-auth, bff-payment, bff-api)." />
-              <MetroRow title="Anúncios" secondary="Google AdMob. Premium remove os anúncios." />
+              <MetroRow title="Conta e mensagens" secondary="Plataforma CONEXUS (bff-auth, bff-api)." />
+              <MetroRow title="Jogo completo" secondary="Sem anúncios e sem compras dentro do app." />
             </>
           ) : null}
         </ScrollView>

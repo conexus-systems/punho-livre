@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 
-import { AdBannerSlot } from "@/components/AdBannerSlot";
 import { MetroButton, MetroDialog, MetroEmpty, MetroGroup, MetroHeader, MetroMenu, MetroPage, MetroPivot, MetroProgress, MetroRow, type MenuItem } from "@/components/metro";
 import { BUILTIN_ORDER, BUILTIN } from "@/src/characters/builtin.generated";
 import { install, rosterStore, uninstall } from "@/src/characters/registry";
@@ -15,7 +14,6 @@ import { space, useTokens } from "@/src/ui/theme";
 export default function RosterScreen() {
   const t = useTokens();
   const installed = rosterStore.use((s) => s.installed);
-  const premium = app.use((s) => s.premium);
   const admin = app.use((s) => s.player?.admin === true);
   const [pivot, setPivot] = useState(0);
   const [catalog, setCatalog] = useState<CharacterSummary[] | null>(null);
@@ -55,7 +53,7 @@ export default function RosterScreen() {
   const sections = admin ? ["Catálogo", "Instalados", "Revisão"] : ["Catálogo", "Instalados", "Enviar"];
 
   return (
-    <MetroPage footer={<AdBannerSlot />}>
+    <MetroPage>
       <MetroHeader title="Personagens" actions={<MetroButton kind="text" label="Voltar" onPress={() => router.back()} />} />
       <MetroPivot sections={sections} index={pivot} onChange={setPivot}>
         <ScrollView contentContainerStyle={{ paddingBottom: space.lg }}>
@@ -74,13 +72,12 @@ export default function RosterScreen() {
               catalog.map((c) => {
                 const mine = installed.find((i) => i.slug === c.slug);
                 const outdated = Boolean(mine && mine.sha256 !== c.sha256);
-                const locked = c.premium && !premium;
                 return (
                   <MetroRow
                     key={c.slug}
-                    title={`${c.name}${c.premium ? " · premium" : ""}`}
+                    title={c.name}
                     secondary={`por ${c.author} · v${c.version} · ${bytes(c.size_bytes)} · ${relative(c.updated_at)}`}
-                    glyph={mine && !outdated ? "check" : locked ? "premium" : "download"}
+                    glyph={mine && !outdated ? "check" : "download"}
                     selected={Boolean(mine)}
                     right={
                       busy === c.slug ? (
@@ -88,11 +85,7 @@ export default function RosterScreen() {
                       ) : mine && !outdated ? (
                         <Text style={[TYPE.CAPTION, { color: t.accentText }]}>instalado</Text>
                       ) : (
-                        <MetroButton
-                          kind={locked ? "secondary" : "primary"}
-                          label={locked ? "Assinar" : outdated ? "Atualizar" : "Baixar"}
-                          onPress={() => (locked ? router.push("/paywall") : void act(c.slug, () => install(c)))}
-                        />
+                        <MetroButton kind="primary" label={outdated ? "Atualizar" : "Baixar"} onPress={() => void act(c.slug, () => install(c))} />
                       )
                     }
                     onLongPress={
@@ -162,7 +155,6 @@ export default function RosterScreen() {
                   right={
                     <View style={{ flexDirection: "row", gap: space.sm }}>
                       <MetroButton kind="primary" label="Aprovar" onPress={() => void act(c.slug, async () => { await reviewCharacter(c.slug, "approved"); await load(); })} />
-                      <MetroButton label="Premium" onPress={() => void act(c.slug, async () => { await reviewCharacter(c.slug, "approved", { premium: true }); await load(); })} />
                       <MetroButton label="Recusar" onPress={() => void act(c.slug, async () => { await reviewCharacter(c.slug, "rejected", { reason: "Não aprovado na revisão" }); await load(); })} />
                     </View>
                   }

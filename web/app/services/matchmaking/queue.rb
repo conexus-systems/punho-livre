@@ -72,6 +72,8 @@ module Matchmaking
     # Entrada pelo subscribe do MatchmakingChannel. `token` é o stream do canal.
     def join(player:, token:, mode:, character:, pack_sha256:, engine_version:, room_code: nil)
       validate!(mode, character, pack_sha256, engine_version)
+      # jogo pago: o online só aceita cópia comprada na Google Play (offline nunca depende disto)
+      return Result.build(:error, error: "license_required") unless Integrity::License.licensed?(player)
       MatchmakingTicket.stale.where(player: player).delete_all
       return Result.build(:error, error: "already_queued") if MatchmakingTicket.exists?(player: player)
 

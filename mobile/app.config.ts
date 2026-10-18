@@ -1,9 +1,5 @@
 import type { ExpoConfig } from "expo/config";
 
-// IDs de teste oficiais do Google. Em produção, defina as variáveis no EAS.
-const ADMOB_ANDROID_APP_ID = process.env.ADMOB_ANDROID_APP_ID ?? "ca-app-pub-3940256099942544~3347511713";
-const ADMOB_IOS_APP_ID = process.env.ADMOB_IOS_APP_ID ?? "ca-app-pub-3940256099942544~1458002511";
-
 const config: ExpoConfig = {
   name: "MUGEN Arena",
   slug: "mugen-arena",
@@ -20,6 +16,8 @@ const config: ExpoConfig = {
   },
   android: {
     package: "br.com.conexus.mugenarena",
+    // jogo pago, sem anúncios: nada de identificador de publicidade
+    blockedPermissions: ["com.google.android.gms.permission.AD_ID"],
   },
   extra: {
     eas: { projectId: process.env.EAS_PROJECT_ID ?? "00000000-0000-0000-0000-000000000000" },
@@ -32,23 +30,6 @@ const config: ExpoConfig = {
     [
       "expo-screen-orientation",
       { initialOrientation: "LANDSCAPE" },
-    ],
-    [
-      "expo-tracking-transparency",
-      {
-        userTrackingPermission:
-          "Usamos este identificador para mostrar anúncios mais relevantes e manter o MUGEN Arena gratuito.",
-      },
-    ],
-    [
-      "react-native-google-mobile-ads",
-      {
-        androidAppId: ADMOB_ANDROID_APP_ID,
-        iosAppId: ADMOB_IOS_APP_ID,
-        delayAppMeasurementInit: true,
-        userTrackingUsageDescription:
-          "Usamos este identificador para mostrar anúncios mais relevantes e manter o MUGEN Arena gratuito.",
-      },
     ],
     [
       "expo-build-properties",

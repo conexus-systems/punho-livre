@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 
-import { AdBannerSlot } from "@/components/AdBannerSlot";
 import { CharacterPortrait } from "@/components/CharacterPortrait";
 import { MetroButton, MetroHeader, MetroPage } from "@/components/metro";
 import { rosterEntries, type RosterEntry } from "@/src/characters/registry";
@@ -70,7 +69,7 @@ export default function Select() {
 
   const tile = 96;
   return (
-    <MetroPage footer={<AdBannerSlot />}>
+    <MetroPage>
       <View style={{ flex: 1, flexDirection: "row", gap: space.lg }}>
         <View style={{ width: 240, justifyContent: "space-between", paddingBottom: space.sm }}>
           <MetroHeader

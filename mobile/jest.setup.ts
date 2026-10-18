@@ -31,20 +31,6 @@ jest.mock("@shopify/react-native-skia", () => {
   };
 });
 
-jest.mock("react-native-google-mobile-ads", () => ({
-  __esModule: true,
-  default: () => ({ initialize: async () => [], setRequestConfiguration: async () => undefined }),
-  BannerAd: () => null,
-  BannerAdSize: { ANCHORED_ADAPTIVE_BANNER: "ANCHORED_ADAPTIVE_BANNER" },
-  TestIds: { ADAPTIVE_BANNER: "b", INTERSTITIAL: "i", REWARDED: "r" },
-  AdEventType: { LOADED: "loaded", CLOSED: "closed", ERROR: "error" },
-  RewardedAdEventType: { LOADED: "rl", EARNED_REWARD: "earned" },
-  MaxAdContentRating: { T: "T" },
-  AdsConsent: { gatherConsent: async () => ({ canRequestAds: false }), getUserChoices: async () => ({}) },
-  InterstitialAd: { createForAdRequest: () => ({ addAdEventListener: () => () => undefined, load: () => undefined, show: async () => undefined }) },
-  RewardedAd: { createForAdRequest: () => ({ addAdEventListener: () => () => undefined, load: () => undefined, show: async () => undefined }) },
-}));
-
 jest.mock("expo-router", () => {
   const router = { push: jest.fn(), replace: jest.fn(), back: jest.fn() };
   return { router, useLocalSearchParams: () => ({}), Stack: () => null, Redirect: () => null };
@@ -84,5 +70,9 @@ jest.mock("expo-crypto", () => ({
 }));
 
 jest.mock("expo-haptics", () => ({ impactAsync: async () => undefined, ImpactFeedbackStyle: { Light: "l", Medium: "m" } }));
-jest.mock("expo-tracking-transparency", () => ({ requestTrackingPermissionsAsync: async () => ({ granted: false }) }));
 jest.mock("expo-secure-store", () => ({ getItemAsync: async () => null, setItemAsync: async () => undefined, deleteItemAsync: async () => undefined }));
+
+jest.mock("@expo/app-integrity", () => ({
+  prepareIntegrityTokenProviderAsync: async () => undefined,
+  requestIntegrityCheckAsync: async () => "integrity-token",
+}));

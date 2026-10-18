@@ -132,29 +132,14 @@ RSpec.describe "Characters API" do
       expect(response.parsed_body["error"]).to eq("not_found")
     end
 
-    context "with a premium character" do
+    context "with a character flagged premium (legado)" do
       before { create(:character, slug: "akuma", premium: true) }
 
-      it "requires a token" do
+      it "serves it to everyone, without a token (jogo pago: nada bloqueado)" do
         get "/api/v1/characters/akuma/pack"
 
-        expect(response).to have_http_status(:unauthorized)
-        expect(response.parsed_body["error"]).to eq("invalid_token")
-      end
-
-      it "returns 402 premium_required for a non-premium player" do
-        get "/api/v1/characters/akuma/pack", headers: bearer_headers(token_for(create(:player)))
-
-        expect(response).to have_http_status(:payment_required)
-        expect(response.parsed_body["error"]).to eq("premium_required")
-      end
-
-      it "serves premium players and admins" do
-        get "/api/v1/characters/akuma/pack", headers: bearer_headers(token_for(create(:player, premium: true)))
         expect(response).to have_http_status(:ok)
-
-        get "/api/v1/characters/akuma/pack", headers: bearer_headers(token_for(create(:player), groups: [ "admin" ]))
-        expect(response).to have_http_status(:ok)
+        expect(response.headers["Cache-Control"]).to include("public")
       end
     end
   end

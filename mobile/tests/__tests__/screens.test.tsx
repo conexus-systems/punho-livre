@@ -6,7 +6,6 @@ import { matchSetup } from "@/src/match";
 import { app } from "@/src/store";
 import { setTheme } from "@/src/ui/theme";
 
-import Paywall from "@/app/paywall";
 import Profile from "@/app/profile";
 import RosterScreen from "@/app/roster";
 import Select from "@/app/select";
@@ -48,7 +47,9 @@ describe("telas W10M montam sem erro", () => {
     for (const t of ["Iniciar", "Arcade", "Online", "Versus CPU", "Equipes 3×3", "Personagens"]) expect(all).toContain(t);
     // blocos pequenos mostram só o ícone; o nome fica no rótulo de acessibilidade
     const labels = r.root.findAll((n) => n.props.accessibilityRole === "button").map((n) => n.props.accessibilityLabel);
-    for (const t of ["Treino", "Ajustes", "Ranking", "Premium"]) expect(labels).toContain(t);
+    for (const t of ["Treino", "Ajustes", "Ranking"]) expect(labels).toContain(t);
+    // jogo pago: sem tile de Premium
+    expect(labels).not.toContain("Premium");
     r.unmount();
   });
 
@@ -123,12 +124,11 @@ describe("telas W10M montam sem erro", () => {
     r.unmount();
   });
 
-  it("Personagens, Perfil, Ajustes e Premium", async () => {
+  it("Personagens, Perfil e Ajustes", async () => {
     for (const [el, expected] of [
       [<RosterScreen key="r" />, "Nenhum personagem extra publicado ainda"],
       [<Profile key="p" />, "Entre com sua conta CONEXUS"],
       [<Settings key="s" />, "Especiais em um toque"],
-      [<Paywall key="w" />, "Sem anúncios"],
     ] as const) {
       const r = await render(el);
       expect(texts(r)).toContain(expected);

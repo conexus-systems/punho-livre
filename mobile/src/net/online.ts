@@ -16,6 +16,7 @@ import { cableUrl } from "@/src/config";
 import type { Roster } from "@/src/engine/fighter";
 import { createWorld } from "@/src/engine/world";
 import { accessToken } from "@/src/services/auth";
+import { ensureLicense, licenseMessage } from "@/src/services/license";
 import { createStore } from "@/src/store";
 
 import { CableClient, type CableSubscription } from "./cable";
@@ -112,6 +113,8 @@ export async function findMatch(opts: { mode: "ranked" | "room"; roomCode?: stri
     connectionLost: false,
   });
   try {
+    // jogo pago: o online só aceita cópia comprada na Google Play
+    await ensureLicense();
     const c = await ensureClient();
     matchmaking?.unsubscribe();
     matchmaking = c.subscribe(
@@ -162,6 +165,7 @@ export async function findMatch(opts: { mode: "ranked" | "room"; roomCode?: stri
                 room_full: "Sala cheia.",
                 already_queued: "Você já está na fila.",
                 version_mismatch: "O dono da sala está com outra versão do jogo. Atualizem os dois.",
+                license_required: licenseMessage("not_licensed"),
               };
               onlineStore.set({ phase: { kind: "error", message: map[String(msg.error)] ?? String(msg.error) } });
               break;

@@ -16,6 +16,20 @@ RSpec.describe MatchmakingChannel, type: :channel do
                               engine_version: engine_version, created_at: created_at, heartbeat_at: Time.current)
   end
 
+  describe "jogo pago" do
+    it "recusa a fila sem licença quando a exigência está ligada" do
+      ENV["PLAY_INTEGRITY_REQUIRED"] = "1"
+      begin
+        subscribe(mode: "ranked", character: "kaze", pack_sha256: sha, engine_version: ver)
+      ensure
+        ENV.delete("PLAY_INTEGRITY_REQUIRED")
+      end
+
+      expect(transmissions.last).to eq("type" => "error", "error" => "license_required")
+      expect(MatchmakingTicket.where(player: player)).to be_empty
+    end
+  end
+
   describe "ranked" do
     it "queues when nobody is waiting" do
       subscribe(mode: "ranked", character: "kaze", pack_sha256: sha, engine_version: ver)

@@ -30,7 +30,6 @@ import { audio } from "@/src/audio";
 import { matchSetup } from "@/src/match";
 import { joinMatch, onlineBanner, onlineStore, type OnlineMatchHandle } from "@/src/net/online";
 import type { RollbackSession } from "@/src/net/rollback";
-import { onMatchFinished, showRewarded } from "@/src/services/ads";
 import { fetchMe } from "@/src/services/api";
 import { devOptions, perfOverlayOn } from "@/src/services/devOptions";
 import { FightTelemetry, resultFor } from "@/src/services/fightTelemetry";
@@ -347,7 +346,6 @@ export default function Fight() {
   const leave = async (to: "menu" | "rematch" | "select" | "next") => {
     audio.stopMusic();
     await onlineRef.current?.leave();
-    await onMatchFinished();
     if (online) void fetchMe().catch(() => undefined);
     if (to === "menu") router.replace("/");
     else if (to === "select") {
@@ -361,12 +359,10 @@ export default function Fight() {
     }
   };
 
-  const continueWithAd = async () => {
-    const ok = await showRewarded();
-    if (ok) {
-      matchSetup.set({ continues: setup.continues + 1 });
-      router.replace("/fight");
-    }
+  // jogo pago: continuar no arcade é livre, sem anúncio
+  const continueArcade = () => {
+    matchSetup.set({ continues: setup.continues + 1 });
+    router.replace("/fight");
   };
 
   const won = result && result.winner === localSide;
@@ -469,7 +465,7 @@ export default function Fight() {
               <MetroButton kind="primary" label="Próxima luta" onPress={() => void leave("next")} />
             ) : !won ? (
               <>
-                <MetroButton kind="primary" label={app.get().premium ? "Continuar" : "Continuar (assistir anúncio)"} onPress={() => void continueWithAd()} />
+                <MetroButton kind="primary" label="Continuar" onPress={continueArcade} />
                 <MetroButton label="Desistir" onPress={() => void leave("menu")} />
               </>
             ) : (

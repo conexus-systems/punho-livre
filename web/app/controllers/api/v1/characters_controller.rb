@@ -16,15 +16,14 @@ module Api
       end
 
       # GET /api/v1/characters/:slug/pack — corpo = bytes exatos do pack
-      # (os mesmos do sha256). Premium exige token de jogador premium (ou admin).
+      # (os mesmos do sha256). Jogo pago: todo personagem aprovado é livre para quem tem o jogo.
       def pack
         character = Character.served_for(params[:slug])
         raise ActiveRecord::RecordNotFound unless character
-        return unless authorize_pack!(character)
 
         etag = %("#{character.sha256}")
         response.headers["ETag"] = etag
-        response.headers["Cache-Control"] = character.premium ? "private, max-age=0, must-revalidate" : "public, max-age=300"
+        response.headers["Cache-Control"] = "public, max-age=300"
         return head :not_modified if request.headers["If-None-Match"] == etag
 
         render body: character.pack_body, content_type: "application/json"
@@ -46,19 +45,6 @@ module Api
       end
 
       private
-
-      def authorize_pack!(character)
-        return true unless character.premium
-
-        unless authenticate_bearer!
-          render_invalid_token
-          return false
-        end
-        return true if current_player.premium || current_admin?
-
-        render_error :payment_required, "premium_required", "this character requires a premium subscription"
-        false
-      end
 
       # Lido do corpo cru (não de `params`) para preservar tipos e ordem das
       # chaves — o JSON re-serializado é o que vira pack_body/sha256.
