@@ -1,0 +1,44 @@
+source "https://rubygems.org"
+
+# Ruby 4.0.2 fica pinado em .ruby-version (deploy/Docker). Sem diretiva `ruby`
+# aqui de propósito, para o bundle também resolver em máquinas com Ruby 3.3+.
+
+gem "rails", "~> 8.1.4"
+# PostgreSQL (banco único: app + Solid Queue/Cache/Cable — ADR 0001)
+gem "pg", "~> 1.6"
+gem "puma", ">= 5.0"
+
+# Windows does not include zoneinfo files, so bundle the tzinfo-data gem
+gem "tzinfo-data", platforms: %i[ windows jruby ]
+
+# Jobs, cache e Action Cable no Postgres primário (sem Redis/Sidekiq — ADR 0001)
+gem "solid_cache"
+gem "solid_queue"
+gem "solid_cable"
+
+# Reduces boot times through caching; required in config/boot.rb
+gem "bootsnap", require: false
+
+# CORS para o app mobile / ferramentas web
+gem "rack-cors"
+
+# Auth (verificação de JWT do bff-auth) / HTTP
+gem "jwt", "~> 3.1"
+gem "faraday"
+
+# Plataforma CONEXUS (webhooks HMAC + dispatch de mensagens via bff-api).
+# Vendorizada: vendor/ é versionado com a cópia da gem.
+gem "conexus-platform", path: "vendor/conexus-platform"
+
+group :development, :test do
+  gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
+  gem "bundler-audit", require: false
+  gem "brakeman", require: false
+  gem "rubocop-rails-omakase", require: false
+  gem "rspec-rails"
+  gem "factory_bot_rails"
+end
+
+group :test do
+  gem "webmock"
+end

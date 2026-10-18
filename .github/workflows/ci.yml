@@ -1,0 +1,61 @@
+name: CI
+
+"on":
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - name: Elenco gerado está atualizado
+        run: |
+          npm run roster
+          # PNGs podem variar com a versão do zlib; o texto MUGEN e o índice não
+          git diff --exit-code -- characters ':!characters/**/*.png' src/characters/builtin.generated.ts
+      - run: npx tsc --noEmit
+      - run: npx jest --ci
+      - run: npm run test:tools
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      RAILS_ENV: test
+      CI: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          working-directory: backend
+          bundler-cache: true
+      - run: bin/rails db:prepare
+      - run: bundle exec rspec
+      - run: bundle exec rubocop
+      - run: bin/brakeman -q --no-pager

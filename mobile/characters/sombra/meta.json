@@ -1,0 +1,23 @@
+{
+  "id": "sombra",
+  "name": "Sombra",
+  "bio": "Monge que trocou a luz pela sombra. Controla o espaço de longe.",
+  "specials": [
+    {
+      "name": "Orbe Sombrio",
+      "cmd": "qcf_p"
+    },
+    {
+      "name": "Deslize",
+      "cmd": "qcf_k"
+    },
+    {
+      "name": "Maré Negra",
+      "cmd": "qcb_p"
+    }
+  ],
+  "super": {
+    "name": "Eclipse",
+    "cmd": "super_p"
+  }
+}

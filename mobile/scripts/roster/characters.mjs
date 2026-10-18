@@ -1,0 +1,132 @@
+// Elenco nativo do MUGEN Arena — personagens originais (sem IP de terceiros).
+//
+// Especiais disponíveis (ver generate.mjs → SPECIALS):
+//   projectile, rising, spin, dash, teleport, slam, cartwheel, divekick
+// Supers: rush, beam
+
+export const ROSTER = [
+  {
+    id: "kaze",
+    name: "Kaze",
+    bio: "Carateca andarilho que domina o vento. Equilibrado e direto.",
+    H: 95,
+    build: 1,
+    look: {
+      skin: "#E8B48A", top: "#F4F1EA", pants: "#F4F1EA", belt: "#111827", gloves: "#B91C1C",
+      shoes: "#3F2A1E", hair: "spiky", hairColor: "#2B1B12", headband: "#DC2626", sleeves: false, energy: "#38BDF8",
+    },
+    style: { body: "#F4F1EA", accent: "#DC2626", skin: "#E8B48A", trim: "#111827", energy: "#38BDF8" },
+    stats: { life: 1000, attack: 100, defence: 100, walkF: 2.4, walkB: -2.2, runF: 4.6, jumpY: -8.4 },
+    specials: [
+      { kind: "projectile", name: "Kaze Ha", cmd: "qcf_p", proj: "orb", speed: 4.5, damage: 60 },
+      { kind: "rising", name: "Tatsu Agito", cmd: "dp_p", damage: 95 },
+      { kind: "spin", name: "Senpu", cmd: "qcb_k", damage: 32, hits: 3 },
+    ],
+    super: { kind: "beam", name: "Shinku Kaze", cmd: "super_p", damage: 260 },
+  },
+  {
+    id: "brasa",
+    name: "Brasa",
+    bio: "Capoeirista de Salvador; ginga imprevisível e chutes em chamas.",
+    H: 92,
+    build: 0.95,
+    look: {
+      skin: "#8D5A3B", top: "#FACC15", pants: "#F8FAFC", belt: "#16A34A", gloves: "#8D5A3B",
+      shoes: "#8D5A3B", hair: "short", hairColor: "#1C1917", headband: null, sleeves: false, energy: "#F97316",
+    },
+    style: { body: "#FACC15", accent: "#16A34A", skin: "#8D5A3B", trim: "#F8FAFC", energy: "#F97316" },
+    stats: { life: 950, attack: 100, defence: 95, walkF: 2.7, walkB: -2.5, runF: 5.2, jumpY: -8.8 },
+    poses: {
+      stand1: { torso: -80, armF: [40, -80], armB: [140, -60], legF: [60, 100], legB: [124, 96] },
+      stand2: { torso: -86, armF: [60, -60], armB: [150, -40], legF: [74, 98], legB: [110, 96], hipX: 3 },
+      stand3: { torso: -92, armF: [80, -40], armB: [160, -20], legF: [86, 96], legB: [100, 96], hipX: 6 },
+    },
+    specials: [
+      { kind: "cartwheel", name: "Meia Lua", cmd: "qcb_k", damage: 30, hits: 3 },
+      { kind: "rising", name: "Martelo", cmd: "dp_k", damage: 85, kick: true },
+      { kind: "dash", name: "Armada", cmd: "qcf_k", damage: 70, pose: "flyingKick", speed: 6, ground: false },
+    ],
+    super: { kind: "rush", name: "Roda de Fogo", cmd: "super_k", damage: 230, kicks: true },
+  },
+  {
+    id: "tita",
+    name: "Titã",
+    bio: "Lutador de vale-tudo do interior. Lento, mas cada golpe derruba.",
+    H: 108,
+    build: 1.35,
+    look: {
+      skin: "#C68B59", top: "#C68B59", pants: "#1E3A8A", belt: "#FBBF24", gloves: "#111827",
+      shoes: "#111827", hair: "mohawk", hairColor: "#111827", headband: null, sleeves: false, energy: "#A16207",
+    },
+    style: { body: "#1E3A8A", accent: "#FBBF24", skin: "#C68B59", trim: "#111827", energy: "#A16207" },
+    stats: { life: 1200, attack: 115, defence: 110, walkF: 1.8, walkB: -1.6, runF: 3.6, jumpY: -7.6 },
+    specials: [
+      { kind: "slam", name: "Terremoto", cmd: "dd_p", damage: 80, wave: { speed: 4, damage: 50 } },
+      { kind: "dash", name: "Ombrada", cmd: "qcf_p", damage: 90, pose: "shoulder", speed: 7 },
+      { kind: "rising", name: "Cabeçada", cmd: "dp_p", damage: 100 },
+    ],
+    super: { kind: "beam", name: "Fenda Tectônica", cmd: "super_p", damage: 280, wave: true },
+  },
+  {
+    id: "yuki",
+    name: "Yuki",
+    bio: "Ninja do clã da neve. Frágil, rápida e difícil de acompanhar.",
+    H: 88,
+    build: 0.85,
+    look: {
+      skin: "#F1D3BC", top: "#1F2937", pants: "#1F2937", belt: "#7DD3FC", gloves: "#E0F2FE",
+      shoes: "#0F172A", hair: "hood", hairColor: "#111827", headband: null, sleeves: true, energy: "#7DD3FC",
+    },
+    style: { body: "#1F2937", accent: "#7DD3FC", skin: "#F1D3BC", trim: "#E0F2FE", energy: "#7DD3FC" },
+    stats: { life: 880, attack: 95, defence: 92, walkF: 3, walkB: -2.8, runF: 6, jumpY: -9.2 },
+    specials: [
+      { kind: "projectile", name: "Kunai de Gelo", cmd: "qcf_p", proj: "blade", speed: 7.5, damage: 40 },
+      { kind: "teleport", name: "Passo da Neve", cmd: "dd_k" },
+      { kind: "divekick", name: "Avalanche", cmd: "qcf_k", damage: 55 },
+    ],
+    super: { kind: "rush", name: "Mil Flocos", cmd: "super_p", damage: 220 },
+  },
+  {
+    id: "volt",
+    name: "Volt",
+    bio: "Boxeador da periferia que canaliza eletricidade nos punhos.",
+    H: 97,
+    build: 1.12,
+    look: {
+      skin: "#A0663E", top: "#A0663E", pants: "#7C3AED", belt: "#FDE047", gloves: "#FDE047",
+      shoes: "#F8FAFC", hair: "topknot", hairColor: "#0B0B0F", headband: null, sleeves: false, energy: "#FDE047",
+    },
+    style: { body: "#7C3AED", accent: "#FDE047", skin: "#A0663E", trim: "#F8FAFC", energy: "#FDE047" },
+    stats: { life: 1000, attack: 108, defence: 98, walkF: 2.6, walkB: -2.3, runF: 5, jumpY: -8.2 },
+    poses: {
+      stand1: { torso: -78, armF: [40, -75], armB: [80, -80], legF: [64, 98], legB: [118, 96] },
+      stand2: { torso: -76, armF: [42, -72], armB: [82, -78], legF: [66, 98], legB: [116, 96], hipX: 1 },
+      stand3: { torso: -78, armF: [44, -70], armB: [84, -76], legF: [64, 100], legB: [118, 96], hipX: 2 },
+    },
+    specials: [
+      { kind: "dash", name: "Direto Relâmpago", cmd: "qcf_p", damage: 75, pose: "dashPunch", speed: 7.5 },
+      { kind: "rising", name: "Gancho Trovão", cmd: "dp_p", damage: 100 },
+      { kind: "projectile", name: "Faísca", cmd: "qcb_p", proj: "orb", speed: 3, damage: 55, removetime: 45 },
+    ],
+    super: { kind: "rush", name: "Tempestade de Socos", cmd: "super_p", damage: 250 },
+  },
+  {
+    id: "sombra",
+    name: "Sombra",
+    bio: "Monge que trocou a luz pela sombra. Controla o espaço de longe.",
+    H: 100,
+    build: 0.95,
+    look: {
+      skin: "#D6C2B0", top: "#3B0764", pants: "#1E1B4B", belt: "#A855F7", gloves: "#D6C2B0",
+      shoes: "#1E1B4B", hair: "long", hairColor: "#E5E7EB", headband: null, sleeves: true, energy: "#A855F7",
+    },
+    style: { body: "#3B0764", accent: "#A855F7", skin: "#D6C2B0", trim: "#E5E7EB", energy: "#A855F7" },
+    stats: { life: 980, attack: 98, defence: 100, walkF: 2.2, walkB: -2.2, runF: 4.2, jumpY: -8.4 },
+    specials: [
+      { kind: "projectile", name: "Orbe Sombrio", cmd: "qcf_p", proj: "orb", speed: 2.6, damage: 70 },
+      { kind: "dash", name: "Deslize", cmd: "qcf_k", damage: 60, pose: "sweep1", speed: 6.5, low: true },
+      { kind: "projectile", name: "Maré Negra", cmd: "qcb_p", proj: "wave", speed: 3.6, damage: 55, low: true },
+    ],
+    super: { kind: "beam", name: "Eclipse", cmd: "super_p", damage: 250 },
+  },
+];

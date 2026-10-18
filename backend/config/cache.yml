@@ -1,0 +1,14 @@
+# Solid Cache — tabela solid_cache_entries no banco primário (ADR 0001).
+default: &default
+  store_options:
+    max_size: <%= 256.megabytes %>
+    namespace: <%= Rails.env %>
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default

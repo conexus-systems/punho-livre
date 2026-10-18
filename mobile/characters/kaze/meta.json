@@ -1,0 +1,23 @@
+{
+  "id": "kaze",
+  "name": "Kaze",
+  "bio": "Carateca andarilho que domina o vento. Equilibrado e direto.",
+  "specials": [
+    {
+      "name": "Kaze Ha",
+      "cmd": "qcf_p"
+    },
+    {
+      "name": "Tatsu Agito",
+      "cmd": "dp_p"
+    },
+    {
+      "name": "Senpu",
+      "cmd": "qcb_k"
+    }
+  ],
+  "super": {
+    "name": "Shinku Kaze",
+    "cmd": "super_p"
+  }
+}

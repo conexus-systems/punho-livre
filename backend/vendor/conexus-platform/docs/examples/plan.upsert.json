@@ -1,0 +1,20 @@
+{
+  "id": "evt_550e8400-e29b-41d4-a716-446655440002",
+  "type": "plan.upsert",
+  "created_at": "2026-09-05T18:05:00Z",
+  "data": {
+    "plan_id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+    "product_slug": "public-mock-exams",
+    "slug": "premium-monthly",
+    "name": "Premium Mensal",
+    "currency": "BRL",
+    "amount_cents": 4990,
+    "interval": "month",
+    "interval_count": 1,
+    "active": true,
+    "gateway_price_ids": {
+      "mercadopago": "mp_preapproval_plan_abc",
+      "stripe": "price_1ABCxyz"
+    }
+  }
+}

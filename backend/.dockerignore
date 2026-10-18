@@ -1,0 +1,15 @@
+/.git/
+/.gitignore
+/.bundle
+/vendor/bundle
+/.env*
+/config/master.key
+/config/credentials/*.key
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
+/tmp/pids/*
+!/tmp/pids/.keep
+/spec
+/coverage

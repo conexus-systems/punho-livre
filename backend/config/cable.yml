@@ -1,0 +1,18 @@
+# Solid Cable no banco primário (sem Redis — ADR 0001). Sem connects_to:
+# solid_cable_messages está no mesmo banco, então broadcasts feitos por jobs
+# ou por outro processo Puma chegam a todas as conexões.
+development:
+  adapter: solid_cable
+  polling_interval: 0.1.seconds
+  message_retention: 1.day
+
+test:
+  adapter: test
+
+# polling_interval baixo: inputs de luta são relayados por aqui (rollback
+# netcode tolera alguns ms, mas não 1 s).
+production:
+  adapter: solid_cable
+  polling_interval: <%= ENV.fetch("SOLID_CABLE_POLLING_INTERVAL", "0.05").to_f %>.seconds
+  message_retention: 1.hour
+  autotrim: true

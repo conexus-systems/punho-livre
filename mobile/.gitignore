@@ -1,0 +1,11 @@
+node_modules/
+.expo/
+dist/
+*.jks
+.env
+.env.*
+!/.env.example
+/ios
+/android
+*.pack.json
+coverage/

@@ -1,0 +1,13 @@
+#!/bin/bash -e
+
+# Enable jemalloc for reduced memory usage and latency.
+if [ -z "${LD_PRELOAD+x}" ] && [ -f /usr/local/lib/libjemalloc.so ]; then
+  export LD_PRELOAD=/usr/local/lib/libjemalloc.so
+fi
+
+# Ao subir o servidor web, cria/migra o banco (inclui tabelas Solid Queue/Cache/Cable).
+if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
+  ./bin/rails db:prepare
+fi
+
+exec "${@}"

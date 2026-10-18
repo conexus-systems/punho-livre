@@ -1,0 +1,23 @@
+{
+  "id": "yuki",
+  "name": "Yuki",
+  "bio": "Ninja do clã da neve. Frágil, rápida e difícil de acompanhar.",
+  "specials": [
+    {
+      "name": "Kunai de Gelo",
+      "cmd": "qcf_p"
+    },
+    {
+      "name": "Passo da Neve",
+      "cmd": "dd_k"
+    },
+    {
+      "name": "Avalanche",
+      "cmd": "qcf_k"
+    }
+  ],
+  "super": {
+    "name": "Mil Flocos",
+    "cmd": "super_p"
+  }
+}

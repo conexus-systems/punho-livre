@@ -1,0 +1,23 @@
+{
+  "id": "brasa",
+  "name": "Brasa",
+  "bio": "Capoeirista de Salvador; ginga imprevisível e chutes em chamas.",
+  "specials": [
+    {
+      "name": "Meia Lua",
+      "cmd": "qcb_k"
+    },
+    {
+      "name": "Martelo",
+      "cmd": "dp_k"
+    },
+    {
+      "name": "Armada",
+      "cmd": "qcf_k"
+    }
+  ],
+  "super": {
+    "name": "Roda de Fogo",
+    "cmd": "super_k"
+  }
+}

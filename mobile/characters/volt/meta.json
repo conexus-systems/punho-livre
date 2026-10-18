@@ -1,0 +1,23 @@
+{
+  "id": "volt",
+  "name": "Volt",
+  "bio": "Boxeador da periferia que canaliza eletricidade nos punhos.",
+  "specials": [
+    {
+      "name": "Direto Relâmpago",
+      "cmd": "qcf_p"
+    },
+    {
+      "name": "Gancho Trovão",
+      "cmd": "dp_p"
+    },
+    {
+      "name": "Faísca",
+      "cmd": "qcb_p"
+    }
+  ],
+  "super": {
+    "name": "Tempestade de Socos",
+    "cmd": "super_p"
+  }
+}

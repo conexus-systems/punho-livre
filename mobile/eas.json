@@ -1,0 +1,40 @@
+{
+  "cli": { "version": ">= 16.0.0", "appVersionSource": "remote" },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://mugen-arena.conexus-systems.com.br",
+        "EXPO_PUBLIC_AUTH_URL": "https://auth.conexus-systems.com.br",
+        "EXPO_PUBLIC_PAYMENTS_URL": "https://payments.conexus-systems.com.br",
+        "EXPO_PUBLIC_ADS_TEST": "1"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://mugen-arena.conexus-systems.com.br",
+        "EXPO_PUBLIC_AUTH_URL": "https://auth.conexus-systems.com.br",
+        "EXPO_PUBLIC_PAYMENTS_URL": "https://payments.conexus-systems.com.br",
+        "EXPO_PUBLIC_ADS_TEST": "1"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": { "buildType": "app-bundle" },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://mugen-arena.conexus-systems.com.br",
+        "EXPO_PUBLIC_AUTH_URL": "https://auth.conexus-systems.com.br",
+        "EXPO_PUBLIC_PAYMENTS_URL": "https://payments.conexus-systems.com.br",
+        "EXPO_PUBLIC_ADS_TEST": "0"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": { "track": "internal", "releaseStatus": "draft" }
+    }
+  }
+}

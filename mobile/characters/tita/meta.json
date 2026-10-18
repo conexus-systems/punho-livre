@@ -1,0 +1,23 @@
+{
+  "id": "tita",
+  "name": "Titã",
+  "bio": "Lutador de vale-tudo do interior. Lento, mas cada golpe derruba.",
+  "specials": [
+    {
+      "name": "Terremoto",
+      "cmd": "dd_p"
+    },
+    {
+      "name": "Ombrada",
+      "cmd": "qcf_p"
+    },
+    {
+      "name": "Cabeçada",
+      "cmd": "dp_p"
+    }
+  ],
+  "super": {
+    "name": "Fenda Tectônica",
+    "cmd": "super_p"
+  }
+}
