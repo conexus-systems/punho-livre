@@ -49,3 +49,23 @@ Tamanho: sprites ≈ 16 MB (eram ≈ 6 MB); cenários ≈ 1,1 MB.
   tela inteira são ampliadas na CPU; antes eram ~16 ms. Com GPU (navegadores e celulares comuns) essa
   cópia é barata, mas isso **não foi medido**. No app, cada camada é uma imagem do Skia.
 - Pendente: conferir em aparelho real.
+
+## 0.3.1 — animação e impacto
+
+![](screenshots/impacto.png)
+
+- **Mais quadros por golpe** (≈ 40% a mais de sprites): quadros com 4 ticks ou mais, fora do acerto,
+  ganham uma pose intermediária até a seguinte. O tempo de cada golpe e o instante do acerto não mudam;
+  o gerador renumera `AnimElem` / `AnimElemTime` nos estados. Sprites a 2,6 px/unidade para manter o
+  tamanho (≈ 19 MB).
+- **Efeitos de impacto** (`src/game/effects.ts`):
+  - clarão;
+  - estrela de pontas;
+  - rastro do golpe a partir dos médios;
+  - onda de choque nos fortes;
+  - faíscas com gravidade;
+  - escudo azul em arco na defesa;
+  - clarão branco em quem apanha;
+  - poeira ao pousar, cair, correr e rolar.
+- **Versão web**: resolução adaptativa. Se os frames ficam lentos (navegador sem GPU), o canvas cai de 2×
+  para 1,5× e depois para 1×. No Chromium sem GPU deste ambiente, voltou a 60 fps (p50 16,7 ms).

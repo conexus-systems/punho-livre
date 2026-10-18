@@ -78,6 +78,11 @@ test("renderiza cenas de luta", async () => {
       script: (f) => (f === 400 ? [Btn.L | C, 0] : [0, 0]),
     },
     {
+      name: "impacto", a: "lua", b: "volt", stage: "pelourinho", frames: 400 + 12,
+      setup: (w) => { w.fighters[0].x = -20; w.fighters[1].x = 20; },
+      script: (f) => (f === 400 ? [C, 0] : [0, 0]),
+    },
+    {
       name: "just-defend", a: "kaze", b: "volt", stage: "dojo", frames: 400 + 22,
       setup: (w) => { w.fighters[0].x = -16; w.fighters[1].x = 16; },
       script: (f) => (f === 400 ? [C, 0] : f >= 403 ? [0, Btn.R] : [0, 0]),

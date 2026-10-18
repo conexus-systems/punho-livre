@@ -106,7 +106,7 @@ Mesma stack de app da frota (conexus-launcher, multi-miner), adaptada a jogo mul
 | Infra | `platform-infra` (workflows reutilizáveis, GHCR, Terraform LKE em `deploy/terraform/linode`), EAS |
 | Processo | `AGENTS.md`, `HANDOFF.md`, `SKILL.md` + `agents/` + `templates/TASK.md`, `docs/UPDATE_X.Y.Z.md`, release por tag |
 
-Versão atual: **0.3.0** (arte nova) — notas em [docs/UPDATE_0.3.0.md](docs/UPDATE_0.3.0.md) e [docs/UPDATE_0.2.0.md](docs/UPDATE_0.2.0.md) (sistema SNK).
+Versão atual: **0.3.1** (arte nova, animação e impacto) — notas em [docs/UPDATE_0.3.0.md](docs/UPDATE_0.3.0.md) e [docs/UPDATE_0.2.0.md](docs/UPDATE_0.2.0.md) (sistema SNK).
 
 ## CI e deploy
 

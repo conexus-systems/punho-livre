@@ -27,6 +27,7 @@ import { GUARD_MAX, POWER_PER_LEVEL } from "@/src/engine/constants";
 import type { Box, CharacterData, FighterState, GameEvent, ProjectileState, WorldState } from "@/src/engine/types";
 
 import { STAGE_ART } from "./stages.generated";
+import { Effects } from "./effects";
 import { StageCache, stageById, type StageImages } from "./stages";
 
 export interface RenderInput {
@@ -43,15 +44,6 @@ export interface RenderInput {
   debugBoxes?: boolean;
   /** Mensagem central extra (ex.: "AGUARDANDO OPONENTE"). */
   banner?: string | null;
-}
-
-interface Spark {
-  x: number;
-  y: number;
-  level: number;
-  age: number;
-  guard: boolean;
-  color: string;
 }
 
 /** Texto de sistema que sobe da cabeça do lutador. */
@@ -104,7 +96,11 @@ function paint(color: string, alpha = 1): SkPaint {
 }
 
 export class FightRenderer {
-  private sparks: Spark[] = [];
+  private fx = new Effects();
+  /** Clarão branco no lutador que acabou de apanhar (frames restantes). */
+  private flash: [number, number] = [0, 0];
+  /** Estado anterior de cada lutador (para poeira ao pousar, quicar, correr). */
+  private lastState: [number, number] = [-1, -1];
   private pops: Pop[] = [];
   private shake = 0;
   private lifeTrail: [number, number] = [1, 1];
@@ -121,15 +117,12 @@ export class FightRenderer {
     for (const e of events) {
       if (e.kind === "hit" || e.kind === "guard") {
         const owner = world.fighters[e.side];
-        this.sparks.push({
-          x: e.x,
-          y: e.y,
-          level: e.level,
-          age: 0,
-          guard: e.kind === "guard",
-          color: roster[owner.charId]?.style.energy ?? "#FDE047",
-        });
-        if (e.kind === "hit") this.shake = Math.max(this.shake, 3 + e.level * 3);
+        const guard = e.kind === "guard";
+        this.fx.hit(e.x, e.y, e.level, roster[owner.charId]?.style.energy ?? "#FDE047", owner.facing, guard);
+        if (!guard) {
+          this.shake = Math.max(this.shake, 3 + e.level * 3);
+          this.flash[e.side === 0 ? 1 : 0] = 4;
+        }
       } else if (e.kind === "ko") {
         this.shake = 14;
         this.koFlash = 22;
@@ -191,6 +184,17 @@ export class FightRenderer {
       this.superFlash--;
     }
 
+    // poeira ao pousar, cair, correr e rolar
+    for (const f of w.fighters) {
+      const prev = this.lastState[f.side];
+      if (f.stateNo !== prev) {
+        if (f.stateNo === 52) this.fx.dust(f.x, 4);
+        else if (f.stateNo === 5100) this.fx.dust(f.x, 10);
+        else if (f.stateNo === 100 || f.stateNo === 6000 || f.stateNo === 6001) this.fx.dust(f.x, 5, -f.facing);
+        this.lastState[f.side] = f.stateNo;
+      }
+    }
+
     // sombras
     const shadow = this.solid("#000000", 0.28);
     for (const f of w.fighters) {
@@ -207,7 +211,7 @@ export class FightRenderer {
     }
     for (const p of w.projectiles) this.drawProjectile(c, p, input, sx, sy, k);
     if (input.debugBoxes) for (const f of w.fighters) this.drawBoxes(c, f, input, sx, sy, k);
-    this.drawSparks(c, sx, sy, k);
+    this.fx.draw(c, sx, sy, k);
     this.drawPops(c, input, sx, sy);
     if (this.koFlash > 0) {
       c.drawRect(Skia.XYWHRect(0, 0, width, height), paint("#FFFFFF", Math.min(0.85, this.koFlash / 22)));
@@ -231,6 +235,7 @@ export class FightRenderer {
     oy: number,
     k: number,
     alpha = 1,
+    over?: SkPaint,
   ): boolean {
     if (group < 0) return true; // frame vazio (invisível)
     const sheet = ch.sprites;
@@ -248,7 +253,7 @@ export class FightRenderer {
       img,
       Skia.XYWHRect(fx, fy, fw, fh),
       Skia.XYWHRect((ox - ax / scale) * k, (oy - ay / scale) * k, (fw / scale) * k, (fh / scale) * k),
-      this.solid("#FFFFFF", alpha),
+      over ?? this.solid("#FFFFFF", alpha),
     );
     c.restore();
     return true;
@@ -270,6 +275,14 @@ export class FightRenderer {
     const blink = f.notHitBy > 0 && f.stateNo !== 5120 && (f.stateNo < 6000 || f.stateNo > 6070) && this.frame % 4 < 2 ? 0.55 : 1;
     const ok = this.drawSprite(c, ch, input.atlases[f.charId], frame.group, frame.index, sx(f.x), sy(f.y), flip, frame.ox, frame.oy, k, blink);
     if (!ok) this.drawBoxBody(c, f, ch, frame.clsn2, sx, sy, k);
+    // clarão de quem apanhou: o mesmo sprite somado por cima
+    if (ok && this.flash[f.side] > 0) {
+      const over = Skia.Paint();
+      over.setBlendMode(BlendMode.Plus);
+      over.setAlphaf(0.18 * this.flash[f.side]);
+      this.drawSprite(c, ch, input.atlases[f.charId], frame.group, frame.index, sx(f.x), sy(f.y), flip, frame.ox, frame.oy, k, 1, over);
+      this.flash[f.side]--;
+    }
   }
 
   /** Brilho do modo MAX em volta do lutador. */
@@ -375,43 +388,6 @@ export class FightRenderer {
       }
     }
     c.drawLine(sx(f.x) - 4, sy(f.y), sx(f.x) + 4, sy(f.y), stroke("#FACC15"));
-  }
-
-  private drawSparks(c: SkCanvas, sx: (x: number) => number, sy: (y: number) => number, k: number): void {
-    const keep: Spark[] = [];
-    for (const s of this.sparks) {
-      s.age++;
-      const life = 14 + s.level * 4;
-      if (s.age > life) continue;
-      keep.push(s);
-      const t = s.age / life;
-      const r = (8 + s.level * 6) * k * (0.4 + t);
-      const alpha = 1 - t;
-      const center = { x: sx(s.x), y: sy(s.y) };
-      const glow = Skia.Paint();
-      glow.setBlendMode(BlendMode.Plus);
-      glow.setShader(
-        Skia.Shader.MakeRadialGradient(
-          center,
-          r,
-          [Skia.Color(s.guard ? "#93C5FD" : "#FFFFFF"), Skia.Color(s.guard ? "#3B82F6" : s.color), Skia.Color("transparent")],
-          [0, 0.35, 1],
-          TileMode.Clamp,
-        ),
-      );
-      glow.setAlphaf(alpha);
-      c.drawCircle(center.x, center.y, r, glow);
-      const ray = paint(s.guard ? "#DBEAFE" : "#FEF9C3", alpha);
-      ray.setStrokeWidth(2 * k * (1 - t));
-      const n = 6 + s.level * 2;
-      for (let i = 0; i < n; i++) {
-        const a = (i / n) * Math.PI * 2 + s.x;
-        const r0 = r * 0.3;
-        const r1 = r * (1.1 + (i % 2) * 0.4);
-        c.drawLine(center.x + Math.cos(a) * r0, center.y + Math.sin(a) * r0, center.x + Math.cos(a) * r1, center.y + Math.sin(a) * r1, ray);
-      }
-    }
-    this.sparks = keep;
   }
 
   private drawPops(c: SkCanvas, input: RenderInput, sx: (x: number) => number, sy: (y: number) => number): void {

@@ -80,7 +80,7 @@ poweradd = 15
 
 [State 210, golpe]
 type = HitDef
-trigger1 = AnimElem = 2
+trigger1 = AnimElem = 3
 attr = S, NA
 animtype = Medium
 damage = 45, 6
@@ -112,7 +112,7 @@ poweradd = 24
 
 [State 220, golpe]
 type = HitDef
-trigger1 = AnimElem = 2
+trigger1 = AnimElem = 3
 attr = S, NA
 animtype = Hard
 damage = 72, 9
@@ -176,7 +176,7 @@ poweradd = 17
 
 [State 240, golpe]
 type = HitDef
-trigger1 = AnimElem = 2
+trigger1 = AnimElem = 3
 attr = S, NA
 animtype = Medium
 damage = 50, 7
@@ -208,7 +208,7 @@ poweradd = 27
 
 [State 250, golpe]
 type = HitDef
-trigger1 = AnimElem = 2
+trigger1 = AnimElem = 3
 attr = S, NA
 animtype = Hard
 damage = 82, 10
@@ -272,7 +272,7 @@ poweradd = 23
 
 [State 410, golpe]
 type = HitDef
-trigger1 = AnimElem = 2
+trigger1 = AnimElem = 3
 attr = C, NA
 animtype = Hard
 damage = 68, 8
@@ -336,7 +336,7 @@ poweradd = 20
 
 [State 440, golpe]
 type = HitDef
-trigger1 = AnimElem = 2
+trigger1 = AnimElem = 3
 attr = C, NA
 animtype = Hard
 damage = 60, 8
@@ -442,7 +442,7 @@ poweradd = 24
 
 [State 640, golpe]
 type = HitDef
-trigger1 = AnimElem = 2
+trigger1 = AnimElem = 3
 attr = A, NA
 animtype = Hard
 damage = 72, 8
@@ -468,7 +468,7 @@ poweradd = 40
 
 [State 1000, projetil]
 type = Projectile
-trigger1 = AnimElem = 2
+trigger1 = AnimElem = 3
 projid = 1000
 projanim = 1050
 projhitanim = 1060
@@ -505,17 +505,17 @@ poweradd = 40
 
 [State 1100, corre]
 type = VelSet
-trigger1 = AnimElemTime(2) >= 0 && AnimElemTime(3) < 0
+trigger1 = AnimElemTime(3) >= 0 && AnimElemTime(4) < 0
 x = 7
 
 [State 1100, freia]
 type = VelSet
-trigger1 = AnimElem = 3
+trigger1 = AnimElem = 4
 x = 0
 
 [State 1100, golpe]
 type = HitDef
-trigger1 = AnimElem = 2
+trigger1 = AnimElem = 3
 attr = S, SA
 animtype = Hard
 damage = 82, 10
@@ -606,15 +606,15 @@ time = 20
 
 [State 3000, avanca]
 type = VelSet
-trigger1 = AnimElemTime(2) >= 0 && AnimElemTime(6) < 0
+trigger1 = AnimElemTime(3) >= 0 && AnimElemTime(7) < 0
 x = 3.6
 
 [State 3000, combo]
 type = HitDef
-trigger1 = AnimElem = 2
-trigger2 = AnimElem = 3
-trigger3 = AnimElem = 4
-trigger4 = AnimElem = 5
+trigger1 = AnimElem = 3
+trigger2 = AnimElem = 4
+trigger3 = AnimElem = 5
+trigger4 = AnimElem = 6
 attr = S, HA
 animtype = Medium
 damage = 32, 2
@@ -631,7 +631,7 @@ fall = 0
 
 [State 3000, final]
 type = HitDef
-trigger1 = AnimElem = 6
+trigger1 = AnimElem = 7
 attr = S, HA
 animtype = Hard
 damage = 137, 10

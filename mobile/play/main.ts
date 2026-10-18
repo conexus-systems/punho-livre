@@ -554,8 +554,28 @@ const skCanvas = new Canvas2D(ctx2d);
 let cssW = 0;
 let cssH = 0;
 
+/**
+ * Resolução adaptativa: começa na do aparelho (até 2×) e, se os frames ficarem
+ * lentos (navegador sem GPU para o canvas), cai para 1,5× e depois 1×.
+ */
+let maxDpr = 2;
+let slowFrames = 0;
+let sampledFrames = 0;
+
+function adapt(dt: number) {
+  sampledFrames++;
+  if (dt > 26) slowFrames++;
+  if (sampledFrames < 90) return;
+  if (slowFrames > 45 && maxDpr > 1) {
+    maxDpr = maxDpr > 1.5 ? 1.5 : 1;
+    resize();
+  }
+  sampledFrames = 0;
+  slowFrames = 0;
+}
+
 function resize() {
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = Math.min(maxDpr, window.devicePixelRatio || 1);
   cssW = canvas.clientWidth;
   cssH = canvas.clientHeight;
   canvas.width = Math.round(cssW * dpr);
@@ -576,6 +596,7 @@ function frame(t: number) {
     return;
   }
   if (last === 0) last = t;
+  if (!paused) adapt(t - last);
   acc += Math.min(100, t - last);
   last = t;
   let steps = 0;

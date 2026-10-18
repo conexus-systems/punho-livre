@@ -19,7 +19,7 @@ import { boxes, proportions, solve } from "./rig.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.resolve(here, "../../characters");
-const SCALE = 3; // pixels por unidade do MUGEN
+const SCALE = 2.6; // pixels por unidade do MUGEN
 const H_ = true; // marca frame ativo (Clsn1)
 
 // --------------------------------------------------------- animações
@@ -663,6 +663,65 @@ function blend(a, b) {
   return out;
 }
 
+// ------------------------------------------------- quadros intermediários
+
+const plainPose = (p) => typeof p === "string" && !p.startsWith("proj:") && p !== "__empty__" && !p.includes("~");
+
+/** Pose de descanso para onde o fim do golpe volta (o estado seguinte). */
+function restPose(id) {
+  if (id >= 200 && id < 300) return "stand1";
+  if (id >= 400 && id < 500) return "crouch1";
+  return null;
+}
+
+/**
+ * Divide os quadros longos (≥ 4 ticks, sem acerto) dos golpes em dois: a pose
+ * e o meio do caminho até a próxima. O tempo total e o início de cada quadro
+ * original não mudam; devolve, por animação, o novo número (1-based) de cada
+ * elemento antigo, para renumerar AnimElem/AnimElemTime nos estados.
+ */
+function tweenAnims(anims) {
+  const maps = {};
+  for (const key of Object.keys(anims)) {
+    const id = Number(key);
+    const tweenable = (id >= 190 && id < 200) || (id >= 200 && id < 700) || (id >= 1000 && id < 5000) || id === 5120 || (id >= 6000 && id < 7000);
+    if (!tweenable) continue;
+    const { frames, loopStart } = anims[key];
+    const out = [];
+    const map = [];
+    frames.forEach((f, i) => {
+      map.push(out.length + 1);
+      const [pose, time, active] = f;
+      let next = frames[i + 1]?.[0];
+      if (next === undefined) next = loopStart > 0 ? frames[loopStart][0] : restPose(id);
+      if (!active && time >= 4 && plainPose(pose) && plainPose(next) && next !== pose) {
+        const a = Math.ceil(time / 2);
+        out.push([pose, a], [`${pose}~${next}`, time - a]);
+      } else {
+        out.push(f);
+      }
+    });
+    if (out.length === frames.length) continue;
+    anims[key] = { frames: out, loopStart: loopStart > 0 ? map[loopStart] - 1 : 0 };
+    maps[id] = map;
+  }
+  return maps;
+}
+
+/** Ajusta AnimElem = n e AnimElemTime(n) de cada Statedef à animação dele. */
+function renumberElems(text, maps) {
+  return text
+    .split(/(?=\[Statedef )/)
+    .map((block) => {
+      const anim = /\nanim = (\d+)/.exec(block);
+      const map = anim ? maps[Number(anim[1])] : null;
+      if (!map) return block;
+      const to = (n) => map[Number(n) - 1] ?? n;
+      return block.replace(/AnimElem = (\d+)/g, (_, n) => `AnimElem = ${to(n)}`).replace(/AnimElemTime\((\d+)\)/g, (_, n) => `AnimElemTime(${to(n)})`);
+    })
+    .join("");
+}
+
 function generate(ch) {
   const P = proportions(ch.H, ch.build);
   const poses = { ...POSES, ...(ch.poses ?? {}) };
@@ -683,6 +742,10 @@ function generate(ch) {
   const sup = SUPERS[ch.super.kind](ch.super, 3000, ch);
   Object.assign(anims, sup.anims);
   stateTexts.push(sup.states);
+
+  // quadros intermediários nos golpes; renumera AnimElem nos estados
+  const elemMaps = tweenAnims(anims);
+  const cnsText = renumberElems(stateTexts.join("\n\n"), elemMaps);
 
   // sprites: um por pose/efeito usado
   const spriteKeys = [];
@@ -727,7 +790,7 @@ function generate(ch) {
   const dir = path.join(OUT, ch.id);
   mkdirSync(dir, { recursive: true });
   writeFileSync(path.join(dir, `${ch.id}.def`), defFile(ch));
-  writeFileSync(path.join(dir, `${ch.id}.cns`), `${cnsHeader(ch)}\n${stateTexts.join("\n\n")}\n`);
+  writeFileSync(path.join(dir, `${ch.id}.cns`), `${cnsHeader(ch)}\n${cnsText}\n`);
   writeFileSync(path.join(dir, `${ch.id}.cmd`), cmdFile(ch, specials, ch.super));
   writeFileSync(path.join(dir, `${ch.id}.air`), air);
   pages.forEach((pg, i) => writeFileSync(path.join(dir, `sprites${i}.png`), pg.toPNG()));

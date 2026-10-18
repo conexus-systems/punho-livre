@@ -13,6 +13,33 @@ type Shader =
 
 export const TileMode = { Clamp: 0 } as const;
 export const PaintStyle = { Fill: 0, Stroke: 1 } as const;
+export const StrokeCap = { Butt: 0, Round: 1, Square: 2 } as const;
+
+/** SkPath mínimo: linhas e arcos, desenhado com Path2D. */
+export class Path {
+  readonly p = new Path2D();
+  moveTo(x: number, y: number) {
+    this.p.moveTo(x, y);
+    return this;
+  }
+  lineTo(x: number, y: number) {
+    this.p.lineTo(x, y);
+    return this;
+  }
+  close() {
+    this.p.closePath();
+    return this;
+  }
+  detach() {
+    return this;
+  }
+  /** Arco do oval em graus (início, varredura), como no Skia. */
+  addArc(r: Rect, start: number, sweep: number) {
+    const rad = (d: number) => (d * Math.PI) / 180;
+    this.p.ellipse(r.x + r.width / 2, r.y + r.height / 2, r.width / 2, r.height / 2, 0, rad(start), rad(start + sweep), sweep < 0);
+    return this;
+  }
+}
 export const BlendMode = { Plus: "plus" } as const;
 
 export class Paint {
@@ -20,6 +47,7 @@ export class Paint {
   alpha = 1;
   style = 0;
   strokeWidth = 0;
+  cap: CanvasLineCap = "butt";
   shader: Shader | null = null;
   blend: string | null = null;
   setAntiAlias(_aa: boolean) {}
@@ -31,6 +59,9 @@ export class Paint {
   }
   setStyle(s: number) {
     this.style = s;
+  }
+  setStrokeCap(c: number) {
+    this.cap = c === 1 ? "round" : c === 2 ? "square" : "butt";
   }
   setStrokeWidth(w: number) {
     this.strokeWidth = w;
@@ -104,6 +135,7 @@ export class PictureRecorder {
 
 export const Skia = {
   PictureRecorder: () => new PictureRecorder(),
+  PathBuilder: { Make: () => new Path() },
   Paint: () => new Paint(),
   Color: (c: string) => (c === "transparent" ? "rgba(0,0,0,0)" : c),
   XYWHRect: (x: number, y: number, width: number, height: number): Rect => ({ x, y, width, height }),
@@ -138,6 +170,7 @@ export class Canvas2D {
     if (stroke) {
       ctx.strokeStyle = st;
       ctx.lineWidth = p.strokeWidth > 0 ? p.strokeWidth : 1;
+      ctx.lineCap = p.cap;
     } else {
       ctx.fillStyle = st;
     }
@@ -197,8 +230,15 @@ export class Canvas2D {
     for (const [name, args] of pic.ops) (this[name] as (...a: unknown[]) => void)(...args);
   }
 
+  drawPath(path: Path, p: Paint) {
+    if (this.apply(p)) this.ctx.stroke(path.p);
+    else this.ctx.fill(path.p);
+    this.done();
+  }
+
   drawImageRect(img: CanvasImageSource, src: Rect, dst: Rect, p: Paint) {
     this.ctx.globalAlpha = p.alpha;
+    if (p.blend === "plus") this.ctx.globalCompositeOperation = "lighter";
     this.ctx.drawImage(img, src.x, src.y, src.width, src.height, dst.x, dst.y, dst.width, dst.height);
     this.done();
   }
