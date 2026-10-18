@@ -1,0 +1,27 @@
+{
+  "id": "kenshi",
+  "name": "Kenshi",
+  "bio": "Espadachim errante que corta o vento com a lâmina. Alcance longo, golpes secos.",
+  "specials": [
+    {
+      "name": "Kamaitachi",
+      "cmd": "qcf_p"
+    },
+    {
+      "name": "Iaigiri",
+      "cmd": "qcb_p"
+    },
+    {
+      "name": "Tsubame Gaeshi",
+      "cmd": "dp_p"
+    }
+  ],
+  "super": {
+    "name": "Mil Cortes",
+    "cmd": "super_p"
+  },
+  "quotes": [
+    "Um corte. Era só o que precisava.",
+    "A lâmina descansa; o caminho continua."
+  ]
+}

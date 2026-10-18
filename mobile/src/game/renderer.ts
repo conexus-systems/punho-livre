@@ -1,7 +1,11 @@
 /**
  * Desenha um frame do mundo num SkCanvas (via PictureRecorder a cada frame).
  * Estado visual que não afeta a simulação (faíscas, tremida, barras com
- * atraso) fica aqui, fora do WorldState determinístico.
+ * atraso, textos do sistema) fica aqui, fora do WorldState determinístico.
+ *
+ * HUD no estilo KOF: vida com rastro e piscando no vermelho, medidor de
+ * defesa, estoques de power com o modo MAX, retratos da equipe e textos de
+ * sistema (COUNTER, JUST DEFEND, GUARD CRUSH...).
  */
 
 import { Platform } from "react-native";
@@ -19,15 +23,17 @@ import {
 
 import { currentFrame, worldBox } from "@/src/engine/anim";
 import { getAnim } from "@/src/engine/character";
+import { GUARD_MAX, POWER_PER_LEVEL } from "@/src/engine/constants";
 import type { Box, CharacterData, FighterState, GameEvent, ProjectileState, WorldState } from "@/src/engine/types";
 
-import { drawStage, stageById, type StagePainter } from "./stages";
+import { StageCache, stageById } from "./stages";
 
 export interface RenderInput {
   world: WorldState;
   roster: Record<string, CharacterData>;
   atlases: Record<string, SkImage[]>;
-  names: [string, string];
+  /** Nomes no HUD (1 contra 1); sem isso, ou nas equipes, usa o nome do personagem. */
+  names?: [string, string];
   width: number;
   height: number;
   /** Mostrar caixas Clsn (modo treino). */
@@ -45,12 +51,31 @@ interface Spark {
   color: string;
 }
 
+/** Texto de sistema que sobe da cabeça do lutador. */
+interface Pop {
+  text: string;
+  x: number;
+  y: number;
+  age: number;
+  color: string;
+}
+
+const POP_TEXT: Partial<Record<GameEvent["kind"], [string, string]>> = {
+  counter: ["COUNTER", "#F97316"],
+  justdefend: ["JUST DEFEND", "#38BDF8"],
+  guardcrush: ["GUARD CRUSH", "#EF4444"],
+  max: ["MAX", "#FACC15"],
+  guardcancel: ["GUARD CANCEL", "#A3E635"],
+  tech: ["ESCAPE", "#E5E7EB"],
+};
+
 const fontFamily = Platform.select({ ios: "Helvetica Neue", default: "sans-serif-condensed" });
 type Fonts = { small: SkFont; medium: SkFont; big: SkFont; huge: SkFont };
 let fonts: Fonts | null | undefined;
+let fontsFor = 0;
 /** Fontes do sistema para o HUD; null quando não há (ex.: navegador sem fontes do Skia) — o HUD desenha sem texto. */
 function getFonts(h: number): Fonts | null {
-  if (fonts === undefined) {
+  if (fonts === undefined || (fonts !== null && fontsFor !== h)) {
     try {
       fonts = {
         small: matchFont({ fontFamily, fontSize: Math.round(h * 0.035), fontWeight: "bold" }),
@@ -58,6 +83,7 @@ function getFonts(h: number): Fonts | null {
         big: matchFont({ fontFamily, fontSize: Math.round(h * 0.075), fontWeight: "bold" }),
         huge: matchFont({ fontFamily, fontSize: Math.round(h * 0.15), fontWeight: "bold" }),
       };
+      fontsFor = h;
     } catch {
       fonts = null;
     }
@@ -65,6 +91,7 @@ function getFonts(h: number): Fonts | null {
   return fonts;
 }
 
+/** Paint novo (para quem vai mexer nele: traço, shader, alfa variável). */
 function paint(color: string, alpha = 1): SkPaint {
   const p = Skia.Paint();
   p.setAntiAlias(true);
@@ -75,10 +102,17 @@ function paint(color: string, alpha = 1): SkPaint {
 
 export class FightRenderer {
   private sparks: Spark[] = [];
+  private pops: Pop[] = [];
   private shake = 0;
   private lifeTrail: [number, number] = [1, 1];
   private superFlash = 0;
+  private superColor = "#000000";
+  private koFlash = 0;
   private frame = 0;
+  private stage = new StageCache();
+  /** Paints de cor sólida reaproveitados entre frames (só leitura: nunca altere o que `solid` devolve). */
+  private solids = new Map<string, SkPaint>();
+  private gradients = new Map<string, SkPaint>();
 
   addEvents(events: GameEvent[], world: WorldState, roster: Record<string, CharacterData>): void {
     for (const e of events) {
@@ -95,10 +129,43 @@ export class FightRenderer {
         if (e.kind === "hit") this.shake = Math.max(this.shake, 3 + e.level * 3);
       } else if (e.kind === "ko") {
         this.shake = 14;
+        this.koFlash = 22;
       } else if (e.kind === "super") {
         this.superFlash = 30;
+        this.superColor = e.level >= 3 ? "#7F1D1D" : "#000000";
+        if (e.level >= 3) this.pops.push({ text: "MAX SUPER", x: e.x, y: e.y - 20, age: 0, color: "#FACC15" });
+      } else {
+        const pop = POP_TEXT[e.kind];
+        if (pop) this.pops.push({ text: pop[0], x: e.x, y: e.y, age: 0, color: pop[1] });
+        if (e.kind === "max" || e.kind === "guardcrush") this.shake = Math.max(this.shake, 6);
+        if (e.kind === "max") {
+          this.superFlash = 18;
+          this.superColor = "#78350F";
+        }
       }
     }
+  }
+
+  private solid(color: string, alpha = 1): SkPaint {
+    const key = alpha < 1 ? `${color}/${alpha.toFixed(2)}` : color;
+    let p = this.solids.get(key);
+    if (!p) {
+      p = paint(color, alpha);
+      this.solids.set(key, p);
+    }
+    return p;
+  }
+
+  private vGradient(top: number, bottom: number, from: string, to: string): SkPaint {
+    const key = `${top}:${bottom}:${from}:${to}`;
+    let p = this.gradients.get(key);
+    if (!p) {
+      p = Skia.Paint();
+      p.setShader(Skia.Shader.MakeLinearGradient({ x: 0, y: top }, { x: 0, y: bottom }, [Skia.Color(from), Skia.Color(to)], null, TileMode.Clamp));
+      if (this.gradients.size > 64) this.gradients.clear();
+      this.gradients.set(key, p);
+    }
+    return p;
   }
 
   draw(c: SkCanvas, input: RenderInput): void {
@@ -111,38 +178,38 @@ export class FightRenderer {
     if (this.shake < 0.4) this.shake = 0;
 
     const cam = w.cameraX;
-    const sx = (x: number, parallax = 1) => (x - cam * parallax) * k + width / 2 + shakeX;
+    const sx = (x: number) => (x - cam) * k + width / 2 + shakeX;
     const sy = (y: number) => groundPx + y * k;
-    const painter: StagePainter = {
-      sx,
-      sy,
-      s: (u) => u * k,
-      width,
-      height,
-      cam,
-      frame: this.frame,
-      paint,
-    };
 
-    drawStage(c, stageById(w.stageId), painter);
+    this.stage.draw(c, stageById(w.stageId), { k, width, height, groundPx, cam, shakeX, frame: this.frame });
 
     if (this.superFlash > 0) {
-      c.drawRect(Skia.XYWHRect(0, 0, width, height), paint("#000000", Math.min(0.55, this.superFlash / 40)));
+      c.drawRect(Skia.XYWHRect(0, 0, width, height), paint(this.superColor, Math.min(0.55, this.superFlash / 40)));
       this.superFlash--;
     }
 
     // sombras
+    const shadow = this.solid("#000000", 0.28);
     for (const f of w.fighters) {
       const shadowW = 34 * k * Math.max(0.4, 1 + f.y / 200);
-      c.drawOval(Skia.XYWHRect(sx(f.x) - shadowW / 2, sy(0) - 4 * k, shadowW, 8 * k), paint("#000000", 0.28));
+      c.drawOval(Skia.XYWHRect(sx(f.x) - shadowW / 2, sy(0) - 4 * k, shadowW, 8 * k), shadow);
     }
 
     // quem está atacando fica na frente
-    const order = [...w.fighters].sort((a, b) => (a.moveType === "A" ? 1 : 0) - (b.moveType === "A" ? 1 : 0));
-    for (const f of order) this.drawFighter(c, f, input, sx, sy, k);
+    const [f0, f1] = w.fighters;
+    const order = f0.moveType === "A" && f1.moveType !== "A" ? [f1, f0] : [f0, f1];
+    for (const f of order) {
+      if (f.maxTime > 0) this.drawAura(c, f, input, sx, sy, k);
+      this.drawFighter(c, f, input, sx, sy, k);
+    }
     for (const p of w.projectiles) this.drawProjectile(c, p, input, sx, sy, k);
     if (input.debugBoxes) for (const f of w.fighters) this.drawBoxes(c, f, input, sx, sy, k);
     this.drawSparks(c, sx, sy, k);
+    this.drawPops(c, input, sx, sy);
+    if (this.koFlash > 0) {
+      c.drawRect(Skia.XYWHRect(0, 0, width, height), paint("#FFFFFF", Math.min(0.85, this.koFlash / 22)));
+      this.koFlash--;
+    }
     this.drawHud(c, input);
   }
 
@@ -174,13 +241,11 @@ export class FightRenderer {
     c.save();
     c.translate(x, y);
     if (flip) c.scale(-1, 1);
-    const p = Skia.Paint();
-    if (alpha < 1) p.setAlphaf(alpha);
     c.drawImageRect(
       img,
       Skia.XYWHRect(fx, fy, fw, fh),
       Skia.XYWHRect((ox - ax / scale) * k, (oy - ay / scale) * k, (fw / scale) * k, (fh / scale) * k),
-      p,
+      this.solid("#FFFFFF", alpha),
     );
     c.restore();
     return true;
@@ -198,9 +263,31 @@ export class FightRenderer {
     const anim = getAnim(ch, f.anim);
     const frame = currentFrame(f, anim);
     const flip = (f.facing === -1) !== frame.flipH;
-    const blink = f.notHitBy > 0 && f.stateNo !== 5120 && this.frame % 4 < 2 ? 0.55 : 1;
+    // invencível pisca (menos ao levantar e no rolamento, que já se vê)
+    const blink = f.notHitBy > 0 && f.stateNo !== 5120 && (f.stateNo < 6000 || f.stateNo > 6070) && this.frame % 4 < 2 ? 0.55 : 1;
     const ok = this.drawSprite(c, ch, input.atlases[f.charId], frame.group, frame.index, sx(f.x), sy(f.y), flip, frame.ox, frame.oy, k, blink);
     if (!ok) this.drawBoxBody(c, f, ch, frame.clsn2, sx, sy, k);
+  }
+
+  /** Brilho do modo MAX em volta do lutador. */
+  private drawAura(
+    c: SkCanvas,
+    f: FighterState,
+    input: RenderInput,
+    sx: (x: number) => number,
+    sy: (y: number) => number,
+    k: number,
+  ): void {
+    const color = input.roster[f.charId]?.style.energy ?? "#FACC15";
+    const pulse = 0.8 + 0.2 * Math.sin(this.frame / 4);
+    const cx = sx(f.x);
+    const cy = sy(f.y - 48);
+    const r = 62 * k * pulse;
+    const glow = Skia.Paint();
+    glow.setBlendMode(BlendMode.Plus);
+    glow.setShader(Skia.Shader.MakeRadialGradient({ x: cx, y: cy }, r, [Skia.Color(color), Skia.Color("transparent")], [0, 1], TileMode.Clamp));
+    glow.setAlphaf(0.5);
+    c.drawCircle(cx, cy, r, glow);
   }
 
   /** Personagem sem sprites: desenha o corpo a partir das Clsn2 (estilo "debug" do MUGEN, mas bonito). */
@@ -216,18 +303,18 @@ export class FightRenderer {
     if (boxes.length === 0) return;
     const world = boxes.map((b) => worldBox(b, f.x, f.y, f.facing));
     const top = world.reduce((a, b) => (b.y1 < a.y1 ? b : a));
+    const outline = paint(ch.style.trim);
+    outline.setStyle(PaintStyle.Stroke);
+    outline.setStrokeWidth(1.2 * k);
     for (const b of world) {
       const r = Skia.XYWHRect(sx(b.x1), sy(b.y1), (b.x2 - b.x1) * k, (b.y2 - b.y1) * k);
-      c.drawRRect(Skia.RRectXY(r, 5 * k, 5 * k), paint(ch.style.body));
-      const outline = paint(ch.style.trim);
-      outline.setStyle(PaintStyle.Stroke);
-      outline.setStrokeWidth(1.2 * k);
+      c.drawRRect(Skia.RRectXY(r, 5 * k, 5 * k), this.solid(ch.style.body));
       c.drawRRect(Skia.RRectXY(r, 5 * k, 5 * k), outline);
     }
     const head = { x: (top.x1 + top.x2) / 2, y: top.y1 - 7 };
-    c.drawCircle(sx(head.x), sy(head.y), 8 * k, paint(ch.style.skin));
-    c.drawCircle(sx(head.x + 3 * f.facing), sy(head.y - 1), 1.5 * k, paint("#111111"));
-    c.drawRect(Skia.XYWHRect(sx(head.x) - 8 * k, sy(head.y - 5), 16 * k, 3 * k), paint(ch.style.accent));
+    c.drawCircle(sx(head.x), sy(head.y), 8 * k, this.solid(ch.style.skin));
+    c.drawCircle(sx(head.x + 3 * f.facing), sy(head.y - 1), 1.5 * k, this.solid("#111111"));
+    c.drawRect(Skia.XYWHRect(sx(head.x) - 8 * k, sy(head.y - 5), 16 * k, 3 * k), this.solid(ch.style.accent));
   }
 
   private drawProjectile(
@@ -278,9 +365,10 @@ export class FightRenderer {
       [frame.clsn2, "#3B82F6"],
       [f.hitDefActive ? frame.clsn1 : [], "#EF4444"],
     ] as const) {
+      const p = stroke(color);
       for (const b of list) {
         const wb = worldBox(b, f.x, f.y, f.facing);
-        c.drawRect(Skia.XYWHRect(sx(wb.x1), sy(wb.y1), (wb.x2 - wb.x1) * k, (wb.y2 - wb.y1) * k), stroke(color));
+        c.drawRect(Skia.XYWHRect(sx(wb.x1), sy(wb.y1), (wb.x2 - wb.x1) * k, (wb.y2 - wb.y1) * k), p);
       }
     }
     c.drawLine(sx(f.x) - 4, sy(f.y), sx(f.x) + 4, sy(f.y), stroke("#FACC15"));
@@ -323,6 +411,30 @@ export class FightRenderer {
     this.sparks = keep;
   }
 
+  private drawPops(c: SkCanvas, input: RenderInput, sx: (x: number) => number, sy: (y: number) => number): void {
+    if (this.pops.length === 0) return;
+    const font = getFonts(input.height)?.medium;
+    const keep: Pop[] = [];
+    for (const p of this.pops) {
+      p.age++;
+      if (p.age > 50) continue;
+      keep.push(p);
+      if (!font) continue;
+      const rise = Math.min(p.age, 12) * 1.2;
+      const alpha = p.age < 38 ? 1 : 1 - (p.age - 38) / 12;
+      const grow = p.age < 5 ? 1.4 - p.age * 0.08 : 1;
+      const tw = font.measureText(p.text).width * grow;
+      const x = Math.max(4, Math.min(input.width - tw - 4, sx(p.x) - tw / 2));
+      c.save();
+      c.translate(x, sy(p.y - rise));
+      c.scale(grow, grow);
+      c.drawText(p.text, 2, 2, paint("#000000", 0.75 * alpha), font);
+      c.drawText(p.text, 0, 0, paint(p.color, alpha), font);
+      c.restore();
+    }
+    this.pops = keep;
+  }
+
   // ---------------------------------------------------------------- HUD
 
   private drawHud(c: SkCanvas, input: RenderInput): void {
@@ -337,86 +449,151 @@ export class FightRenderer {
     const barH = H * 0.05;
     const top = H * 0.05;
     const margin = W * 0.06;
+    const panel = this.solid("#0B0B12", 0.85);
+    const names = input.names && !w.teams ? input.names : w.fighters.map((p) => input.roster[p.charId]?.displayName ?? p.charId);
 
     w.fighters.forEach((p, i) => {
+      const left = i === 0;
       const ratio = Math.max(0, p.life / p.lifeMax);
       this.lifeTrail[i] = Math.max(ratio, this.lifeTrail[i] - 0.006);
       if (this.lifeTrail[i] < ratio) this.lifeTrail[i] = ratio;
-      const x0 = i === 0 ? margin : W - margin - barW;
+      const x0 = left ? margin : W - margin - barW;
       // fundo
-      c.drawRRect(Skia.RRectXY(Skia.XYWHRect(x0 - 3, top - 3, barW + 6, barH + 6), 4, 4), paint("#0B0B12", 0.85));
+      c.drawRRect(Skia.RRectXY(Skia.XYWHRect(x0 - 3, top - 3, barW + 6, barH + 6), 4, 4), panel);
       // rastro de dano
       const trailW = barW * this.lifeTrail[i];
-      c.drawRect(Skia.XYWHRect(i === 0 ? x0 + barW - trailW : x0, top, trailW, barH), paint("#DC2626"));
-      // vida
+      c.drawRect(Skia.XYWHRect(left ? x0 + barW - trailW : x0, top, trailW, barH), this.solid("#DC2626"));
+      // vida; no vermelho (≤ 25%) pisca, como no KOF
       const lifeW = barW * ratio;
-      const life = Skia.Paint();
-      life.setShader(
-        Skia.Shader.MakeLinearGradient(
-          { x: 0, y: top },
-          { x: 0, y: top + barH },
-          [Skia.Color(ratio > 0.3 ? "#FDE047" : "#FB923C"), Skia.Color(ratio > 0.3 ? "#CA8A04" : "#C2410C")],
-          null,
-          TileMode.Clamp,
-        ),
-      );
-      c.drawRect(Skia.XYWHRect(i === 0 ? x0 + barW - lifeW : x0, top, lifeW, barH), life);
+      const low = ratio <= 0.25;
+      const blink = low && this.frame % 16 < 8;
+      const life = low
+        ? this.vGradient(top, top + barH, blink ? "#FCA5A5" : "#F87171", blink ? "#EF4444" : "#B91C1C")
+        : this.vGradient(top, top + barH, "#FDE047", "#CA8A04");
+      c.drawRect(Skia.XYWHRect(left ? x0 + barW - lifeW : x0, top, lifeW, barH), life);
+      // medidor de defesa (fino, embaixo da vida)
+      const gRatio = Math.max(0, p.guardMeter / GUARD_MAX);
+      const gy = top + barH + 2;
+      const gh = Math.max(2, H * 0.008);
+      c.drawRect(Skia.XYWHRect(x0, gy, barW, gh), this.solid("#0B0B12", 0.8));
+      c.drawRect(Skia.XYWHRect(left ? x0 + barW - barW * gRatio : x0, gy, barW * gRatio, gh), this.solid(gRatio < 0.3 ? "#F97316" : "#60A5FA"));
       // nome
-      const name = input.names[i].toUpperCase();
-      const nameW = width(name, f?.small);
-      text(name, i === 0 ? x0 : x0 + barW - nameW, top + barH + size(f?.small) * 1.15, paint("#FFFFFF"), f?.small);
-      // rounds vencidos
-      for (let r = 0; r < w.roundsToWin; r++) {
-        const cx = i === 0 ? x0 + barW - 8 - r * 14 : x0 + 8 + r * 14;
-        const won = r < p.roundsWon;
-        c.drawCircle(cx, top + barH + size(f?.small) * 0.75, 5, paint(won ? "#FACC15" : "#3F3F46"));
+      const name = names[i].toUpperCase();
+      const nameY = top + barH + size(f?.small) * 1.3;
+      text(name, left ? x0 : x0 + barW - width(name, f?.small), nameY, this.solid("#FFFFFF"), f?.small);
+      // rounds vencidos ou retratos da equipe, no canto de dentro
+      const midY = nameY - size(f?.small) * 0.35;
+      if (w.teams) this.drawTeam(c, input, i as 0 | 1, left ? x0 + barW : x0, midY, left);
+      else {
+        for (let r = 0; r < Math.min(w.roundsToWin, 5); r++) {
+          const cx = left ? x0 + barW - 8 - r * 14 : x0 + 8 + r * 14;
+          c.drawCircle(cx, midY, 5, this.solid(r < p.roundsWon ? "#FACC15" : "#3F3F46"));
+        }
       }
-      // barra de super (níveis de 1000)
-      const pw = barW * 0.6;
-      const px = i === 0 ? x0 : x0 + barW - pw;
-      const py = top + barH + size(f?.small) * 1.6;
-      c.drawRect(Skia.XYWHRect(px, py, pw, H * 0.018), paint("#0B0B12", 0.8));
-      const pr = p.power / p.powerMax;
-      const full = p.power >= 1000;
-      c.drawRect(
-        Skia.XYWHRect(i === 0 ? px : px + pw - pw * pr, py, pw * pr, H * 0.018),
-        paint(full && this.frame % 20 < 10 ? "#FFFFFF" : "#38BDF8"),
-      );
-      const lvl = `${Math.floor(p.power / 1000)}`;
-      text(lvl, i === 0 ? px + pw + 6 : px - 6 - width(lvl, f?.small), py + H * 0.018, paint("#38BDF8"), f?.small);
+      this.drawPower(c, p, left, left ? x0 : x0 + barW, nameY + H * 0.03, barW * 0.55, H, f);
       // combo
-      const opp = w.fighters[i === 0 ? 1 : 0];
+      const opp = w.fighters[left ? 1 : 0];
       if (opp.comboHits >= 2 && opp.moveType === "H") {
         const txt = `${opp.comboHits} HITS`;
-        text(txt, i === 0 ? margin : W - margin - width(txt, f?.big), H * 0.38, paint("#FDE047"), f?.big);
+        text(txt, left ? margin : W - margin - width(txt, f?.big), H * 0.4, this.solid("#FDE047"), f?.big);
       }
     });
 
-    // relógio
+    // relógio (vermelho piscando nos últimos 10 s)
     const time = w.timer < 0 ? "∞" : `${Math.ceil(w.timer / 60)}`;
     const tw = width(time, f?.big);
-    c.drawRRect(Skia.RRectXY(Skia.XYWHRect(W / 2 - H * 0.07, top - 6, H * 0.14, barH + 18), 6, 6), paint("#0B0B12", 0.85));
-    text(time, W / 2 - tw / 2, top + barH + 2, paint("#FFFFFF"), f?.big);
+    c.drawRRect(Skia.RRectXY(Skia.XYWHRect(W / 2 - H * 0.07, top - 6, H * 0.14, barH + 18), 6, 6), panel);
+    const hurry = w.timer >= 0 && w.timer < 600 && w.roundState === 2 && this.frame % 30 < 15;
+    text(time, W / 2 - tw / 2, top + barH + 2, this.solid(hurry ? "#F87171" : "#FFFFFF"), f?.big);
 
     // mensagens centrais
     let msg: string | null = input.banner ?? null;
+    let color = "#FDE047";
     if (!msg) {
-      if (w.roundState === 1) msg = w.roundStateTime < 60 ? `ROUND ${w.roundNo}` : "LUTE!";
+      const [a, b] = w.fighters;
+      const finalRound = !w.teams && a.roundsWon === w.roundsToWin - 1 && b.roundsWon === w.roundsToWin - 1;
+      if (w.roundState === 1) msg = w.roundStateTime < 55 ? (finalRound ? "FINAL ROUND" : `ROUND ${w.roundNo}`) : "READY";
+      else if (w.roundState === 2 && w.roundStateTime < 40) msg = "GO!";
       else if (w.roundState === 3 && w.roundStateTime < 90) {
-        msg = w.fighters.some((p) => p.life <= 0) ? "K.O." : "TEMPO!";
+        msg = a.life <= 0 || b.life <= 0 ? "K.O." : "TIME UP";
+        color = "#EF4444";
       } else if (w.roundState === 4) {
-        if (w.matchWinner === 0 || w.matchWinner === 1) msg = `${input.names[w.matchWinner].toUpperCase()} VENCE!`;
-        else if (w.matchWinner === 2) msg = "EMPATE";
-        else msg = w.roundWinner === 2 ? "EMPATE" : `${input.names[w.roundWinner === 1 ? 1 : 0].toUpperCase()} VENCE O ROUND`;
+        if (w.matchWinner === 0 || w.matchWinner === 1) msg = `${names[w.matchWinner].toUpperCase()} VENCE!`;
+        else if (w.matchWinner === 2 || w.roundWinner === 2) msg = "EMPATE";
+        else {
+          const winner = w.fighters[w.roundWinner === 1 ? 1 : 0];
+          msg = winner.life >= winner.lifeMax ? "PERFECT" : `${names[winner.side].toUpperCase()} VENCE${w.teams ? "" : " O ROUND"}`;
+        }
       }
     }
     if (msg) {
       const font = msg.length > 12 ? f?.big : f?.huge;
       const mw = width(msg, font);
       const y = H * 0.45;
-      const shadow = paint("#000000", 0.7);
-      text(msg, W / 2 - mw / 2 + 3, y + 3, shadow, font);
-      text(msg, W / 2 - mw / 2, y, paint(msg === "K.O." ? "#EF4444" : "#FDE047"), font);
+      text(msg, W / 2 - mw / 2 + 3, y + 3, this.solid("#000000", 0.7), font);
+      text(msg, W / 2 - mw / 2, y, this.solid(color), font);
     }
+  }
+
+  /**
+   * Estoques de power (KOF '98): caixa com o número de estoques e barra até o
+   * próximo; no MAX a barra vira o relógio do MAX. `anchor` é a borda de fora
+   * (esquerda do P1, direita do P2).
+   */
+  private drawPower(c: SkCanvas, p: FighterState, left: boolean, anchor: number, y: number, pw: number, H: number, f: Fonts | null): void {
+    const bh = H * 0.022;
+    const box = H * 0.045;
+    const stocks = Math.floor(p.power / POWER_PER_LEVEL);
+    const full = stocks >= Math.floor(p.powerMax / POWER_PER_LEVEL);
+    const boxX = left ? anchor : anchor - box;
+    const bx = left ? boxX + box + 4 : boxX - 4 - pw;
+    const by = y + (box - bh) / 2;
+    c.drawRect(Skia.XYWHRect(boxX, y, box, box), this.solid(p.maxTime > 0 ? "#B45309" : "#1E3A8A"));
+    const n = `${stocks}`;
+    if (f) c.drawText(n, boxX + box / 2 - f.medium.measureText(n).width / 2, y + box / 2 + f.medium.getSize() * 0.36, this.solid("#FFFFFF"), f.medium);
+    c.drawRect(Skia.XYWHRect(bx, by, pw, bh), this.solid("#0B0B12", 0.8));
+    let ratio: number;
+    let color: string;
+    if (p.maxTime > 0) {
+      ratio = p.maxTime / Math.max(1, p.maxTotal);
+      color = this.frame % 10 < 5 ? "#F97316" : "#FACC15";
+    } else {
+      ratio = full ? 1 : (p.power % POWER_PER_LEVEL) / POWER_PER_LEVEL;
+      color = full && this.frame % 20 < 10 ? "#FFFFFF" : "#38BDF8";
+    }
+    c.drawRect(Skia.XYWHRect(left ? bx : bx + pw - pw * ratio, by, pw * ratio, bh), this.solid(color));
+    const label = p.maxTime > 0 ? "MAX" : full ? "MAXIMUM" : "";
+    if (f && label) {
+      const lw = f.small.measureText(label).width;
+      c.drawText(label, left ? bx + pw + 6 : bx - 6 - lw, by + bh, this.solid(p.maxTime > 0 ? "#FACC15" : "#38BDF8"), f.small);
+    }
+  }
+
+  /** Retratos da equipe: quadrados com a inicial; quem já caiu fica riscado. `edge` é a borda de dentro da barra. */
+  private drawTeam(c: SkCanvas, input: RenderInput, side: 0 | 1, edge: number, y: number, left: boolean): void {
+    const team = input.world.teams?.[side];
+    if (!team) return;
+    const f = getFonts(input.height);
+    const s = input.height * 0.045;
+    team.members.forEach((id, j) => {
+      const x = left ? edge - (j + 1) * (s + 4) : edge + j * (s + 4);
+      const ch = input.roster[id];
+      const out = j < team.index;
+      c.drawRect(Skia.XYWHRect(x, y - s / 2, s, s), this.solid(ch?.style.body ?? "#3F3F46", out ? 0.35 : 1));
+      if (j === team.index) {
+        const border = paint("#FACC15");
+        border.setStyle(PaintStyle.Stroke);
+        border.setStrokeWidth(2);
+        c.drawRect(Skia.XYWHRect(x, y - s / 2, s, s), border);
+      }
+      const initial = (ch?.displayName ?? id).charAt(0).toUpperCase();
+      if (f) c.drawText(initial, x + s / 2 - f.small.measureText(initial).width / 2, y + f.small.getSize() * 0.36, this.solid(ch?.style.trim ?? "#FFFFFF", out ? 0.4 : 1), f.small);
+      if (out) {
+        const cross = paint("#EF4444");
+        cross.setStrokeWidth(2);
+        c.drawLine(x, y - s / 2, x + s, y + s / 2, cross);
+        c.drawLine(x + s, y - s / 2, x, y + s / 2, cross);
+      }
+    });
   }
 }

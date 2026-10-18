@@ -1,13 +1,13 @@
 # Handoff — MUGEN Arena
 
-Data: 18/10/2026. Versão **0.1.0** (primeira). Branch de trabalho: `ccr-0c9af399-ubmxeu` em `tantoniazi/mugen`
+Data: 18/10/2026. Versão **0.2.0** (sistema SNK; ver `docs/UPDATE_0.2.0.md`). Branch de trabalho: `ccr-0c9af399-ubmxeu` em `tantoniazi/mugen`
 (privado). O repositório definitivo deve ser `conexus-systems/mugen-arena` (privado) — a criação na org foi
 negada à integração e precisa ser feita por um admin.
 
 ## 1. Comece por aqui
 
 1. `AGENTS.md` (regras), `SKILL.md` + `agents/` (fluxo com agentes), `templates/TASK.md`.
-2. `docs/UPDATE_0.1.0.md` — o que existe, o que foi verificado e o que está pendente.
+2. `docs/UPDATE_0.2.0.md` (sistema SNK, equipes, Kenshi e Lua, otimização) e `docs/UPDATE_0.1.0.md` — o que existe, o que foi verificado e o que está pendente.
 3. `docs/W10M_DESIGN_SYSTEM.md` — design system (mesmo do conexus-launcher/multi-miner, em RN).
 4. `docs/PROTOCOL.md` — contrato app ⇄ web (REST, ActionCable, webhooks, pack de personagem).
 5. `docs/CHARACTERS.md` — formato MUGEN, importação, compatibilidade da engine.

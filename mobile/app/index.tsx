@@ -26,7 +26,7 @@ interface StartTile {
 }
 
 function play(mode: Mode) {
-  matchSetup.set({ mode, p1: null, p2: null, ladder: [], stageNo: 0, continues: 0, online: null });
+  matchSetup.set({ mode, p1: null, p2: null, ladder: [], stageNo: 0, continues: 0, online: null, team1: [], team2: [] });
   router.push(mode === "online" ? "/online" : "/select");
 }
 
@@ -74,6 +74,7 @@ export default function Start() {
         ),
       },
       { id: "versus", title: "Versus CPU", size: "medium", glyph: "versus", onPress: () => play("versus") },
+      { id: "team", title: "Equipes 3×3", size: "medium", glyph: "team", onPress: () => play("team") },
       { id: "training", title: "Treino", size: "small", glyph: "training", onPress: () => play("training") },
       { id: "settings", title: "Ajustes", size: "small", glyph: "settings", onPress: () => router.push("/settings") },
       {

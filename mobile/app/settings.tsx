@@ -53,6 +53,15 @@ export default function Settings() {
                 onChange={(v) => setSetting("assist", v)}
               />
               <MetroToggle label="Vibração" description="Toque nos botões da luta." value={settings.vibration} onChange={(v) => setSetting("vibration", v)} />
+              <MetroGroup title="Botões" />
+              <MetroCheck
+                kind="radio"
+                label="4 botões (padrão SNK)"
+                checked={settings.buttons === "snk"}
+                onChange={() => setSetting("buttons", "snk")}
+              />
+              <Text style={[TYPE.CAPTION, { color: t.muted }]}>A e B fracos, C e D fortes, com atalhos A+B (rolamento) e C+D (blowback).</Text>
+              <MetroCheck kind="radio" label="6 botões (MUGEN)" checked={settings.buttons === "mugen"} onChange={() => setSetting("buttons", "mugen")} />
               <MetroRow title="Dificuldade da CPU" secondary={DIFFICULTY[settings.difficulty]} glyph="versus" onPress={() => setDifficultyOpen(true)} />
               <MetroSlider
                 label="Atraso de input online"
@@ -103,7 +112,11 @@ export default function Settings() {
             <>
               <MetroRow title="MUGEN Arena" secondary={`Versão ${Constants.expoConfig?.version ?? "?"}`} />
               <MetroRow title="Engine" secondary="Compatível com o formato de personagens do MUGEN (.def, .air, .cmd, .cns, .sff). Não usa código da Elecbyte." />
-              <MetroRow title="Elenco nativo" secondary="Kaze, Brasa, Titã, Yuki, Volt e Sombra — personagens originais da CONEXUS." />
+              <MetroRow
+                title="Sistema de luta"
+                secondary="Inspirado nos jogos da SNK: rolamento, blowback, arremesso com escape, guard cancel, Just Defend, guard crush, modo MAX e equipes 3×3. Personagens e arte originais."
+              />
+              <MetroRow title="Elenco nativo" secondary="Kaze, Brasa, Titã, Yuki, Volt, Sombra, Kenshi e Lua — personagens originais da CONEXUS." />
               <MetroRow title="Conta, pagamentos e mensagens" secondary="Plataforma CONEXUS (bff-auth, bff-payment, bff-api)." />
               <MetroRow title="Anúncios" secondary="Google AdMob. Premium remove os anúncios." />
             </>

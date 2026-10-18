@@ -3,12 +3,15 @@
 // Especiais disponíveis (ver generate.mjs → SPECIALS):
 //   projectile, rising, spin, dash, teleport, slam, cartwheel, divekick
 // Supers: rush, beam
+// Projéteis: orb, blade, wave, slash
+// look.weapon (arma na mão da frente), look.shorts e look.armband: ver rig.mjs
 
 export const ROSTER = [
   {
     id: "kaze",
     name: "Kaze",
     bio: "Carateca andarilho que domina o vento. Equilibrado e direto.",
+    quotes: ["O vento não escolhe lado. Eu também não.", "Volte quando seu punho estiver leve como o ar."],
     H: 95,
     build: 1,
     look: {
@@ -28,6 +31,7 @@ export const ROSTER = [
     id: "brasa",
     name: "Brasa",
     bio: "Capoeirista de Salvador; ginga imprevisível e chutes em chamas.",
+    quotes: ["A roda é minha casa, e você caiu nela.", "Ginga não se ensina: se sente."],
     H: 92,
     build: 0.95,
     look: {
@@ -52,6 +56,7 @@ export const ROSTER = [
     id: "tita",
     name: "Titã",
     bio: "Lutador de vale-tudo do interior. Lento, mas cada golpe derruba.",
+    quotes: ["Pode levantar. Eu espero.", "Do interior pro mundo, um tombo de cada vez."],
     H: 108,
     build: 1.35,
     look: {
@@ -71,6 +76,7 @@ export const ROSTER = [
     id: "yuki",
     name: "Yuki",
     bio: "Ninja do clã da neve. Frágil, rápida e difícil de acompanhar.",
+    quotes: ["Nem viu a neve cair, né?", "Silêncio também é uma técnica."],
     H: 88,
     build: 0.85,
     look: {
@@ -90,6 +96,7 @@ export const ROSTER = [
     id: "volt",
     name: "Volt",
     bio: "Boxeador da periferia que canaliza eletricidade nos punhos.",
+    quotes: ["Na periferia a gente aprende a apanhar. E a bater mais forte.", "Ainda tem carga sobrando aqui."],
     H: 97,
     build: 1.12,
     look: {
@@ -114,6 +121,7 @@ export const ROSTER = [
     id: "sombra",
     name: "Sombra",
     bio: "Monge que trocou a luz pela sombra. Controla o espaço de longe.",
+    quotes: ["Toda luz projeta uma sombra. Você é a minha.", "Feche os olhos. Dói menos."],
     H: 100,
     build: 0.95,
     look: {
@@ -128,5 +136,61 @@ export const ROSTER = [
       { kind: "projectile", name: "Maré Negra", cmd: "qcb_p", proj: "wave", speed: 3.6, damage: 55, low: true },
     ],
     super: { kind: "beam", name: "Eclipse", cmd: "super_p", damage: 250 },
+  },
+  {
+    id: "kenshi",
+    name: "Kenshi",
+    bio: "Espadachim errante que corta o vento com a lâmina. Alcance longo, golpes secos.",
+    quotes: ["Um corte. Era só o que precisava.", "A lâmina descansa; o caminho continua."],
+    H: 98,
+    build: 0.98,
+    look: {
+      skin: "#E2B48C", top: "#E7E5E4", pants: "#1E293B", belt: "#7F1D1D", gloves: "#E2B48C",
+      shoes: "#292524", hair: "topknot", hairColor: "#1C1917", headband: null, sleeves: true, energy: "#E0F2FE",
+      vest: "#1E293B",
+      weapon: { kind: "katana", blade: "#E5E7EB", hilt: "#111827", guard: "#B45309", length: 0.62 },
+    },
+    style: { body: "#1E293B", accent: "#B45309", skin: "#E2B48C", trim: "#E7E5E4", energy: "#E0F2FE" },
+    stats: { life: 960, attack: 106, defence: 96, walkF: 2.3, walkB: -2.1, runF: 4.6, jumpY: -8.2 },
+    poses: {
+      stand1: { torso: -82, armF: [70, -40], armB: [60, -30], legF: [58, 100], legB: [124, 96], weapon: -40 },
+      stand2: { torso: -81, armF: [72, -38], armB: [62, -28], legF: [60, 100], legB: [122, 96], weapon: -38 },
+      stand3: { torso: -80, armF: [74, -36], armB: [64, -26], legF: [62, 100], legB: [120, 96], weapon: -36 },
+      intro1: { torso: -90, armF: [80, 95], armB: [100, 80], legF: [86, 92], legB: [96, 90], weapon: 95 },
+      win1: { torso: -88, armF: [80, 90], armB: [110, 60], legF: [80, 95], legB: [102, 92], weapon: 92 },
+      win2: { torso: -90, armF: [-60, -80], armB: [100, 60], legF: [84, 92], legB: [98, 90], weapon: -95 },
+    },
+    specials: [
+      { kind: "projectile", name: "Kamaitachi", cmd: "qcf_p", proj: "slash", speed: 5.5, damage: 58 },
+      { kind: "dash", name: "Iaigiri", cmd: "qcb_p", damage: 82, pose: "iai", speed: 7 },
+      { kind: "rising", name: "Tsubame Gaeshi", cmd: "dp_p", damage: 98 },
+    ],
+    super: { kind: "rush", name: "Mil Cortes", cmd: "super_p", damage: 265 },
+  },
+  {
+    id: "lua",
+    name: "Lua",
+    bio: "Lutadora de muay thai de Fortaleza. Joelhos e cotovelos de perto, sem pausa.",
+    quotes: ["Oito armas, uma vitória.", "No ringue de Fortaleza já apanhei de gente maior."],
+    H: 90,
+    build: 0.92,
+    look: {
+      skin: "#B9795A", top: "#0F172A", pants: "#DC2626", belt: "#FACC15", gloves: "#DC2626",
+      shoes: "#B9795A", hair: "long", hairColor: "#0C0A09", headband: "#F8FAFC", sleeves: false, energy: "#F43F5E",
+      shorts: true, armband: "#FACC15",
+    },
+    style: { body: "#DC2626", accent: "#FACC15", skin: "#B9795A", trim: "#0F172A", energy: "#F43F5E" },
+    stats: { life: 940, attack: 104, defence: 94, walkF: 2.8, walkB: -2.5, runF: 5.4, jumpY: -8.8 },
+    poses: {
+      stand1: { torso: -84, armF: [30, -95], armB: [60, -100], legF: [70, 98], legB: [112, 96] },
+      stand2: { torso: -83, armF: [32, -93], armB: [62, -98], legF: [72, 99], legB: [110, 97], hipX: 1 },
+      stand3: { torso: -84, armF: [34, -91], armB: [64, -96], legF: [70, 100], legB: [112, 98], hipX: 2 },
+    },
+    specials: [
+      { kind: "dash", name: "Joelhada Voadora", cmd: "qcf_k", damage: 78, pose: "flyingKnee", speed: 6.5 },
+      { kind: "dash", name: "Cotovelada", cmd: "qcf_p", damage: 70, pose: "elbow", speed: 5 },
+      { kind: "rising", name: "Chute Tesoura", cmd: "dp_k", damage: 92, kick: true },
+    ],
+    super: { kind: "rush", name: "Tempestade de Joelhos", cmd: "super_k", damage: 240, kicks: true },
   },
 ];

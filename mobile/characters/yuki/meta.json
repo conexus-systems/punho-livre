@@ -19,5 +19,9 @@
   "super": {
     "name": "Mil Flocos",
     "cmd": "super_p"
-  }
+  },
+  "quotes": [
+    "Nem viu a neve cair, né?",
+    "Silêncio também é uma técnica."
+  ]
 }

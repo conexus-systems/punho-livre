@@ -19,5 +19,9 @@
   "super": {
     "name": "Shinku Kaze",
     "cmd": "super_p"
-  }
+  },
+  "quotes": [
+    "O vento não escolhe lado. Eu também não.",
+    "Volte quando seu punho estiver leve como o ar."
+  ]
 }

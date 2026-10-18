@@ -19,5 +19,9 @@
   "super": {
     "name": "Roda de Fogo",
     "cmd": "super_k"
-  }
+  },
+  "quotes": [
+    "A roda é minha casa, e você caiu nela.",
+    "Ginga não se ensina: se sente."
+  ]
 }

@@ -23,18 +23,22 @@ teste em aparelho.*
   de verdade — estados, triggers com expressões, `HitDef`, `Projectile`, caixas Clsn1/Clsn2,
   comandos com `~ / $ >`, rounds, KO, tempo. 100% determinística (requisito do rollback).
   O MUGEN original (Elecbyte) é fechado e só roda no Windows; aqui reimplementamos o formato.
-- **6 personagens originais** (sem IP de terceiros): Kaze, Brasa, Titã, Yuki, Volt e Sombra,
-  cada um com 14 golpes normais, 3 especiais e 1 super, escritos no formato MUGEN
-  (`mobile/characters/<id>/`) e com sprites gerados por um rig esquelético.
+- **Sistema de luta estilo SNK** (KOF, Garou, Samurai Shodown) por cima do MUGEN: 4 botões A B C D,
+  pulo curto, corrida, rolamento (A+B), blowback (C+D), arremesso com escape, guard cancel, Just Defend,
+  contra-ataque, guard crush, 3 estoques de power, modo MAX e super turbinado, e **equipes 3×3**.
+  Determinístico, vale no online. Ver [docs/UPDATE_0.2.0.md](docs/UPDATE_0.2.0.md).
+- **8 personagens originais** (sem IP de terceiros): Kaze, Brasa, Titã, Yuki, Volt, Sombra, Kenshi
+  (espadachim) e Lua (muay thai), cada um com 14 golpes normais, 3 especiais, 1 super e as animações do
+  sistema, escritos no formato MUGEN (`mobile/characters/<id>/`) e com sprites gerados por um rig esquelético.
 - **Adicionar personagens**: `npm run pack` converte uma pasta de personagem MUGEN
   (incluindo `.sff` v1/v2 e paleta `.act`) num pack e envia ao backend; após aprovação
   de um admin ele aparece no catálogo do app para download. Ver [docs/CHARACTERS.md](docs/CHARACTERS.md).
-- **Modos**: Arcade (escada de oponentes, continue com anúncio premiado), Versus CPU,
+- **Modos**: Arcade (escada de oponentes, continue com anúncio premiado), Versus CPU, Equipes 3×3,
   Treino (caixas de colisão, barra cheia) e Online (ranqueada por Elo ou sala com código).
 - **Online**: netcode com rollback (input delay + predição + re-simulação + checksum
   anti-dessincronia) sobre ActionCable (Solid Cable, sem Redis).
-- **Controles touch**: direcional flutuante, os 6 botões do MUGEN (x y z / a b c) e
-  botões "assistidos" que executam especiais/super num toque.
+- **Controles touch**: direcional flutuante, 4 botões SNK (A B C D + atalhos A+B e C+D) ou os 6 do
+  MUGEN, e botões "assistidos" que executam especiais/super/MAX num toque.
 - **AdMob**: banner nos menus, interstitial entre partidas (a cada 2, intervalo mínimo
   de 3 min), rewarded para continuar no arcade; consentimento UMP + ATT no iOS.
   Premium remove anúncios.
@@ -61,7 +65,8 @@ docs/      PROTOCOL.md (contrato app ⇄ backend), CHARACTERS.md, screenshots
 
 `npm run play:build` (em `mobile/`) gera `mobile/play/dist`: uma versão web jogável com a **mesma engine,
 personagens, IA e renderizador** do app (o desenho Skia passa por um adaptador para Canvas 2D). Arcade,
-versus CPU e treino; teclado (setas/WASD, U I O socos, J K L chutes, 1–4 especiais/super) ou toque.
+versus CPU, equipes 3×3 e treino; teclado (setas/WASD; A `U`, B `J`, C `I`, D `K`, A+B `O`, C+D `L`, MAX `M`;
+1–4 especiais/super) ou toque.
 Não tem online, conta nem anúncios — isso é do app.
 
 ## Rodando
@@ -100,7 +105,7 @@ Mesma stack de app da frota (conexus-launcher, multi-miner), adaptada a jogo mul
 | Infra | `platform-infra` (workflows reutilizáveis, GHCR, Terraform LKE em `deploy/terraform/linode`), EAS |
 | Processo | `AGENTS.md`, `HANDOFF.md`, `SKILL.md` + `agents/` + `templates/TASK.md`, `docs/UPDATE_X.Y.Z.md`, release por tag |
 
-Versão atual: **0.1.0** — notas em [docs/UPDATE_0.1.0.md](docs/UPDATE_0.1.0.md).
+Versão atual: **0.2.0** (sistema SNK) — notas em [docs/UPDATE_0.2.0.md](docs/UPDATE_0.2.0.md).
 
 ## CI e deploy
 

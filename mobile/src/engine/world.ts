@@ -7,8 +7,12 @@
 import { advanceAnim, contactPoint, currentFrame, overlap, resetAnim, worldBox } from "./anim";
 import { getAnim } from "./character";
 import {
+  GUARD_MAX,
+  GUARD_REGEN_DELAY,
   INTRO_FRAMES,
   KO_FRAMES,
+  KO_SLOWMO_FRAMES,
+  POWER_PER_LEVEL,
   OVER_FRAMES,
   SCREEN_MARGIN,
   SCREEN_W,
@@ -22,6 +26,7 @@ import {
   buildHitDef,
   changeAnim,
   changeState,
+  emptyGetHit,
   faceOpponent,
   FighterCtx,
   holding,
@@ -36,40 +41,27 @@ import {
   type StateRunner,
 } from "./fighter";
 import { INPUT_HISTORY, toRelative } from "./input";
+import {
+  attackBoost,
+  guardCost,
+  isJustDefend,
+  isRolling,
+  resolveThrows,
+  SYS,
+  systemInput,
+  tickSystem,
+} from "./snk";
 import type {
   Box,
   CharacterData,
   Controller,
   FighterState,
-  GetHitVars,
   HitDefState,
   MatchConfig,
   ProjectileState,
   WorldState,
 } from "./types";
 import { Key } from "./types";
-
-function emptyGetHit(): GetHitVars {
-  return {
-    damage: 0,
-    hitTime: 0,
-    slideTime: 0,
-    ctrlTime: 0,
-    xvel: 0,
-    yvel: 0,
-    yaccel: 0.35,
-    fall: 0,
-    fallXVel: 0,
-    fallYVel: -4.5,
-    fallRecover: 1,
-    animType: 0,
-    groundType: 1,
-    airType: 1,
-    guarded: 0,
-    hitCount: 0,
-    hitTimeLeft: 0,
-  };
-}
 
 function createFighter(side: 0 | 1, ch: CharacterData): FighterState {
   const lifeMax = Math.max(1, Math.trunc(ch.consts["data.life"] ?? 1000));
@@ -118,12 +110,21 @@ function createFighter(side: 0 | 1, ch: CharacterData): FighterState {
     roundsWon: 0,
     attackMul: (ch.consts["data.attack"] ?? 100) / 100,
     defenceMul: (ch.consts["data.defence"] ?? 100) / 100,
+    maxTime: 0,
+    maxTotal: 0,
+    guardMeter: GUARD_MAX,
+    guardRegenDelay: 0,
+    throwDir: 0,
   };
 }
 
 export function createWorld(cfg: MatchConfig, roster: Roster): WorldState {
-  const [a, b] = cfg.chars;
-  if (!roster[a] || !roster[b]) throw new Error(`personagem não carregado: ${!roster[a] ? a : b}`);
+  const teams = cfg.teams ? cfg.teams.map((m) => m.filter(Boolean).slice(0, 3)) : null;
+  if (teams && (teams[0].length === 0 || teams[1].length === 0)) throw new Error("equipe vazia");
+  const [a, b] = teams ? [teams[0][0], teams[1][0]] : cfg.chars;
+  for (const id of teams ? [...teams[0], ...teams[1]] : [a, b]) {
+    if (!roster[id]) throw new Error(`personagem não carregado: ${id}`);
+  }
   const w: WorldState = {
     frame: 0,
     rng: (cfg.seed >>> 0) || 0x9e3779b9,
@@ -144,6 +145,7 @@ export function createWorld(cfg: MatchConfig, roster: Roster): WorldState {
     superPauseOwner: -1,
     events: [],
     stageId: cfg.stageId,
+    teams: teams ? [{ members: teams[0], index: 0 }, { members: teams[1], index: 0 }] : null,
   };
   return w;
 }
@@ -293,22 +295,27 @@ function applyHit(
   if (fromProjectile) def.facing = fromProjectile.facing === 1 ? -1 : 1;
   else faceOpponent(def, att);
 
+  const boost = attackBoost(att, hd);
   if (canGuard(hd, def)) {
-    const dmg = Math.round((hd.guardDamage * att.attackMul) / def.defenceMul);
+    // Just Defend (Garou): sem dano, recupera um pouco e sai mais rápido da defesa
+    const jd = isJustDefend(def);
+    const dmg = jd ? 0 : Math.round((hd.guardDamage * att.attackMul * boost) / def.defenceMul);
     def.life -= dmg;
     if (def.life <= 0) def.life = hd.guardKill ? 0 : 1;
+    if (jd) def.life = Math.min(def.lifeMax, def.life + 6);
     const air = def.stateType === "A";
+    const hitTime = jd ? Math.max(3, Math.round(hd.guardHitTime / 2)) : hd.guardHitTime;
     def.getHit = {
       ...emptyGetHit(),
       damage: dmg,
-      hitTime: hd.guardHitTime,
-      slideTime: hd.guardSlideTime,
-      ctrlTime: hd.guardCtrlTime,
-      xvel: air ? hd.airGuardVelX : hd.guardVelX,
+      hitTime,
+      slideTime: jd ? 0 : hd.guardSlideTime,
+      ctrlTime: jd ? hitTime : hd.guardCtrlTime,
+      xvel: jd ? 0 : air ? hd.airGuardVelX : hd.guardVelX,
       yvel: air ? hd.airGuardVelY : 0,
       yaccel: hd.yaccel,
       guarded: 1,
-      hitTimeLeft: hd.guardHitTime,
+      hitTimeLeft: hitTime,
     };
     if (!fromProjectile) {
       att.moveGuarded = 1;
@@ -316,19 +323,32 @@ function applyHit(
       att.hitPause = hd.guardPauseP1;
       att.hitDefActive = false;
     }
-    def.hitPause = hd.guardPauseP2;
-    changeState(def, w, roster, air ? 154 : def.stateType === "C" ? 152 : 150);
+    def.hitPause = jd ? Math.min(hd.guardPauseP2, 6) : hd.guardPauseP2;
+    // medidor de defesa: quem só defende acaba aberto (guard crush)
+    const crush = !jd && !air && (def.guardMeter -= guardCost(hd)) <= 0;
+    if (!jd) def.guardRegenDelay = GUARD_REGEN_DELAY;
+    if (crush) {
+      def.guardMeter = GUARD_MAX;
+      changeState(def, w, roster, SYS.GUARD_CRUSH);
+      def.hitPause = Math.max(def.hitPause, 16);
+    } else {
+      changeState(def, w, roster, air ? 154 : def.stateType === "C" ? 152 : 150);
+    }
     def.ctrl = false;
     addPower(att, hd.getPower / 2);
-    addPower(def, hd.givePower / 2);
+    addPower(def, jd ? 40 : hd.givePower / 2);
     w.events.push({ kind: "guard", x: at.x, y: at.y, side: att.side, level: hd.sparkLevel, frame: w.frame });
+    if (jd) w.events.push({ kind: "justdefend", x: def.x, y: def.y - 70, side: def.side, level: 0, frame: w.frame });
+    if (crush) w.events.push({ kind: "guardcrush", x: def.x, y: def.y - 70, side: def.side, level: 2, frame: w.frame });
     if (def.life <= 0) w.events.push({ kind: "ko", x: def.x, y: def.y, side: def.side, level: 2, frame: w.frame });
     return;
   }
 
+  // contra-ataque: acertar quem estava atacando dá mais dano e mais atordoamento
+  const counter = !wasHit && def.moveType === "A";
   const combo = wasHit ? def.comboHits + 1 : 1;
   const scale = combo > 3 ? Math.max(0.4, 1 - 0.1 * (combo - 3)) : 1;
-  const dmg = Math.max(hd.damage > 0 ? 1 : 0, Math.round(((hd.damage * att.attackMul) / def.defenceMul) * scale));
+  const dmg = Math.max(hd.damage > 0 ? 1 : 0, Math.round(((hd.damage * att.attackMul * boost * (counter ? 1.25 : 1)) / def.defenceMul) * scale));
   def.life -= dmg;
   if (def.life <= 0) def.life = hd.kill ? 0 : 1;
   def.comboHits = combo;
@@ -350,7 +370,7 @@ function applyHit(
     fall = 1;
     if (yvel === 0) yvel = -3;
   }
-  const hitTime = airborne ? hd.airHitTime : hd.groundHitTime;
+  const hitTime = (airborne ? hd.airHitTime : hd.groundHitTime) + (counter ? 4 : 0);
   def.getHit = {
     damage: dmg,
     hitTime,
@@ -392,6 +412,7 @@ function applyHit(
   if (!fromProjectile && hd.p1StateNo >= 0) changeState(att, w, roster, hd.p1StateNo);
 
   w.events.push({ kind: "hit", x: at.x, y: at.y, side: att.side, level: hd.sparkLevel, frame: w.frame });
+  if (counter) w.events.push({ kind: "counter", x: def.x, y: def.y - 70, side: att.side, level: 0, frame: w.frame });
   if (def.life <= 0) w.events.push({ kind: "ko", x: def.x, y: def.y, side: def.side, level: 2, frame: w.frame });
 }
 
@@ -497,8 +518,9 @@ function runFighter(p: FighterState, w: WorldState, roster: Roster, runner: Stat
   applyFriction(p, ch);
 
   // -3/-2/-1 sempre rodam; depois os movimentos internos; depois o estado atual.
-  let changed = false;
-  for (const special of [-3, -2, -1]) {
+  // sistema SNK (rolamento, blowback, arremesso, MAX, guard cancel) antes dos comandos do personagem
+  let changed = systemInput(p, w, roster);
+  if (!changed) for (const special of [-3, -2, -1]) {
     if (ch.states[special] && runStateDef(p, special, w, roster, runner)) changed = true;
   }
   if (!changed) internalMovement(p, w, roster);
@@ -528,7 +550,6 @@ function tickCounters(p: FighterState): void {
   if (p.moveContact > 0) p.moveContact++;
   if (p.moveHit > 0) p.moveHit++;
   if (p.moveGuarded > 0) p.moveGuarded++;
-  if (p.notHitBy > 0) p.notHitBy--;
   if (p.moveType === "H") p.getHit.hitTimeLeft--;
   else p.comboHits = 0;
 }
@@ -538,6 +559,7 @@ function tickCounters(p: FighterState): void {
 function separate(w: WorldState, roster: Roster): void {
   const [a, b] = w.fighters;
   if (a.stateType === "L" || b.stateType === "L") return;
+  if (isRolling(a) || isRolling(b)) return; // o rolamento atravessa o oponente
   const ha = roster[a.charId].consts["size.height"] ?? 60;
   const hb = roster[b.charId].consts["size.height"] ?? 60;
   if (a.y < b.y - hb || b.y < a.y - ha) return; // um passou por cima do outro
@@ -567,7 +589,7 @@ function clampPositions(w: WorldState): void {
   }
   // se os dois estiverem colados na mesma parede, empurra o de dentro
   const [l, r] = a.x <= b.x ? [a, b] : [b, a];
-  if (r.x - l.x < 8) r.x = Math.min(hi, l.x + 8);
+  if (r.x - l.x < 8 && !isRolling(a) && !isRolling(b)) r.x = Math.min(hi, l.x + 8);
 }
 
 function autoTurn(w: WorldState, roster: Roster): void {
@@ -587,7 +609,7 @@ function autoTurn(w: WorldState, roster: Roster): void {
 
 // -------------------------------------------------------------- rounds
 
-function resetRound(w: WorldState, roster: Roster): void {
+function resetRound(w: WorldState, roster: Roster, keepLife: readonly [boolean, boolean] = [false, false]): void {
   w.roundState = 1;
   w.roundStateTime = 0;
   w.roundWinner = -1;
@@ -597,7 +619,8 @@ function resetRound(w: WorldState, roster: Roster): void {
   w.timer = w.roundTicks;
   for (const p of w.fighters) {
     const ch = roster[p.charId];
-    const keep = { roundsWon: p.roundsWon, power: p.power };
+    const keep: Partial<FighterState> = { roundsWon: p.roundsWon, power: p.power };
+    if (keepLife[p.side]) keep.life = p.life;
     Object.assign(p, createFighter(p.side, ch), keep);
     changeState(p, w, roster, ch.states[190] && ch.anims[190] ? 190 : 0);
     p.ctrl = false;
@@ -669,7 +692,9 @@ function updateRound(w: WorldState, roster: Roster): void {
       }
       return;
     case 4:
-      if (w.matchWinner < 0 && w.roundStateTime >= OVER_FRAMES) {
+      if (w.matchWinner < 0 && w.roundStateTime >= OVER_FRAMES && w.teams) {
+        nextTeamRound(w, roster);
+      } else if (w.matchWinner < 0 && w.roundStateTime >= OVER_FRAMES) {
         const aWon = a.roundsWon >= w.roundsToWin;
         const bWon = b.roundsWon >= w.roundsToWin;
         if (aWon || bWon || w.roundNo >= 9) {
@@ -681,6 +706,35 @@ function updateRound(w: WorldState, roster: Roster): void {
       }
       return;
   }
+}
+
+/**
+ * Equipes (KOF): quem perdeu dá lugar ao próximo, que entra com +1 estoque;
+ * quem venceu continua com a vida que tinha e recupera 30% do que perdeu.
+ */
+function nextTeamRound(w: WorldState, roster: Roster): void {
+  const teams = w.teams;
+  if (!teams) return;
+  const lost: [boolean, boolean] = [w.roundWinner === 1 || w.roundWinner === 2, w.roundWinner === 0 || w.roundWinner === 2];
+  for (const side of [0, 1] as const) if (lost[side]) teams[side].index++;
+  const out = teams.map((t) => t.index >= t.members.length);
+  if (out[0] || out[1]) {
+    w.matchWinner = out[0] && out[1] ? 2 : out[0] ? 1 : 0;
+    return;
+  }
+  w.roundNo++;
+  for (const side of [0, 1] as const) {
+    const prev = w.fighters[side];
+    if (lost[side]) {
+      const next = createFighter(side, roster[teams[side].members[teams[side].index]]);
+      next.power = Math.min(next.powerMax, prev.power + POWER_PER_LEVEL);
+      next.roundsWon = prev.roundsWon;
+      w.fighters[side] = next;
+    } else {
+      prev.life = Math.min(prev.lifeMax, prev.life + Math.round((prev.lifeMax - prev.life) * 0.3));
+    }
+  }
+  resetRound(w, roster, [!lost[0], !lost[1]]);
 }
 
 // ---------------------------------------------------------------- step
@@ -706,11 +760,20 @@ export function stepWorld(w: WorldState, inputs: readonly [number, number], rost
     return;
   }
 
+  // câmera lenta do K.O.: os lutadores andam 1 frame a cada 3
+  if (w.roundState === 3 && w.roundStateTime < KO_SLOWMO_FRAMES && w.roundStateTime % 3 !== 0 && !w.training) {
+    if (w.fighters[0].life <= 0 || w.fighters[1].life <= 0) return;
+  }
+
   const runner = makeRunner(w, roster);
   for (const p of w.fighters) {
     if (p.hitPause > 0) continue;
+    // NotHitBy conta a partir do frame em que é ligado (time = 1 vale para este frame)
+    if (p.notHitBy > 0) p.notHitBy--;
     runFighter(p, w, roster, runner);
   }
+  resolveThrows(w, roster);
+  if (w.roundState === 2) for (const p of w.fighters) tickSystem(p, w);
 
   for (const p of w.fighters) {
     if (p.hitPause > 0) {

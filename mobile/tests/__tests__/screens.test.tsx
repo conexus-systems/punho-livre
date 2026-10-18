@@ -1,6 +1,8 @@
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 
 import { MetroButton, MetroDialog, MetroPivot, MetroToggle } from "@/components/metro";
+import { TouchControls } from "@/components/TouchControls";
+import { matchSetup } from "@/src/match";
 import { app } from "@/src/store";
 import { setTheme } from "@/src/ui/theme";
 
@@ -41,7 +43,7 @@ describe("telas W10M montam sem erro", () => {
   it("Iniciar mostra os Live Tiles", async () => {
     const r = await render(<Start />);
     const all = texts(r);
-    for (const t of ["Iniciar", "Arcade", "Online", "Versus CPU", "Personagens"]) expect(all).toContain(t);
+    for (const t of ["Iniciar", "Arcade", "Online", "Versus CPU", "Equipes 3×3", "Personagens"]) expect(all).toContain(t);
     // blocos pequenos mostram só o ícone; o nome fica no rótulo de acessibilidade
     const labels = r.root.findAll((n) => n.props.accessibilityRole === "button").map((n) => n.props.accessibilityLabel);
     for (const t of ["Treino", "Ajustes", "Ranking", "Premium"]) expect(labels).toContain(t);
@@ -51,8 +53,42 @@ describe("telas W10M montam sem erro", () => {
   it("Seleção lista o elenco nativo", async () => {
     const r = await render(<Select />);
     const all = texts(r);
-    for (const n of ["Kaze", "Brasa", "Titã", "Yuki", "Volt", "Sombra"]) expect(all).toContain(n);
+    for (const n of ["Kaze", "Brasa", "Titã", "Yuki", "Volt", "Sombra", "Kenshi", "Lua"]) expect(all).toContain(n);
     r.unmount();
+  });
+
+  it("Equipes 3×3: escolhe três lutadores e a CPU sorteia a equipe dela", async () => {
+    matchSetup.set({ mode: "team", team1: [], team2: [], p1: null, p2: null });
+    const r = await render(<Select />);
+    expect(texts(r)).toContain("Lutador 1 de 3");
+    const press = async (label: string) => {
+      const btn = r.root.findAll((n) => n.props.accessibilityLabel === label && typeof n.props.onPress === "function")[0];
+      await act(async () => btn.props.onPress());
+    };
+    await press("Escolher Kaze");
+    await press("Próximo");
+    await press("Escolher Lua");
+    await press("Próximo");
+    expect(texts(r)).toContain("Lutador 3 de 3");
+    await press("Escolher Kenshi");
+    await press("Lutar");
+    const s = matchSetup.get();
+    expect(s.team1).toEqual(["kaze", "lua", "kenshi"]);
+    expect(s.team2).toHaveLength(3);
+    expect(s.team2.some((id) => s.team1.includes(id))).toBe(false);
+    r.unmount();
+    matchSetup.set({ mode: "versus", team1: [], team2: [] });
+  });
+
+  it("controles: 4 botões SNK com atalhos ou 6 do MUGEN", async () => {
+    const labels = (r: ReactTestRenderer) => r.root.findAll((n) => typeof n.props.accessibilityLabel === "string" && n.props.accessibilityLabel.startsWith("Botão ")).map((n) => n.props.accessibilityLabel);
+    const props = { inputRef: { current: 0 }, assists: [], onAssist: () => undefined, haptics: false, onPause: () => undefined };
+    const snk = await render(<TouchControls {...props} layout="snk" />);
+    expect(labels(snk)).toEqual(expect.arrayContaining(["Botão A", "Botão B", "Botão C", "Botão D", "Botão A+B", "Botão C+D"]));
+    snk.unmount();
+    const mugen = await render(<TouchControls {...props} layout="mugen" />);
+    expect(labels(mugen)).toEqual(expect.arrayContaining(["Botão x", "Botão y", "Botão z", "Botão a", "Botão b", "Botão c"]));
+    mugen.unmount();
   });
 
   it("Personagens, Perfil, Ajustes e Premium", async () => {

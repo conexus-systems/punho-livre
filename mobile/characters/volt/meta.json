@@ -19,5 +19,9 @@
   "super": {
     "name": "Tempestade de Socos",
     "cmd": "super_p"
-  }
+  },
+  "quotes": [
+    "Na periferia a gente aprende a apanhar. E a bater mais forte.",
+    "Ainda tem carga sobrando aqui."
+  ]
 }

@@ -11,7 +11,8 @@ import { matchSetup, shuffle } from "@/src/match";
 import { TYPE } from "@/src/ui/type";
 import { space, useTokens } from "@/src/ui/theme";
 
-const TITLES = { arcade: "Arcade", versus: "Versus CPU", training: "Treino", online: "Online" } as const;
+const TITLES = { arcade: "Arcade", versus: "Versus CPU", training: "Treino", online: "Online", team: "Equipes 3×3" } as const;
+const TEAM_SIZE = 3;
 
 export default function Select() {
   const t = useTokens();
@@ -30,8 +31,24 @@ export default function Select() {
 
   const current = entries.find((e) => e.id === cursor) ?? null;
 
+  const teamMode = setup.mode === "team";
+  const team = setup.team1;
+
   const confirm = () => {
     if (!cursor) return;
+    if (teamMode) {
+      const next = [...team, cursor];
+      if (next.length < TEAM_SIZE) {
+        matchSetup.set({ team1: next });
+        return;
+      }
+      // equipe da CPU: sorteada entre quem sobrou (repete se o elenco for pequeno)
+      const rest = shuffle(entries.map((e) => e.id).filter((id) => !next.includes(id)));
+      const pool = rest.length >= TEAM_SIZE ? rest : shuffle(entries.map((e) => e.id));
+      matchSetup.set({ team1: next, team2: pool.slice(0, TEAM_SIZE), p1: next[0], p2: pool[0] });
+      router.replace("/fight");
+      return;
+    }
     if (setup.mode === "online") {
       matchSetup.set({ p1: cursor });
       router.back();
@@ -56,7 +73,17 @@ export default function Select() {
     <MetroPage footer={<AdBannerSlot />}>
       <View style={{ flex: 1, flexDirection: "row", gap: space.lg }}>
         <View style={{ width: 240, justifyContent: "space-between", paddingBottom: space.sm }}>
-          <MetroHeader kicker={TITLES[setup.mode]} title={picking === 1 ? "Seu lutador" : "Oponente"} />
+          <MetroHeader
+            kicker={TITLES[setup.mode]}
+            title={teamMode ? `Lutador ${team.length + 1} de ${TEAM_SIZE}` : picking === 1 ? "Seu lutador" : "Oponente"}
+          />
+          {teamMode && team.length > 0 ? (
+            <View style={{ flexDirection: "row", gap: 4 }} accessibilityLabel={`Equipe: ${team.map((id) => entries.find((e) => e.id === id)?.name ?? id).join(", ")}`}>
+              {team.map((id, i) => (
+                <CharacterPortrait key={`${id}-${i}`} id={id} size={48} />
+              ))}
+            </View>
+          ) : null}
           {current ? (
             <View style={{ gap: space.xs }}>
               <CharacterPortrait id={current.id} size={150} flip={picking === 2} />
@@ -72,8 +99,18 @@ export default function Select() {
             </View>
           ) : null}
           <View style={{ flexDirection: "row", gap: space.sm }}>
-            <MetroButton label="Voltar" glyph="back" onPress={() => (picking === 2 ? matchSetup.set({ p1: null }) : router.back())} />
-            <MetroButton kind="primary" label={picking === 2 || !needsP2 ? "Lutar" : "Próximo"} onPress={confirm} disabled={!cursor} style={{ flex: 1 }} />
+            <MetroButton
+              label="Voltar"
+              glyph="back"
+              onPress={() => (teamMode && team.length > 0 ? matchSetup.set({ team1: team.slice(0, -1) }) : picking === 2 ? matchSetup.set({ p1: null }) : router.back())}
+            />
+            <MetroButton
+              kind="primary"
+              label={teamMode ? (team.length + 1 < TEAM_SIZE ? "Próximo" : "Lutar") : picking === 2 || !needsP2 ? "Lutar" : "Próximo"}
+              onPress={confirm}
+              disabled={!cursor}
+              style={{ flex: 1 }}
+            />
           </View>
         </View>
 

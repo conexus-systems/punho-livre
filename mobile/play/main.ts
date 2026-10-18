@@ -18,7 +18,9 @@ import { STAGES } from "@/src/game/stages";
 
 import { Canvas2D } from "./skia-canvas2d";
 
-type Mode = "arcade" | "versus" | "training";
+type Mode = "arcade" | "versus" | "training" | "team";
+
+const TEAM_SIZE = 3;
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -79,6 +81,8 @@ const state = {
   difficulty: 2 as 1 | 2 | 3,
   ladder: [] as string[],
   stageNo: 0,
+  /** Equipes 3×3: quem o jogador já escolheu, na ordem de entrada. */
+  team: [] as string[],
 };
 
 function show(screen: "menu" | "select" | "fight") {
@@ -94,6 +98,7 @@ function startMode(mode: Mode) {
   state.p1 = null;
   state.p2 = null;
   state.picking = 1;
+  state.team = [];
   renderSelect();
   show("select");
 }
@@ -106,14 +111,30 @@ $("help-close").addEventListener("click", () => ($("help").hidden = true));
 
 // ---------------------------------------------------------- seleção
 
-const MODE_NAME: Record<Mode, string> = { arcade: "Arcade", versus: "Versus CPU", training: "Treino" };
+const MODE_NAME: Record<Mode, string> = { arcade: "Arcade", versus: "Versus CPU", training: "Treino", team: "Equipes 3×3" };
 
 function renderSelect() {
+  const team = state.mode === "team";
   $("select-kicker").textContent = MODE_NAME[state.mode];
-  $("select-title").textContent = state.picking === 1 ? "Seu lutador" : state.mode === "training" ? "Boneco de treino" : "Oponente";
-  const needsP2 = state.mode !== "arcade";
+  $("select-title").textContent = team
+    ? `Lutador ${state.team.length + 1} de ${TEAM_SIZE}`
+    : state.picking === 1
+      ? "Seu lutador"
+      : state.mode === "training"
+        ? "Boneco de treino"
+        : "Oponente";
+  const needsP2 = state.mode !== "arcade" && !team;
   const go = $<HTMLButtonElement>("select-go");
-  go.textContent = state.picking === 1 && needsP2 ? "Próximo" : "Lutar";
+  go.textContent = team ? (state.team.length + 1 < TEAM_SIZE ? "Próximo" : "Lutar") : state.picking === 1 && needsP2 ? "Próximo" : "Lutar";
+  const picks = $("team-picks");
+  picks.hidden = !team || state.team.length === 0;
+  picks.replaceChildren();
+  for (const id of state.team) {
+    const c = document.createElement("canvas");
+    c.setAttribute("aria-label", BUILTIN[id].meta.name);
+    picks.append(c);
+    requestAnimationFrame(() => drawPortrait(c, id));
+  }
 
   const grid = $("roster");
   grid.replaceChildren();
@@ -159,7 +180,7 @@ function renderSelect() {
   }
   const diff = $("difficulty");
   diff.replaceChildren();
-  $("difficulty-row").hidden = state.mode !== "versus";
+  $("difficulty-row").hidden = state.mode !== "versus" && !team;
   for (const [lvl, name] of [
     [1, "fácil"],
     [2, "normal"],
@@ -179,6 +200,15 @@ function renderSelect() {
 }
 
 function confirmPick() {
+  if (state.mode === "team") {
+    state.team.push(state.cursor);
+    if (state.team.length < TEAM_SIZE) {
+      renderSelect();
+      return;
+    }
+    startFight();
+    return;
+  }
   if (state.picking === 1) {
     state.p1 = state.cursor;
     if (state.mode === "arcade") {
@@ -200,7 +230,10 @@ function confirmPick() {
 
 $("select-go").addEventListener("click", confirmPick);
 $("select-back").addEventListener("click", () => {
-  if (state.picking === 2) {
+  if (state.mode === "team" && state.team.length > 0) {
+    state.team.pop();
+    renderSelect();
+  } else if (state.picking === 2) {
     state.picking = 1;
     renderSelect();
   } else show("menu");
@@ -208,13 +241,16 @@ $("select-back").addEventListener("click", () => {
 
 // ------------------------------------------------------------ controles
 
+// padrão SNK: A = x, B = a, C = z, D = c (ver src/engine/snk.ts)
 const KEYMAP: Record<string, number> = {
   ArrowUp: Btn.U, KeyW: Btn.U,
   ArrowDown: Btn.D, KeyS: Btn.D,
   ArrowLeft: Btn.L, KeyA: Btn.L,
   ArrowRight: Btn.R, KeyD: Btn.R,
-  KeyU: Btn.x, KeyI: Btn.y, KeyO: Btn.z,
-  KeyJ: Btn.a, KeyK: Btn.b, KeyL: Btn.c,
+  KeyU: Btn.x, KeyJ: Btn.a,
+  KeyI: Btn.z, KeyK: Btn.c,
+  KeyO: Btn.x | Btn.a, KeyL: Btn.z | Btn.c,
+  KeyM: Btn.x | Btn.a | Btn.z,
 };
 const held = new Set<string>();
 let touchBits = 0;
@@ -230,6 +266,7 @@ window.addEventListener("keydown", (e) => {
   }
   if (e.code === "Digit1" || e.code === "Digit2" || e.code === "Digit3") assist(Number(e.code.slice(5)) - 1);
   if (e.code === "Digit4") assist(3);
+  if (e.code === "Digit5") assist(4);
   if (e.code === "Escape" || e.code === "KeyP") togglePause();
   if (e.code === "KeyB" && fight?.mode === "training") debugBoxes = !debugBoxes;
 });
@@ -265,7 +302,8 @@ function updateTouch() {
   }
   touchBits = bits;
   document.querySelectorAll<HTMLElement>("[data-bit]").forEach((el) => {
-    el.classList.toggle("on", (bits & Number(el.dataset.bit)) !== 0);
+    const bit = Number(el.dataset.bit);
+    el.classList.toggle("on", (bits & bit) === bit);
   });
   stickBase.hidden = !stick;
   if (stick) {
@@ -320,14 +358,23 @@ touchLayer.addEventListener("pointercancel", release);
 
 // ---------------------------------------------------------------- luta
 
+interface Assist {
+  label: string;
+  cmd: string;
+  kind: "special" | "super" | "max";
+}
+
 interface Fight {
   mode: Mode;
   world: WorldState;
   cpu: CpuController | null;
   macro: MacroPlayer;
   renderer: FightRenderer;
-  names: [string, string];
-  assists: { label: string; cmd: string; isSuper: boolean }[];
+  /** Nomes no HUD; nas equipes fica a cargo do renderizador (o lutador muda). */
+  names?: [string, string];
+  /** Personagem do P1 para quem os atalhos foram montados. */
+  assistsFor: string;
+  assists: Assist[];
   over: boolean;
 }
 
@@ -335,26 +382,18 @@ let fight: Fight | null = null;
 let paused = false;
 let debugBoxes = false;
 
-function startFight() {
-  const p1 = state.p1!;
-  const p2 = state.p2!;
-  const training = state.mode === "training";
-  const stageId = state.mode === "arcade" ? STAGES[(state.stageNo - 1) % STAGES.length].id : state.stage;
-  const meta = BUILTIN[p1].meta;
-  fight = {
-    mode: state.mode,
-    world: createWorld({ chars: [p1, p2], stageId, seed: (Math.random() * 2 ** 31) | 0, roundsToWin: training ? 99 : 2, roundTime: training ? -1 : 99, training }, roster),
-    cpu: training ? null : new CpuController(1, roster[p2] as CharacterData, state.mode === "arcade" ? (Math.min(3, 1 + Math.floor(state.stageNo / 2)) as 1 | 2 | 3) : state.difficulty),
-    macro: new MacroPlayer(),
-    renderer: new FightRenderer(),
-    names: [roster[p1].displayName, roster[p2].displayName],
-    assists: [...meta.specials.map((s) => ({ label: s.name, cmd: s.cmd, isSuper: false })), { label: "Super", cmd: meta.super.cmd, isSuper: true }],
-    over: false,
-  };
-  debugBoxes = training;
-  paused = false;
-  $("overlay").hidden = true;
-  $("arcade-step").textContent = state.mode === "arcade" ? `luta ${state.stageNo} de ${state.stageNo + state.ladder.length}` : "";
+function assistsOf(charId: string): Assist[] {
+  const meta = BUILTIN[charId].meta;
+  return [
+    ...meta.specials.map((s) => ({ label: s.name, cmd: s.cmd, kind: "special" as const })),
+    { label: "Super", cmd: meta.super.cmd, kind: "super" },
+    { label: "MAX", cmd: "", kind: "max" },
+  ];
+}
+
+/** Botões de atalho do P1 (refeitos quando o lutador muda nas equipes). */
+function renderAssists() {
+  if (!fight) return;
   const assistBox = $("assists");
   assistBox.replaceChildren();
   fight.assists.forEach((a, i) => {
@@ -363,19 +402,61 @@ function startFight() {
     b.dataset.assist = String(i);
     b.className = "assist";
     b.textContent = a.label;
-    b.title = `Tecla ${i + 1}`;
+    b.title = a.kind === "max" ? "Tecla M ou 5 (A+B+C)" : `Tecla ${i + 1}`;
     assistBox.append(b);
   });
+}
+
+function startFight() {
+  const team = state.mode === "team";
+  let teams: [string[], string[]] | undefined;
+  if (team) {
+    // equipe da CPU: sorteada entre quem sobrou
+    const rest = BUILTIN_ORDER.filter((id) => !state.team.includes(id)).sort(() => Math.random() - 0.5);
+    teams = [[...state.team], rest.slice(0, TEAM_SIZE)];
+    state.p1 = teams[0][0];
+    state.p2 = teams[1][0];
+  }
+  const p1 = state.p1!;
+  const p2 = state.p2!;
+  const training = state.mode === "training";
+  const stageId = state.mode === "arcade" ? STAGES[(state.stageNo - 1) % STAGES.length].id : state.stage;
+  const level = state.mode === "arcade" ? (Math.min(3, 1 + Math.floor(state.stageNo / 2)) as 1 | 2 | 3) : state.difficulty;
+  fight = {
+    mode: state.mode,
+    world: createWorld(
+      { chars: [p1, p2], teams, stageId, seed: (Math.random() * 2 ** 31) | 0, roundsToWin: training ? 99 : 2, roundTime: training ? -1 : 99, training },
+      roster,
+    ),
+    cpu: training ? null : new CpuController(1, roster, level),
+    macro: new MacroPlayer(),
+    renderer: new FightRenderer(),
+    names: team ? undefined : [roster[p1].displayName, roster[p2].displayName],
+    assistsFor: p1,
+    assists: assistsOf(p1),
+    over: false,
+  };
+  debugBoxes = training;
+  paused = false;
+  $("overlay").hidden = true;
+  $("arcade-step").textContent = state.mode === "arcade" ? `luta ${state.stageNo} de ${state.stageNo + state.ladder.length}` : "";
+  renderAssists();
   show("fight");
   resize();
 }
+
+const MAX_MACRO = [Btn.x | Btn.a | Btn.z, Btn.x | Btn.a | Btn.z, Btn.x | Btn.a | Btn.z, 0];
 
 function assist(i: number) {
   if (!fight || paused) return;
   const a = fight.assists[i];
   if (!a) return;
   const me = fight.world.fighters[0];
-  if (a.isSuper && me.power < 1000) return;
+  if (a.kind !== "special" && me.power < 1000) return;
+  if (a.kind === "max") {
+    if (me.maxTime === 0) fight.macro.play(MAX_MACRO, me.facing);
+    return;
+  }
   const cmd = findCommand(roster[me.charId], a.cmd);
   if (cmd) fight.macro.play(macroFromCommand(cmd), me.facing);
 }
@@ -388,10 +469,18 @@ function togglePause() {
 
 $("pause-btn").addEventListener("click", togglePause);
 
-function showPanel(kind: "pause" | "result" | null, title = "") {
+function showPanel(kind: "pause" | "result" | null, title = "", quote: { name: string; text: string } | null = null) {
   const overlay = $("overlay");
   overlay.hidden = kind === null;
   if (!kind || !fight) return;
+  const text = $("panel-text");
+  text.hidden = !quote;
+  text.replaceChildren();
+  if (quote) {
+    const who = document.createElement("b");
+    who.textContent = `${quote.name}: `;
+    text.append(who, `“${quote.text}”`);
+  }
   const actions = $("panel-actions");
   actions.replaceChildren();
   const add = (label: string, primary: boolean, fn: () => void) => {
@@ -494,13 +583,23 @@ function frame(t: number) {
 
   if (t - lastUi > 150) {
     lastUi = t;
-    const ready = fight.world.fighters[0].power >= 1000;
+    const me = fight.world.fighters[0];
+    if (me.charId !== fight.assistsFor) {
+      fight.assistsFor = me.charId;
+      fight.assists = assistsOf(me.charId);
+      renderAssists();
+    }
+    const ready = me.power >= 1000;
     document.querySelectorAll<HTMLButtonElement>(".assist").forEach((b, i) => {
-      b.disabled = fight!.assists[i]?.isSuper === true && !ready;
+      const kind = fight!.assists[i]?.kind;
+      b.disabled = (kind === "super" && !ready) || (kind === "max" && (!ready || me.maxTime > 0));
     });
     const w = fight.world;
     if (!fight.over && w.matchWinner >= 0 && w.roundStateTime > 120) {
       fight.over = true;
+      const winner = w.matchWinner === 0 || w.matchWinner === 1 ? w.fighters[w.matchWinner].charId : null;
+      const quotes = winner ? (BUILTIN[winner]?.meta.quotes ?? []) : [];
+      const quote = winner && quotes.length ? { name: roster[winner].displayName, text: quotes[Math.floor(Math.random() * quotes.length)] } : null;
       const title =
         w.matchWinner === 2
           ? "Empate"
@@ -509,7 +608,7 @@ function frame(t: number) {
               ? "Campeão!"
               : "Vitória"
             : "Derrota";
-      showPanel("result", title);
+      showPanel("result", title, quote);
     }
   }
 }

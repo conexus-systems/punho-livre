@@ -72,7 +72,38 @@ export function matchFont(style: { fontFamily?: string; fontSize?: number; fontW
   };
 }
 
+/**
+ * "SkPicture" do navegador: a lista de comandos de desenho já calculados. Um
+ * bitmap fora da tela seria uma cópia de tela inteira por camada, cara quando o
+ * navegador desenha sem GPU; repetir os comandos nunca custa mais que antes e
+ * ainda poupa o cálculo das formas e a criação dos Paints.
+ */
+export class Picture {
+  constructor(readonly ops: [keyof Canvas2D, unknown[]][]) {}
+}
+
+/** Grava as chamadas feitas no canvas devolvido por beginRecording. */
+export class PictureRecorder {
+  private ops: [keyof Canvas2D, unknown[]][] = [];
+
+  beginRecording(_bounds: Rect): Canvas2D {
+    const ops: [keyof Canvas2D, unknown[]][] = [];
+    this.ops = ops;
+    return new Proxy({} as Canvas2D, {
+      get: (_t, name) =>
+        (...args: unknown[]) => {
+          ops.push([name as keyof Canvas2D, args]);
+        },
+    });
+  }
+
+  finishRecordingAsPicture(): Picture {
+    return new Picture(this.ops);
+  }
+}
+
 export const Skia = {
+  PictureRecorder: () => new PictureRecorder(),
   Paint: () => new Paint(),
   Color: (c: string) => (c === "transparent" ? "rgba(0,0,0,0)" : c),
   XYWHRect: (x: number, y: number, width: number, height: number): Rect => ({ x, y, width, height }),
@@ -160,6 +191,10 @@ export class Canvas2D {
     ctx.lineTo(x1, y1);
     ctx.stroke();
     this.done();
+  }
+
+  drawPicture(pic: Picture) {
+    for (const [name, args] of pic.ops) (this[name] as (...a: unknown[]) => void)(...args);
   }
 
   drawImageRect(img: CanvasImageSource, src: Rect, dst: Rect, p: Paint) {

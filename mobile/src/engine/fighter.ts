@@ -13,6 +13,7 @@ import type {
   CharacterData,
   Controller,
   FighterState,
+  GetHitVars,
   HitDefState,
   MoveType,
   Physics,
@@ -70,6 +71,28 @@ function opponentThreat(w: WorldState, p: FighterState, opp: FighterState, oppCh
     if (pr.owner === opp.side && pr.phase === "flying" && Math.abs(pr.x - p.x) <= projDist + 40) return true;
   }
   return false;
+}
+
+export function emptyGetHit(): GetHitVars {
+  return {
+    damage: 0,
+    hitTime: 0,
+    slideTime: 0,
+    ctrlTime: 0,
+    xvel: 0,
+    yvel: 0,
+    yaccel: 0.35,
+    fall: 0,
+    fallXVel: 0,
+    fallYVel: -4.5,
+    fallRecover: 1,
+    animType: 0,
+    groundType: 1,
+    airType: 1,
+    guarded: 0,
+    hitCount: 0,
+    hitTimeLeft: 0,
+  };
 }
 
 // ----------------------------------------------------------- contexto
@@ -375,7 +398,7 @@ export function changeState(p: FighterState, w: WorldState, roster: Roster, no: 
   p.prevStateNo = p.stateNo;
   p.stateNo = target;
   p.stateTime = 0;
-  for (const k of Object.keys(p.fired)) if (!k.startsWith("-")) delete p.fired[k];
+  for (const k in p.fired) if (k.charCodeAt(0) !== 45 /* "-" */) delete p.fired[k];
   if (!sd) return;
 
   if (sd.type) p.stateType = sd.type;
@@ -400,6 +423,8 @@ export function changeState(p: FighterState, w: WorldState, roster: Roster, no: 
 }
 
 export function addPower(p: FighterState, v: number): void {
+  // no MAX a barra não enche (como no KOF '98)
+  if (v > 0 && p.maxTime > 0) return;
   p.power = Math.max(0, Math.min(p.powerMax, p.power + v));
 }
 
@@ -658,7 +683,9 @@ function execController(
         w.superPauseOwner = p.side;
         if (c.type === "superpause") {
           addPower(p, param("poweradd") ? num("poweradd") : 0);
-          w.events.push({ kind: "super", x: p.x, y: p.y - 60, side: p.side, level: 2, frame: w.frame });
+          // nível 3 = super turbinado (MAX ou vida no vermelho), ver snk.ts
+          const boosted = p.maxTime > 0 || p.life * 4 <= p.lifeMax;
+          w.events.push({ kind: "super", x: p.x, y: p.y - 60, side: p.side, level: boosted ? 3 : 2, frame: w.frame });
         }
       }
       return false;
@@ -712,7 +739,7 @@ export function runStateDef(
   const ctx = new FighterCtx(p, w, roster);
   for (const c of sd.controllers) {
     if (!triggersPass(c, ctx)) continue;
-    const key = `${stateNo}:${c.index}`;
+    const key = (c.firedKey ??= `${stateNo}:${c.index}`);
     const fired = p.fired[key];
     if (fired !== undefined) {
       if (c.persistent === 0) continue;

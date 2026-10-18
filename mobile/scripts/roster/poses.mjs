@@ -4,6 +4,16 @@
 const crouchLegs = { legF: [-12, 100], legB: [128, 70] };
 const tuck = { legF: [10, 115], legB: [40, 140], ground: false };
 
+// corpo encolhido como uma bola, girado pelo ângulo do tronco (rolamento)
+const ball = (t) => ({
+  torso: t,
+  head: t,
+  armF: [t + 110, t + 40],
+  armB: [t + 130, t + 60],
+  legF: [t + 100, t + 205],
+  legB: [t + 125, t + 225],
+});
+
 export const POSES = {
   // ------------------------------------------------------------ básico
   stand1: {},
@@ -100,5 +110,22 @@ export const POSES = {
   vanish: { torso: -60, armF: [100, 120], armB: [100, 120], ...crouchLegs },
   capoeira1: { torso: 100, head: 110, armF: [80, 92], armB: [100, 95], legF: [-60, -40], legB: [-110, -130], ground: true, strike: "footF" },
   capoeira2: { torso: 95, head: 100, armF: [85, 95], armB: [95, 92], legF: [-120, -140], legB: [-40, -20], ground: true, strike: "footB" },
+  // ------------------------------------------------- sistema SNK
+  roll1: ball(-40),
+  roll2: ball(40),
+  roll3: ball(120),
+  roll4: ball(200),
+  blowWind: { torso: -98, armF: [120, -20], armB: [150, -40], legF: [20, 115], legB: [104, 90], hipX: -2 },
+  blow: { torso: -132, head: -100, armF: [165, -10], armB: [178, -70], legF: [-12, -8], legB: [98, 90], strike: "footF" },
+  airBlow: { torso: -128, armF: [150, -30], armB: [175, -80], legF: [22, 24], legB: [70, 150], ground: false, strike: "footF" },
+  grab: { torso: -74, armF: [6, -4], armB: [16, 4], legF: [50, 96], legB: [124, 98], hurtArm: true },
+  toss: { torso: -112, head: -125, armF: [-125, -155], armB: [-110, -140], legF: [62, 100], legB: [118, 94], hipX: -3 },
+  dizzy1: { torso: -80, head: -60, armF: [100, 95], armB: [80, 90], legF: [75, 98], legB: [108, 96], hipX: 2 },
+  dizzy2: { torso: -97, head: -118, armF: [95, 100], armB: [86, 95], legF: [80, 96], legB: [104, 98], hipX: -2 },
+  maxPose: { torso: -90, head: -95, armF: [65, 105], armB: [115, 75], legF: [58, 100], legB: [122, 92] },
+  // muay thai / espada
+  flyingKnee: { torso: -62, armF: [-50, -110], armB: [-40, -100], legF: [-30, 100], legB: [110, 150], ground: false, strike: "kneeF" },
+  elbow: { torso: -70, armF: [-10, 175], armB: [110, -60], legF: [50, 96], legB: [128, 100], hurtArm: true, strike: "elbowF" },
+  iai: { torso: -55, armF: [10, -5], armB: [140, 160], legF: [25, 95], legB: [160, 150], hurtArm: true, strike: "handF", weapon: 0 },
   superPose: { torso: -92, armF: [-35, -40], armB: [-145, -140], legF: [62, 100], legB: [120, 92] },
 };

@@ -11,6 +11,7 @@ import { space, useTokens, type Tokens } from "@/src/ui/theme";
 import { BUILTIN } from "@/src/characters/builtin.generated";
 import { getCharacter, rosterFor } from "@/src/characters/registry";
 import type { Roster } from "@/src/engine/fighter";
+import { Btn } from "@/src/engine/input";
 import type { WorldState } from "@/src/engine/types";
 import { createWorld, stepWorld } from "@/src/engine/world";
 import { CpuController } from "@/src/game/ai";
@@ -34,6 +35,15 @@ interface Assist {
   isSuper: boolean;
 }
 
+/** A+B+C por alguns frames: liga o MAX (bits relativos = absolutos para botões). */
+const MAX_MACRO = [Btn.x | Btn.a | Btn.z, Btn.x | Btn.a | Btn.z, Btn.x | Btn.a | Btn.z, 0];
+
+/** Uma frase de vitória do personagem nativo (null para importados). */
+function pickQuote(charId: string): string | null {
+  const quotes = BUILTIN[charId]?.meta.quotes ?? [];
+  return quotes.length ? quotes[Math.floor(Math.random() * quotes.length)] : null;
+}
+
 function assistsFor(charId: string): Assist[] {
   const builtin = BUILTIN[charId];
   if (builtin) {
@@ -55,13 +65,15 @@ export default function Fight() {
   const t = useTokens();
   const online = setup.mode === "online" && setup.online !== null;
 
-  const p1 = online ? (setup.online!.side === 0 ? setup.online!.myCharacter : setup.online!.opponent.character) : setup.p1!;
-  const p2 = online ? (setup.online!.side === 0 ? setup.online!.opponent.character : setup.online!.myCharacter) : setup.p2!;
+  const teams: [string[], string[]] | null = setup.mode === "team" && setup.team1.length > 0 && setup.team2.length > 0 ? [setup.team1, setup.team2] : null;
+  const p1 = online ? (setup.online!.side === 0 ? setup.online!.myCharacter : setup.online!.opponent.character) : teams ? teams[0][0] : setup.p1!;
+  const p2 = online ? (setup.online!.side === 0 ? setup.online!.opponent.character : setup.online!.myCharacter) : teams ? teams[1][0] : setup.p2!;
   const localSide: 0 | 1 = online ? setup.online!.side : 0;
-  const localChar = localSide === 0 ? p1 : p2;
+  const everyone = useMemo(() => [...new Set(teams ? [...teams[0], ...teams[1]] : [p1, p2])], [teams, p1, p2]);
 
-  const roster: Roster = useMemo(() => rosterFor([p1, p2]), [p1, p2]);
-  const names: [string, string] = [roster[p1].displayName, roster[p2].displayName];
+  const roster: Roster = useMemo(() => rosterFor(everyone), [everyone]);
+  // nas equipes o lutador muda a cada round: o HUD usa o nome do personagem em campo
+  const names: [string, string] | undefined = teams ? undefined : [roster[p1].displayName, roster[p2].displayName];
 
   const picture = useSharedValue<SkPicture>(emptyPicture());
   const inputRef = useRef(0);
@@ -79,6 +91,9 @@ export default function Fight() {
   const [paused, setPaused] = useState(false);
   const [result, setResult] = useState<{ winner: number } | null>(null);
   const [superReady, setSuperReady] = useState(false);
+  const [maxReady, setMaxReady] = useState(false);
+  const [localChar, setLocalChar] = useState(localSide === 0 ? p1 : p2);
+  const [winner, setWinner] = useState<{ char: string; quote: string | null } | null>(null);
   const [debugBoxes, setDebugBoxes] = useState(setup.mode === "training");
   const [error, setError] = useState<string | null>(null);
   const finished = onlineStore.use((s) => s.finished);
@@ -86,15 +101,17 @@ export default function Fight() {
   const ping = onlineStore.use((s) => s.ping);
 
   const assists = useMemo(() => assistsFor(localChar), [localChar]);
-  const assistButtons: AssistButton[] = settings.assist
-    ? assists.map((a) => ({ id: a.id, label: a.label, enabled: !a.isSuper || superReady }))
-    : [];
+  const assistButtons: AssistButton[] = [
+    ...(settings.assist ? assists.map((a) => ({ id: a.id, label: a.label, enabled: !a.isSuper || superReady })) : []),
+    // MAX (A+B+C) num toque: gasta 1 estoque
+    { id: "max", label: "MAX", enabled: maxReady },
+  ];
 
   // ------------------------------------------------------------ setup
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      atlases.current = await loadAtlases([p1, p2]);
+      atlases.current = await loadAtlases(everyone);
       if (cancelled) return;
       if (online) {
         const handle = joinMatch(setup.online!, roster, STAGES[setup.online!.matchId % STAGES.length].id, settings.inputDelay);
@@ -110,6 +127,7 @@ export default function Fight() {
         worldRef.current = createWorld(
           {
             chars: [p1, p2],
+            teams: teams ?? undefined,
             stageId: stage,
             seed: (Math.random() * 2 ** 31) | 0,
             roundsToWin: setup.mode === "training" ? 99 : 2,
@@ -120,7 +138,7 @@ export default function Fight() {
         );
         if (setup.mode !== "training") {
           const level = setup.mode === "arcade" ? (Math.min(3, 1 + Math.floor(setup.stageNo / 3)) as 1 | 2 | 3) : settings.difficulty;
-          cpu.current = new CpuController(1, roster[p2], level);
+          cpu.current = new CpuController(1, roster, level);
         }
       }
       setLoading(false);
@@ -185,9 +203,16 @@ export default function Fight() {
 
       if (t - lastUi > 200) {
         lastUi = t;
-        setSuperReady(w.fighters[localSide].power >= 1000);
+        const me = w.fighters[localSide];
+        setSuperReady(me.power >= 1000);
+        setMaxReady(me.power >= 1000 && me.maxTime === 0 && me.ctrl);
+        setLocalChar(me.charId);
         if (w.matchWinner >= 0 && w.roundStateTime > 120 && !reported.current) {
           reported.current = true;
+          if (w.matchWinner === 0 || w.matchWinner === 1) {
+            const char = w.fighters[w.matchWinner].charId;
+            setWinner({ char, quote: pickQuote(char) });
+          }
           onlineRef.current?.reportResult(w.matchWinner === 2 ? null : w.matchWinner);
           setResult({ winner: w.matchWinner });
         }
@@ -200,9 +225,14 @@ export default function Fight() {
 
   const onAssist = useCallback(
     (id: string) => {
-      const a = assists.find((x) => x.id === id);
       const w = sessionRef.current?.world ?? worldRef.current;
-      if (!a || !w) return;
+      if (!w) return;
+      if (id === "max") {
+        macro.current.play(MAX_MACRO, w.fighters[localSide].facing);
+        return;
+      }
+      const a = assists.find((x) => x.id === id);
+      if (!a) return;
       const cmd = findCommand(roster[localChar], a.cmd);
       if (cmd) macro.current.play(macroFromCommand(cmd), w.fighters[localSide].facing);
     },
@@ -221,7 +251,7 @@ export default function Fight() {
     if (online) void fetchMe().catch(() => undefined);
     if (to === "menu") router.replace("/");
     else if (to === "select") {
-      matchSetup.set({ p1: null, p2: null });
+      matchSetup.set({ p1: null, p2: null, team1: [], team2: [] });
       router.replace(online ? "/online" : "/select");
     } else if (to === "rematch") router.replace("/fight");
     else if (to === "next") {
@@ -271,6 +301,7 @@ export default function Fight() {
           onAssist={onAssist}
           haptics={settings.vibration}
           onPause={() => setPause(true)}
+          layout={settings.buttons}
         />
       )}
 
@@ -306,6 +337,11 @@ export default function Fight() {
 
       {result ? (
         <Overlay t={t} title={result.winner === 2 ? "EMPATE" : won ? (arcadeDone ? "CAMPEÃO!" : "VITÓRIA!") : "DERROTA"}>
+          {winner?.quote ? (
+            <Text style={[TYPE.BODY, { color: t.text }]}>
+              <Text style={{ color: t.accentText }}>{roster[winner.char]?.displayName ?? winner.char}: </Text>“{winner.quote}”
+            </Text>
+          ) : null}
           {online && finished?.ratings ? (
             <Text style={[TYPE.BODY, { color: t.text }]}>Novo rating: {finished.ratings[String(localSide)]}</Text>
           ) : null}

@@ -2,6 +2,8 @@
 export function deepClone<T>(v: T): T {
   if (v === null || typeof v !== "object") return v;
   if (Array.isArray(v)) {
+    // listas do estado são homogêneas: as de primitivos (entradas, vars) copiam direto
+    if (v.length === 0 || v[0] === null || typeof v[0] !== "object") return v.slice() as T;
     const out = new Array(v.length);
     for (let i = 0; i < v.length; i++) out[i] = deepClone(v[i]);
     return out as T;

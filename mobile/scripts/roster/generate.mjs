@@ -73,6 +73,16 @@ function commonAnims() {
     5100: F([["bounce", -1]]),
     5110: F([["lie", -1]]),
     5120: F([["getUp1", 8], ["getUp2", 8], ["stand1", 4]]),
+    // sistema SNK (estados 6000+ do common1 da engine)
+    6000: F([["crouchDown", 2], ["roll1", 4], ["roll2", 4], ["roll3", 4], ["roll4", 4], ["roll1", 3], ["crouchDown", 3]]),
+    6001: F([["crouchDown", 2], ["roll4", 4], ["roll3", 4], ["roll2", 4], ["roll1", 4], ["roll4", 3], ["crouchDown", 3]]),
+    6010: F([["blowWind", 9], ["blow", 6, H_], ["blow", 8], ["roundWind", 8]]),
+    6015: F([["jumpUp", 4], ["airBlow", 10, H_], ["airBlow", -1]]),
+    6030: F([["grab", 12], ["toss", 14], ["stand3", 10]]),
+    6040: F([["hitHard", -1]]),
+    6050: F([["guardHit", 10], ["stand3", 8]]),
+    6060: F([["dizzy1", 10], ["dizzy2", 10]]),
+    6070: F([["maxPose", 12], ["superPose", 18]]),
   };
 }
 
@@ -610,7 +620,8 @@ function airFile(ch, anims, spriteOf, P, solved) {
       if (pose.startsWith("proj:")) {
         const [, kind] = pose.split(":");
         const r = Math.round(ch.H * (kind === "beam" ? 0.12 : 0.11));
-        const box = kind === "beam" ? [0, -r, Math.round(r * 7), r] : kind === "wave" ? [-r, -r * 3, r, 0] : [-r, -r, r, r];
+        const box =
+          kind === "beam" ? [0, -r, Math.round(r * 7), r] : kind === "wave" ? [-r, -r * 3, r, 0] : kind === "slash" ? [-r, -r * 2, Math.round(r * 1.5), r * 2] : [-r, -r, r, r];
         if (kind !== "burst") out.push("Clsn1: 1", ` Clsn1[0] = ${fmt(box)}`);
         const [g, n] = spriteOf(pose);
         out.push(`${g}, ${n}, 0, 0, ${time}`);
@@ -621,7 +632,7 @@ function airFile(ch, anims, spriteOf, P, solved) {
         return;
       }
       const S = solved(pose);
-      const { clsn1, clsn2 } = boxes(P, S);
+      const { clsn1, clsn2 } = boxes(P, S, ch.look);
       out.push(`Clsn2: ${clsn2.length}`);
       clsn2.forEach((b, j) => out.push(` Clsn2[${j}] = ${fmt(b)}`));
       if (active && clsn1.length) {
@@ -718,6 +729,7 @@ function generate(ch) {
         bio: ch.bio,
         specials: ch.specials.map((s) => ({ name: s.name, cmd: s.cmd })),
         super: { name: ch.super.name, cmd: ch.super.cmd },
+        quotes: ch.quotes ?? [],
       },
       null,
       2,

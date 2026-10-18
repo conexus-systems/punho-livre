@@ -11,7 +11,7 @@ const charsDir = path.join(root, "characters");
 const out = path.join(root, "src/characters/builtin.generated.ts");
 
 const ids = readdirSync(charsDir).filter((d) => statSync(path.join(charsDir, d)).isDirectory()).sort();
-const order = ["kaze", "brasa", "tita", "yuki", "volt", "sombra"];
+const order = ["kaze", "brasa", "tita", "yuki", "volt", "sombra", "kenshi", "lua"];
 ids.sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99));
 
 const entries = ids.map((id) => {

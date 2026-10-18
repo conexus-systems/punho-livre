@@ -1,0 +1,658 @@
+; Lua — constantes e estados (formato MUGEN .cns)
+; Estados comuns (0, 20, 40, 5000...) vêm do common1 da engine.
+
+[Data]
+life = 940
+power = 3000
+attack = 104
+defence = 94
+fall.defence_up = 50
+liedown.time = 50
+airjuggle = 15
+
+[Size]
+xscale = 1
+yscale = 1
+ground.back = 12
+ground.front = 14
+air.back = 10
+air.front = 10
+height = 56
+attack.dist = 160
+proj.attack.dist = 90
+head.pos = -5, -83
+mid.pos = -5, -54
+
+[Velocity]
+walk.fwd = 2.8
+walk.back = -2.5
+run.fwd = 5.4, 0
+run.back = -4.5, -3.8
+jump.neu = 0, -8.8
+jump.back = -2.55
+jump.fwd = 2.5
+
+[Movement]
+yaccel = .44
+stand.friction = .85
+crouch.friction = .82
+
+[Statedef 200]
+type = S
+movetype = A
+physics = S
+anim = 200
+ctrl = 0
+velset = 0, 0
+poweradd = 7
+
+[State 200, golpe]
+type = HitDef
+trigger1 = AnimElem = 2
+attr = S, NA
+animtype = Light
+damage = 22, 3
+guardflag = MA
+hitflag = MAF
+pausetime = 7, 7
+ground.type = High
+ground.slidetime = 7
+ground.hittime = 12
+ground.velocity = -4.5
+air.velocity = -3, -4
+air.fall = 1
+fall = 0
+
+[State 200, fim]
+type = ChangeState
+trigger1 = AnimTime = 0
+value = 0
+ctrl = 1
+
+[Statedef 210]
+type = S
+movetype = A
+physics = S
+anim = 210
+ctrl = 0
+velset = 0, 0
+poweradd = 15
+
+[State 210, golpe]
+type = HitDef
+trigger1 = AnimElem = 2
+attr = S, NA
+animtype = Medium
+damage = 45, 6
+guardflag = MA
+hitflag = MAF
+pausetime = 10, 10
+ground.type = High
+ground.slidetime = 9
+ground.hittime = 15
+ground.velocity = -6
+air.velocity = -3, -4
+air.fall = 1
+fall = 0
+
+[State 210, fim]
+type = ChangeState
+trigger1 = AnimTime = 0
+value = 0
+ctrl = 1
+
+[Statedef 220]
+type = S
+movetype = A
+physics = S
+anim = 220
+ctrl = 0
+velset = 0, 0
+poweradd = 24
+
+[State 220, golpe]
+type = HitDef
+trigger1 = AnimElem = 2
+attr = S, NA
+animtype = Hard
+damage = 72, 9
+guardflag = MA
+hitflag = MAF
+pausetime = 12, 12
+ground.type = High
+ground.slidetime = 11
+ground.hittime = 18
+ground.velocity = -5
+air.velocity = -3, -7
+air.fall = 1
+fall = 0
+
+[State 220, fim]
+type = ChangeState
+trigger1 = AnimTime = 0
+value = 0
+ctrl = 1
+
+[Statedef 230]
+type = S
+movetype = A
+physics = S
+anim = 230
+ctrl = 0
+velset = 0, 0
+poweradd = 9
+
+[State 230, golpe]
+type = HitDef
+trigger1 = AnimElem = 2
+attr = S, NA
+animtype = Light
+damage = 28, 4
+guardflag = MA
+hitflag = MAF
+pausetime = 8, 8
+ground.type = High
+ground.slidetime = 7
+ground.hittime = 12
+ground.velocity = -5
+air.velocity = -3, -4
+air.fall = 1
+fall = 0
+
+[State 230, fim]
+type = ChangeState
+trigger1 = AnimTime = 0
+value = 0
+ctrl = 1
+
+[Statedef 240]
+type = S
+movetype = A
+physics = S
+anim = 240
+ctrl = 0
+velset = 0, 0
+poweradd = 17
+
+[State 240, golpe]
+type = HitDef
+trigger1 = AnimElem = 2
+attr = S, NA
+animtype = Medium
+damage = 50, 7
+guardflag = MA
+hitflag = MAF
+pausetime = 10, 10
+ground.type = High
+ground.slidetime = 10
+ground.hittime = 16
+ground.velocity = -6.5
+air.velocity = -3, -4
+air.fall = 1
+fall = 0
+
+[State 240, fim]
+type = ChangeState
+trigger1 = AnimTime = 0
+value = 0
+ctrl = 1
+
+[Statedef 250]
+type = S
+movetype = A
+physics = S
+anim = 250
+ctrl = 0
+velset = 0, 0
+poweradd = 27
+
+[State 250, golpe]
+type = HitDef
+trigger1 = AnimElem = 2
+attr = S, NA
+animtype = Hard
+damage = 82, 10
+guardflag = MA
+hitflag = MAF
+pausetime = 13, 13
+ground.type = High
+ground.slidetime = 12
+ground.hittime = 20
+ground.velocity = -7.5
+air.velocity = -4, -6
+air.fall = 1
+fall = 0
+
+[State 250, fim]
+type = ChangeState
+trigger1 = AnimTime = 0
+value = 0
+ctrl = 1
+
+[Statedef 400]
+type = C
+movetype = A
+physics = C
+anim = 400
+ctrl = 0
+velset = 0, 0
+poweradd = 7
+
+[State 400, golpe]
+type = HitDef
+trigger1 = AnimElem = 2
+attr = C, NA
+animtype = Light
+damage = 20, 3
+guardflag = MA
+hitflag = MAF
+pausetime = 7, 7
+ground.type = High
+ground.slidetime = 7
+ground.hittime = 11
+ground.velocity = -4
+air.velocity = -3, -4
+air.fall = 1
+fall = 0
+
+[State 400, fim]
+type = ChangeState
+trigger1 = AnimTime = 0
+value = 11
+ctrl = 1
+
+[Statedef 410]
+type = C
+movetype = A
+physics = C
+anim = 410
+ctrl = 0
+velset = 0, 0
+poweradd = 23
+
+[State 410, golpe]
+type = HitDef
+trigger1 = AnimElem = 2
+attr = C, NA
+animtype = Hard
+damage = 68, 8
+guardflag = MA
+hitflag = MAF
+pausetime = 12, 12
+ground.type = High
+ground.slidetime = 11
+ground.hittime = 18
+ground.velocity = -4
+air.velocity = -2.5, -7.5
+air.fall = 1
+fall = 0
+
+[State 410, fim]
+type = ChangeState
+trigger1 = AnimTime = 0
+value = 11
+ctrl = 1
+
+[Statedef 430]
+type = C
+movetype = A
+physics = C
+anim = 430
+ctrl = 0
+velset = 0, 0
+poweradd = 10
+
+[State 430, golpe]
+type = HitDef
+trigger1 = AnimElem = 2
+attr = C, NA
+animtype = Light
+damage = 30, 4
+guardflag = L
+hitflag = MAF
+pausetime = 8, 8
+ground.type = High
+ground.slidetime = 7
+ground.hittime = 12
+ground.velocity = -5
+air.velocity = -3, -4
+air.fall = 1
+fall = 0
+
+[State 430, fim]
+type = ChangeState
+trigger1 = AnimTime = 0
+value = 11
+ctrl = 1
+
+[Statedef 440]
+type = C
+movetype = A
+physics = C
+anim = 440
+ctrl = 0
+velset = 0, 0
+poweradd = 20
+
+[State 440, golpe]
+type = HitDef
+trigger1 = AnimElem = 2
+attr = C, NA
+animtype = Hard
+damage = 60, 8
+guardflag = L
+hitflag = MAF
+pausetime = 10, 10
+ground.type = Trip
+ground.slidetime = 12
+ground.hittime = 20
+ground.velocity = -2
+air.velocity = -3, -4
+air.fall = 1
+fall = 1
+
+[State 440, fim]
+type = ChangeState
+trigger1 = AnimTime = 0
+value = 11
+ctrl = 1
+
+[Statedef 600]
+type = A
+movetype = A
+physics = A
+anim = 600
+ctrl = 0
+poweradd = 13
+
+[State 600, golpe]
+type = HitDef
+trigger1 = AnimElem = 2
+attr = A, NA
+animtype = Medium
+damage = 40, 5
+guardflag = HA
+hitflag = MAF
+pausetime = 8, 8
+ground.type = High
+ground.slidetime = 8
+ground.hittime = 14
+ground.velocity = -4
+air.velocity = -3, -4
+air.fall = 1
+fall = 0
+
+[Statedef 610]
+type = A
+movetype = A
+physics = A
+anim = 610
+ctrl = 0
+poweradd = 22
+
+[State 610, golpe]
+type = HitDef
+trigger1 = AnimElem = 2
+attr = A, NA
+animtype = Hard
+damage = 66, 8
+guardflag = HA
+hitflag = MAF
+pausetime = 11, 11
+ground.type = High
+ground.slidetime = 11
+ground.hittime = 18
+ground.velocity = -5
+air.velocity = -3, -4
+air.fall = 1
+fall = 0
+
+[Statedef 630]
+type = A
+movetype = A
+physics = A
+anim = 630
+ctrl = 0
+poweradd = 15
+
+[State 630, golpe]
+type = HitDef
+trigger1 = AnimElem = 2
+attr = A, NA
+animtype = Medium
+damage = 45, 5
+guardflag = HA
+hitflag = MAF
+pausetime = 9, 9
+ground.type = High
+ground.slidetime = 9
+ground.hittime = 15
+ground.velocity = -5
+air.velocity = -3, -4
+air.fall = 1
+fall = 0
+
+[Statedef 640]
+type = A
+movetype = A
+physics = A
+anim = 640
+ctrl = 0
+poweradd = 24
+
+[State 640, golpe]
+type = HitDef
+trigger1 = AnimElem = 2
+attr = A, NA
+animtype = Hard
+damage = 72, 8
+guardflag = HA
+hitflag = MAF
+pausetime = 12, 12
+ground.type = High
+ground.slidetime = 11
+ground.hittime = 18
+ground.velocity = -6
+air.velocity = -3, -4
+air.fall = 1
+fall = 0
+
+[Statedef 1000]
+type = S
+movetype = A
+physics = S
+anim = 1000
+ctrl = 0
+velset = 0, 0
+poweradd = 40
+
+[State 1000, corre]
+type = VelSet
+trigger1 = AnimElemTime(2) >= 0 && AnimElemTime(3) < 0
+x = 6.5
+
+[State 1000, freia]
+type = VelSet
+trigger1 = AnimElem = 3
+x = 0
+
+[State 1000, golpe]
+type = HitDef
+trigger1 = AnimElem = 2
+attr = S, SA
+animtype = Hard
+damage = 78, 10
+guardflag = MA
+hitflag = MAF
+pausetime = 10, 12
+ground.type = High
+ground.slidetime = 12
+ground.hittime = 20
+ground.velocity = -7
+air.velocity = -4, -5
+air.fall = 1
+fall = 0
+
+[State 1000, fim]
+type = ChangeState
+trigger1 = AnimTime = 0
+value = 0
+ctrl = 1
+
+[Statedef 1100]
+type = S
+movetype = A
+physics = S
+anim = 1100
+ctrl = 0
+velset = 0, 0
+poweradd = 40
+
+[State 1100, corre]
+type = VelSet
+trigger1 = AnimElemTime(2) >= 0 && AnimElemTime(3) < 0
+x = 5
+
+[State 1100, freia]
+type = VelSet
+trigger1 = AnimElem = 3
+x = 0
+
+[State 1100, golpe]
+type = HitDef
+trigger1 = AnimElem = 2
+attr = S, SA
+animtype = Hard
+damage = 70, 9
+guardflag = MA
+hitflag = MAF
+pausetime = 10, 12
+ground.type = High
+ground.slidetime = 12
+ground.hittime = 20
+ground.velocity = -7
+air.velocity = -4, -5
+air.fall = 1
+fall = 0
+
+[State 1100, fim]
+type = ChangeState
+trigger1 = AnimTime = 0
+value = 0
+ctrl = 1
+
+[Statedef 1200]
+type = S
+movetype = A
+physics = S
+anim = 1200
+ctrl = 0
+velset = 0, 0
+poweradd = 50
+
+[State 1200, invencivel]
+type = NotHitBy
+trigger1 = Time = 0
+value = SCA
+time = 7
+
+[State 1200, sobe]
+type = VelSet
+trigger1 = AnimElem = 2
+x = 2.2
+y = -9.5
+
+[State 1200, ar]
+type = StateTypeSet
+trigger1 = AnimElem = 2
+statetype = A
+physics = A
+
+[State 1200, golpe]
+type = HitDef
+trigger1 = AnimElem = 2
+attr = S, SA
+animtype = Hard
+damage = 92, 12
+guardflag = MA
+hitflag = MAF
+pausetime = 10, 12
+ground.type = High
+ground.slidetime = 12
+ground.hittime = 20
+ground.velocity = -3, -8
+air.velocity = -3, -8
+air.fall = 1
+fall = 1
+
+[Statedef 3000]
+type = S
+movetype = A
+physics = S
+anim = 3000
+ctrl = 0
+velset = 0, 0
+
+[State 3000, custo]
+type = PowerAdd
+trigger1 = Time = 0
+value = -1000
+
+[State 3000, pausa]
+type = SuperPause
+trigger1 = Time = 0
+time = 30
+
+[State 3000, invencivel]
+type = NotHitBy
+trigger1 = Time = 0
+value = SCA
+time = 20
+
+[State 3000, avanca]
+type = VelSet
+trigger1 = AnimElemTime(2) >= 0 && AnimElemTime(6) < 0
+x = 3.6
+
+[State 3000, combo]
+type = HitDef
+trigger1 = AnimElem = 2
+trigger2 = AnimElem = 3
+trigger3 = AnimElem = 4
+trigger4 = AnimElem = 5
+attr = S, HA
+animtype = Medium
+damage = 29, 2
+guardflag = MA
+hitflag = MAF
+pausetime = 4, 8
+ground.type = High
+ground.slidetime = 12
+ground.hittime = 20
+ground.velocity = -1
+air.velocity = -1, -2
+air.fall = 0
+fall = 0
+
+[State 3000, final]
+type = HitDef
+trigger1 = AnimElem = 6
+attr = S, HA
+animtype = Hard
+damage = 124, 10
+guardflag = MA
+hitflag = MAF
+pausetime = 16, 18
+ground.type = High
+ground.slidetime = 14
+ground.hittime = 24
+ground.velocity = -6, -7
+air.velocity = -6, -7
+air.fall = 1
+fall = 1
+
+[State 3000, fim]
+type = ChangeState
+trigger1 = AnimTime = 0
+value = 0
+ctrl = 1

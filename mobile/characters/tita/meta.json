@@ -19,5 +19,9 @@
   "super": {
     "name": "Fenda Tectônica",
     "cmd": "super_p"
-  }
+  },
+  "quotes": [
+    "Pode levantar. Eu espero.",
+    "Do interior pro mundo, um tombo de cada vez."
+  ]
 }

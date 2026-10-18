@@ -42,7 +42,8 @@ export const BASE_POSE = {
   lift: 0, // quanto o ponto mais baixo fica acima do chão
   ground: true,
   hurtArm: false,
-  strike: null, // "handF" | "handB" | "footF" | "footB" | "body"
+  strike: null, // "handF" | "handB" | "hands" | "footF" | "footB" | "kneeF" | "elbowF" | "body"
+  weapon: null, // ângulo da arma na mão da frente (null = segue o antebraço)
   scale: 1,
 };
 
@@ -90,6 +91,36 @@ export function solve(P, poseIn) {
   return S;
 }
 
+// ------------------------------------------------------------- arma
+
+/**
+ * Arma na mão da frente (look.weapon): [cabo, mão, ponta] em unidades. Sem
+ * ângulo na pose, a lâmina segue o antebraço, um pouco para cima.
+ */
+export function weaponSegment(P, S, look) {
+  const wpn = look?.weapon;
+  if (!wpn) return null;
+  const hand = S.armF[2];
+  const fore = S.pose.armF[1];
+  const ang = S.pose.weapon ?? fore - 12;
+  const d = dir(ang);
+  return { butt: add(hand, d, -P.H * 0.1), hand, tip: add(hand, d, P.H * (wpn.length ?? 0.6)), ang };
+}
+
+function weaponShapes(P, S, look, col) {
+  const seg = weaponSegment(P, S, look);
+  if (!seg) return [];
+  const w = look.weapon;
+  const perp = dir(seg.ang + 90);
+  const guard = add(seg.hand, dir(seg.ang), P.H * 0.03);
+  return [
+    { kind: "cap", a: seg.butt, b: seg.hand, r1: P.H * 0.016, color: col(w.hilt) },
+    { kind: "cap", a: add(guard, perp, -P.H * 0.03), b: add(guard, perp, P.H * 0.03), r1: P.H * 0.012, color: col(w.guard) },
+    { kind: "cap", a: guard, b: seg.tip, r1: P.H * 0.014, r2: P.H * 0.006, color: col(w.blade) },
+    { kind: "cap", a: add(guard, perp, -P.H * 0.004), b: add(seg.tip, perp, -P.H * 0.003), r1: P.H * 0.004, r2: P.H * 0.002, color: [255, 255, 255], noOutline: true },
+  ];
+}
+
 // ------------------------------------------------------------- desenho
 
 function limbShapes(seg, r1, r2, end) {
@@ -120,12 +151,19 @@ export function shapes(P, S, look) {
   const leg = (seg, f) => {
     const [thigh, shin] = limbShapes(seg, P.thighR, P.shinR);
     out.push({ ...thigh, color: col(look.pants, f) });
-    out.push({ ...shin, color: col(look.pants, f) });
+    // calção (muay thai): canela à mostra
+    out.push({ ...shin, color: col(look.shorts ? look.skin : look.pants, f) });
+    if (look.shorts) out.push({ kind: "cap", a: seg[0], b: add(seg[0], norm(seg[0], seg[1]), P.thigh * 0.7), r1: P.thighR * 1.12, r2: P.thighR * 1.05, color: col(look.pants, f) });
     out.push(footShape(seg, f));
   };
   const arm = (seg, f) => {
     const sleeve = look.sleeves ? look.top : look.skin;
     out.push({ kind: "cap", a: seg[0], b: seg[1], r1: P.armR * 1.15, r2: P.armR, color: col(sleeve, f) });
+    // braçadeira (prajioud)
+    if (look.armband) {
+      const mid = add(seg[0], norm(seg[0], seg[1]), P.upperArm * 0.45);
+      out.push({ kind: "circle", c: mid, r: P.armR * 1.25, color: col(look.armband, f) });
+    }
     out.push({ kind: "cap", a: seg[1], b: seg[2], r1: P.armR, r2: P.armR * 0.9, color: col(look.forearm ?? look.skin, f) });
     out.push({ kind: "circle", c: seg[2], r: P.fistR, color: col(look.gloves, f) });
   };
@@ -153,8 +191,15 @@ export function shapes(P, S, look) {
     out.push({ kind: "cap", a, b, r1: P.head * 0.22, color: col(look.headband) });
     out.push({ kind: "cap", a, b: [a[0] - P.head * 1.3, a[1] + P.head * 0.6], r1: P.head * 0.16, r2: P.head * 0.08, color: col(look.headband, 0.85) });
   }
+  out.push(...weaponShapes(P, S, look, col));
   arm(S.armF, 1);
   return out;
+}
+
+function norm(a, b) {
+  const d = [b[0] - a[0], b[1] - a[1]];
+  const l = Math.hypot(d[0], d[1]) || 1;
+  return [d[0] / l, d[1] / l];
 }
 
 function hair(out, P, S, look, col) {
@@ -291,13 +336,22 @@ function unionBox(...boxes) {
 }
 
 // Clsn2 (onde pode apanhar) e Clsn1 (onde acerta) de uma pose resolvida.
-export function boxes(P, S) {
+export function boxes(P, S, look = null) {
   const upper = unionBox(segBox([S.head], P.head), segBox([S.hip, S.neck], P.chestR * 0.85));
   const legs = unionBox(segBox(S.legF, P.thighR * 0.8), segBox(S.legB, P.thighR * 0.8));
   const clsn2 = [upper, legs];
   if (S.pose.hurtArm) clsn2.push(segBox(S.armF.slice(1), P.armR));
   const clsn1 = [];
   const strike = S.pose.strike;
+  // com arma, os golpes da mão da frente acertam com a lâmina
+  const blade = weaponSegment(P, S, look);
+  if (blade && (strike === "handF" || strike === "hands")) {
+    clsn1.push(segBox([blade.hand, blade.tip], 4));
+    if (strike === "hands") clsn1.push(segBox(S.armB.slice(1), P.fistR + 2));
+    return { clsn1: clsn1.map((b) => b.map(round)), clsn2: clsn2.map((b) => b.map(round)) };
+  }
+  if (strike === "kneeF") clsn1.push(segBox([S.legF[1]], P.thighR + 4));
+  if (strike === "elbowF") clsn1.push(segBox([S.armF[1]], P.armR + 5));
   if (strike === "handF") clsn1.push(segBox(S.armF.slice(1), P.fistR + 2));
   if (strike === "handB") clsn1.push(segBox(S.armB.slice(1), P.fistR + 2));
   if (strike === "hands") clsn1.push(unionBox(segBox(S.armF.slice(1), P.fistR + 2), segBox(S.armB.slice(1), P.fistR + 2)));
@@ -339,6 +393,30 @@ export function projectileShapes(kind, look, H, frame) {
         { kind: "circle", c: [0, 0], r: r * (1 + frame * 0.45), color: e, alpha: Math.max(0.15, 0.7 - frame * 0.15), noOutline: true },
         { kind: "circle", c: [0, 0], r: r * (0.6 + frame * 0.3), color: glow, alpha: Math.max(0.1, 0.8 - frame * 0.2), noOutline: true },
       ];
+    case "slash": {
+      // lâmina de vento em meia-lua: arco de cápsulas, grosso no meio e fino nas pontas
+      const arc = (rad, thick, color, alpha) => {
+        const out = [];
+        const n = 8;
+        for (let i = 0; i < n; i++) {
+          const a0 = (-70 + (140 * i) / n) * (Math.PI / 180);
+          const a1 = (-70 + (140 * (i + 1)) / n) * (Math.PI / 180);
+          const w = (t) => thick * (0.25 + 0.75 * Math.sin(Math.PI * t));
+          out.push({
+            kind: "cap",
+            a: [-r * 0.6 + Math.cos(a0) * rad, Math.sin(a0) * rad],
+            b: [-r * 0.6 + Math.cos(a1) * rad, Math.sin(a1) * rad],
+            r1: w(i / n),
+            r2: w((i + 1) / n),
+            color,
+            alpha,
+            noOutline: true,
+          });
+        }
+        return out;
+      };
+      return [...arc(r * 1.9, r * 0.5, e, 0.55), ...arc(r * 1.9, r * 0.3, glow, 1), ...arc(r * 1.95, r * 0.1, core, 1)];
+    }
     case "orb":
     default:
       return [

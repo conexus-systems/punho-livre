@@ -67,7 +67,12 @@ Suportado:
 - Estados comuns (`common1`) próprios da engine: parado, agachar, andar, pulo, pouso,
   corrida, recuo, defesa, apanhar (em pé/agachado/ar), queda, quique, deitado, levantar,
   vitória/derrota/intro.
+- Sistema SNK (0.2.0) para qualquer personagem, inclusive importado: estados 6000–6070 do `common1`
+  (rolamento 6000/6001, blowback 6010/6015, guard cancel 6020, arremesso 6030/6040/6050, guard crush
+  6060, MAX 6070). Um personagem pode sobrescrever qualquer um. Sem as animações 6000+, a engine usa
+  substitutas (agachado para o rolamento, 240/250 para o blowback, 640/630 no ar, 800 para o arremesso).
+  A entrada vem de `src/engine/snk.ts`: A = x, B = a, C = z, D = c.
 
-Ainda não suportado: Helper, Explod visível, sons `.snd`, arremessos (`p2stateno`,
+Ainda não suportado: Helper, Explod visível, sons `.snd`, arremessos próprios do personagem (`p2stateno`,
 TargetState, TargetBind), juggle points, AssertSpecial com efeito, cenários/screenpacks
 do MUGEN, paletas além da escolhida no pack.

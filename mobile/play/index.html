@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>MUGEN Arena</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,6 +18,7 @@
     --hud: "Barlow Condensed", "Arial Narrow", sans-serif;
     color-scheme: dark;
   }
+  [hidden] { display: none !important; }
   html, body { height: 100%; }
   body {
     background: var(--bg);
@@ -117,15 +119,21 @@
   .pad { position: absolute; right: max(20px, env(safe-area-inset-right, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); display: grid; grid-template-columns: repeat(3, 56px); gap: 10px; }
   .pad .b { width: 56px; height: 56px; border: 2px solid rgba(255, 255, 255, 0.7); background: rgba(0, 0, 0, 0.4); display: grid; place-items: center; font-size: 26px; font-weight: 300; }
   .pad .b.on { background: var(--accent); border-color: var(--accent); }
+  .pad .b.combo { width: 44px; height: 44px; margin: 6px; font-size: 14px; border-width: 1px; }
   .pad .b:nth-child(n+4) { transform: translateX(14px); }
   .move-hint { position: absolute; left: 40px; bottom: calc(env(safe-area-inset-bottom, 0px) + 40px); width: 100px; height: 100px; border: 2px solid rgba(255,255,255,0.25); display: grid; place-items: center; font-size: 12px; color: rgba(255,255,255,0.5); pointer-events: none; }
 
   #overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); display: grid; place-items: center; z-index: 4; }
   .panel { background: var(--chrome); width: min(480px, 92%); padding: 24px; display: flex; flex-direction: column; gap: 12px; }
   #panel-actions { display: flex; flex-direction: column; gap: 8px; }
+  #panel-text { margin: 0; font-size: 15px; }
+  #panel-text b { color: var(--accent-text); font-weight: 400; }
+  .team-picks { display: flex; gap: 4px; min-height: 0; }
+  .team-picks canvas { width: 48px; height: 48px; background: var(--surface); }
 
   #help { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); display: grid; place-items: center; z-index: 5; }
   #help table { border-collapse: collapse; font-size: 14px; }
+  #help .panel { max-height: 92dvh; overflow: auto; }
   #help td { padding: 4px 16px 4px 0; vertical-align: top; }
   #help td:first-child { color: var(--accent-text); white-space: nowrap; font-variant-numeric: tabular-nums; }
   #loading { position: fixed; inset: 0; display: grid; place-items: center; }
@@ -167,9 +175,12 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><path d="M4 4l9 9M20 4l-9 9M7 14l-3 3 3 3 3-3M17 14l3 3-3 3-3-3"/></svg>
       <span class="name">Versus CPU</span>
     </button>
-    <button class="tile medium" data-mode="training" aria-label="Treino">
+    <button class="tile medium" data-mode="team" aria-label="Equipes 3×3">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><path d="M12 4a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM5 7a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM19 7a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7.5 19v-3a4.5 4.5 0 0 1 9 0v3M2 18v-2a3 3 0 0 1 4-2.8M22 18v-2a3 3 0 0 0-4-2.8"/></svg>
+      <span class="name">Equipes 3×3</span>
+    </button>
+    <button class="tile small" data-mode="training" aria-label="Treino" title="Treino">
       <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 11v2M11 12h2"/></svg>
-      <span class="name">Treino</span>
     </button>
     <button id="help-open" class="tile small quiet" aria-label="Como jogar" title="Como jogar">
       <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><rect x="2.5" y="6.5" width="19" height="11"/><path d="M6 10h2M10 10h2M14 10h2M18 10h0M7 14h10"/></svg>
@@ -181,6 +192,7 @@
   <div class="side">
     <div class="kicker" id="select-kicker">Versus CPU</div>
     <h1 class="header" id="select-title">Seu lutador</h1>
+    <div class="team-picks" id="team-picks" hidden></div>
     <canvas id="pick-portrait"></canvas>
     <div id="pick-name"></div>
     <div class="caption" id="pick-bio"></div>
@@ -202,9 +214,10 @@
   <div id="touch">
     <div class="move-hint">mover</div>
     <div id="stick" hidden><div id="stick-knob"></div></div>
+    <!-- padrão SNK: C e D fortes em cima, A e B fracos embaixo; atalhos de dois botões à esquerda -->
     <div class="pad">
-      <div class="b" data-bit="128">x</div><div class="b" data-bit="256">y</div><div class="b" data-bit="512">z</div>
-      <div class="b" data-bit="16">a</div><div class="b" data-bit="32">b</div><div class="b" data-bit="64">c</div>
+      <div class="b combo" data-bit="576" aria-label="C+D">C+D</div><div class="b" data-bit="512">C</div><div class="b" data-bit="64">D</div>
+      <div class="b combo" data-bit="144" aria-label="A+B">A+B</div><div class="b" data-bit="128">A</div><div class="b" data-bit="16">B</div>
     </div>
   </div>
   <div id="assists"></div>
@@ -212,10 +225,11 @@
     <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="1.7"><path d="M8 5v14M16 5v14"/></svg>
   </button>
   <div id="arcade-step"></div>
-  <div id="keys-hint">mover: setas/WASD · soco: U I O · chute: J K L · especiais: 1 2 3 · super: 4 · pausa: Esc</div>
+  <div id="keys-hint">mover: setas/WASD · A U · B J · C I · D K · rolar O (A+B) · blowback L (C+D) · MAX M · especiais 1 2 3 · super 4 · pausa Esc</div>
   <div id="overlay" hidden>
     <div class="panel" role="dialog" aria-modal="true" aria-labelledby="panel-title">
       <h2 class="header" id="panel-title">pausa</h2>
+      <p id="panel-text" hidden></p>
       <div id="panel-actions"></div>
     </div>
   </div>
@@ -225,13 +239,18 @@
   <div class="panel" role="dialog" aria-modal="true" aria-labelledby="help-title">
     <h2 class="header" id="help-title">como jogar</h2>
     <table>
-      <tr><td>Setas / WASD</td><td>andar, pular (cima), agachar (baixo); segurar para trás defende</td></tr>
-      <tr><td>U · I · O</td><td>soco fraco, médio, forte (x y z)</td></tr>
-      <tr><td>J · K · L</td><td>chute fraco, médio, forte (a b c)</td></tr>
+      <tr><td>Setas / WASD</td><td>andar, pular (cima; toque rápido = pulo curto), agachar; segurar para trás defende; →→ corre</td></tr>
+      <tr><td>U · J</td><td>A soco fraco · B chute fraco</td></tr>
+      <tr><td>I · K</td><td>C soco forte · D chute forte</td></tr>
+      <tr><td>O (A+B)</td><td>rolamento invencível (com ← rola para trás)</td></tr>
+      <tr><td>L (C+D)</td><td>blowback: derruba (também no ar)</td></tr>
+      <tr><td>→ ou ← + I/K</td><td>arremesso colado; quem é agarrado escapa com C ou D</td></tr>
+      <tr><td>M (A+B+C)</td><td>modo MAX: gasta 1 estoque, +20% de dano e super turbinado</td></tr>
+      <tr><td>defendendo</td><td>A+B ou C+D com 1 estoque: guard cancel · ← no último instante: Just Defend</td></tr>
       <tr><td>↓ ↘ → + soco</td><td>especial de meia-lua, como no MUGEN</td></tr>
-      <tr><td>1 · 2 · 3 · 4</td><td>especiais e super em um toque (super com a barra cheia)</td></tr>
+      <tr><td>1 · 2 · 3 · 4</td><td>especiais e super em um toque (super com 1 estoque)</td></tr>
       <tr><td>Esc / P</td><td>pausa · no treino, B mostra as caixas de colisão</td></tr>
-      <tr><td>Celular</td><td>direcional na metade esquerda, botões à direita; jogue com o aparelho deitado</td></tr>
+      <tr><td>Celular</td><td>direcional na metade esquerda, A B C D e os atalhos à direita; aparelho deitado</td></tr>
     </table>
     <button class="btn primary" id="help-close" type="button">Entendi</button>
   </div>

@@ -1,0 +1,27 @@
+{
+  "id": "lua",
+  "name": "Lua",
+  "bio": "Lutadora de muay thai de Fortaleza. Joelhos e cotovelos de perto, sem pausa.",
+  "specials": [
+    {
+      "name": "Joelhada Voadora",
+      "cmd": "qcf_k"
+    },
+    {
+      "name": "Cotovelada",
+      "cmd": "qcf_p"
+    },
+    {
+      "name": "Chute Tesoura",
+      "cmd": "dp_k"
+    }
+  ],
+  "super": {
+    "name": "Tempestade de Joelhos",
+    "cmd": "super_k"
+  },
+  "quotes": [
+    "Oito armas, uma vitória.",
+    "No ringue de Fortaleza já apanhei de gente maior."
+  ]
+}

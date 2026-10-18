@@ -1,6 +1,6 @@
 {
   "name": "mugen-arena",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -15,6 +15,7 @@
     "characters": "node scripts/build-character-index.mjs",
     "pack": "node scripts/mugen-pack.mjs",
     "preview": "jest -c scripts/preview/jest.config.js",
+    "bench": "node scripts/bench.mjs",
     "test:ci": "jest --ci --forceExit && node --test scripts/__tests__/*.test.mjs && node scripts/check-roster.mjs",
     "preview:web": "node scripts/preview-web.mjs",
     "play:build": "node play/build.mjs"

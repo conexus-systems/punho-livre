@@ -6,6 +6,8 @@ export interface CharacterMeta {
   bio: string;
   specials: { name: string; cmd: string }[];
   super: { name: string; cmd: string };
+  /** Frases de vitória (tela de resultado). */
+  quotes?: string[];
 }
 
 export interface BuiltinCharacter {

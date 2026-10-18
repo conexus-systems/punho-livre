@@ -7,7 +7,7 @@ const ADMOB_IOS_APP_ID = process.env.ADMOB_IOS_APP_ID ?? "ca-app-pub-39402560999
 const config: ExpoConfig = {
   name: "MUGEN Arena",
   slug: "mugen-arena",
-  version: "0.1.0",
+  version: "0.2.0",
   orientation: "landscape",
   userInterfaceStyle: "dark",
   scheme: ["br.com.conexus.mugenarena", "mugenarena"],

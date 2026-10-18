@@ -51,7 +51,14 @@ export interface AppState {
   premium: boolean;
   /** Partidas offline concluídas desde o último interstitial. */
   matchesSinceAd: number;
-  settings: { assist: boolean; vibration: boolean; difficulty: 1 | 2 | 3; inputDelay: number };
+  settings: {
+    assist: boolean;
+    vibration: boolean;
+    difficulty: 1 | 2 | 3;
+    inputDelay: number;
+    /** Botões da luta: 4 do padrão SNK (A B C D + A+B e C+D) ou os 6 do MUGEN. */
+    buttons: "snk" | "mugen";
+  };
 }
 
 export const app = createStore<AppState>({
@@ -59,5 +66,5 @@ export const app = createStore<AppState>({
   player: null,
   premium: false,
   matchesSinceAd: 0,
-  settings: { assist: true, vibration: true, difficulty: 2, inputDelay: 2 },
+  settings: { assist: true, vibration: true, difficulty: 2, inputDelay: 2, buttons: "snk" },
 });

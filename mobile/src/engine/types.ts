@@ -99,6 +99,8 @@ export interface Controller {
   ignoreHitPause: boolean;
   /** Índice único dentro do estado, usado para `persistent`. */
   index: number;
+  /** Chave "estado:índice" em `FighterState.fired` (montada uma vez, no primeiro uso). */
+  firedKey?: string;
 }
 
 export interface StateDef {
@@ -269,6 +271,17 @@ export interface FighterState {
   roundsWon: number;
   attackMul: number;
   defenceMul: number;
+  // ---- sistema SNK (ver snk.ts)
+  /** Ticks restantes do modo MAX (0 = desligado). */
+  maxTime: number;
+  /** Duração total do MAX atual (para a barra do HUD). */
+  maxTotal: number;
+  /** Medidor de defesa: chega a 0 → guard crush. */
+  guardMeter: number;
+  /** Ticks até o medidor de defesa voltar a encher. */
+  guardRegenDelay: number;
+  /** Arremesso em andamento: 1 para frente, -1 para trás (0 = nenhum). */
+  throwDir: number;
 }
 
 export interface ProjectileState {
@@ -295,8 +308,24 @@ export interface ProjectileState {
   hitTicksLeft: number;
 }
 
+export type GameEventKind =
+  | "hit"
+  | "guard"
+  | "ko"
+  | "round"
+  | "fight"
+  | "super"
+  /** Sistema SNK: textos e efeitos do HUD. */
+  | "counter"
+  | "justdefend"
+  | "guardcrush"
+  | "max"
+  | "guardcancel"
+  | "throw"
+  | "tech";
+
 export interface GameEvent {
-  kind: "hit" | "guard" | "ko" | "round" | "fight" | "super";
+  kind: GameEventKind;
   x: number;
   y: number;
   side: 0 | 1;
@@ -332,6 +361,15 @@ export interface WorldState {
   superPauseOwner: -1 | 0 | 1;
   events: GameEvent[];
   stageId: string;
+  /** Batalha de equipes (KOF): null no 1 contra 1. */
+  teams: [TeamState, TeamState] | null;
+}
+
+export interface TeamState {
+  /** Ids dos personagens, na ordem de entrada. */
+  members: string[];
+  /** Índice de quem está lutando (= quantos já caíram). */
+  index: number;
 }
 
 export interface MatchConfig {
@@ -343,4 +381,10 @@ export interface MatchConfig {
   roundTime: number;
   /** Treino: vida regenera, sem KO. */
   training?: boolean;
+  /**
+   * Batalha de equipes estilo KOF (eliminação): cada lado entra com até 3
+   * lutadores; quem vence fica com a vida que tinha (mais uma recuperação) e
+   * quem perde é substituído pelo próximo. `chars` é ignorado quando presente.
+   */
+  teams?: [string[], string[]];
 }
