@@ -283,6 +283,108 @@ const SCENES = [
   },
 ];
 
+// ---- primeiro plano: passa na frente dos lutadores, rolando mais rápido que o chão ----
+
+function front(images, key, sc, h, y, draw, alpha = 1) {
+  const w = Math.round(sc.width * 1.2);
+  return layer(images, key, w, h, y, (ctx) => draw(ctx, w, h), { front: true, alpha });
+}
+
+// copa de árvore vista de perto: círculos sobrepostos com pontos de luz
+function canopy(ctx, x, y, s, dark, light) {
+  for (const [dx, dy, r] of [[0, 0, 40], [-38, 10, 32], [38, 12, 34], [-20, 34, 28], [24, 36, 30]]) {
+    ctx.fillStyle = dark; ctx.beginPath(); ctx.arc(x + dx * s, y + dy * s, r * s, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.fillStyle = light;
+  for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.arc(x + (i * 37 % 90 - 45) * s, y + (i * 23 % 70) * s, 5 * s, 0, Math.PI * 2); ctx.fill(); }
+}
+
+function leafCluster(ctx, x, y, s, a, color) {
+  ctx.fillStyle = color;
+  for (let i = 0; i < 6; i++) {
+    const r = a + (i - 2.5) * 0.35;
+    ctx.beginPath(); ctx.ellipse(x + Math.cos(r) * 34 * s, y + Math.sin(r) * 34 * s, 38 * s, 7 * s, r, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+const FRONTS = {
+  1(images, rng, sc) { // Praia: folhas de palmeira no alto e pedras escuras embaixo
+    return [
+      front(images, 'gen/bg1/fg-leaves', sc, 110, 150, (ctx, w) => {
+        for (let x = 140; x < w; x += 520 + rng.next() * 260) leafCluster(ctx, x, 6, 1.5, Math.PI / 2 + (rng.next() - 0.5), '#1f4a2c');
+      }),
+    ];
+  },
+  2(images, rng, sc) { // Rua: postes com luz e fios no alto
+    return [
+      front(images, 'gen/bg2/fg-poles', sc, 440, 128, (ctx, w, h) => {
+        for (let x = 300; x < w; x += 900) {
+          ctx.fillStyle = '#16141f'; ctx.fillRect(x - 3, 30, 6, h - 30);
+          ctx.fillRect(x - 5, 30, 46, 8);
+          const g = ctx.createRadialGradient(x + 38, 44, 2, x + 38, 44, 70);
+          g.addColorStop(0, 'rgba(255,230,160,0.9)'); g.addColorStop(1, 'rgba(255,200,100,0)');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x + 38, 44, 70, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#fff2c0'; ctx.fillRect(x + 28, 40, 20, 6);
+        }
+        ctx.strokeStyle = 'rgba(10,10,20,0.8)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, 20); for (let x = 0; x <= w; x += 60) ctx.lineTo(x, 22 + Math.sin(x / 90) * 8); ctx.stroke();
+      }, 0.55),
+    ];
+  },
+  3(images, rng, sc) { // Floresta: folhas no alto e arbustos embaixo
+    return [
+      front(images, 'gen/bg3/fg-leaves', sc, 110, 150, (ctx, w) => {
+        for (let x = 90; x < w; x += 420 + rng.next() * 260) canopy(ctx, x, -14, 1.1, rng.next() < 0.5 ? '#1c5226' : '#256a2e', '#3f8f45');
+      }),
+      front(images, 'gen/bg3/fg-bush', sc, 50, 530, (ctx, w) => {
+        for (let x = 0; x < w; x += 110) {
+          ctx.fillStyle = rng.next() < 0.5 ? '#1f5a2a' : '#2a7035';
+          ctx.beginPath(); ctx.arc(x + rng.next() * 40, 56, 26 + rng.next() * 20, Math.PI, 0); ctx.fill();
+        }
+      }),
+    ];
+  },
+  4(images, rng, sc) { // Templo: pilares vermelhos e lanternas
+    return [
+      front(images, 'gen/bg4/fg-pillars', sc, 440, 128, (ctx, w, h) => {
+        for (let x = 140; x < w; x += 700) {
+          ctx.fillStyle = '#8a2a26'; ctx.fillRect(x - 14, 0, 28, h);
+          ctx.fillStyle = '#a8352f'; ctx.fillRect(x - 14, 0, 8, h);
+          ctx.fillStyle = '#2a1a1a'; ctx.fillRect(x - 20, 0, 40, 10);
+        }
+        for (let x = 420; x < w; x += 700) {
+          ctx.strokeStyle = '#2a1a1a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 34); ctx.stroke();
+          const g = ctx.createRadialGradient(x, 52, 3, x, 52, 44); g.addColorStop(0, 'rgba(255,190,80,0.9)'); g.addColorStop(1, 'rgba(255,120,40,0)');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, 52, 44, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#d83a2a'; ctx.beginPath(); ctx.ellipse(x, 52, 13, 17, 0, 0, Math.PI * 2); ctx.fill();
+        }
+      }, 0.5),
+    ];
+  },
+  5(images, rng, sc) { // Porto: guindaste e cordas
+    return [
+      front(images, 'gen/bg5/fg-crane', sc, 200, 128, (ctx, w) => {
+        for (let x = 260; x < w; x += 1000) {
+          ctx.fillStyle = '#c8402a'; ctx.fillRect(x - 6, 0, 12, 200);
+          ctx.fillRect(x - 6, 0, 150, 10);
+          ctx.strokeStyle = '#2a2a30'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 140, 10); ctx.lineTo(x + 140, 110); ctx.stroke();
+          ctx.fillStyle = '#2a2a30'; ctx.beginPath(); ctx.arc(x + 140, 116, 8, 0, Math.PI, false); ctx.fill();
+        }
+      }, 0.7),
+    ];
+  },
+};
+
+// cor de ambiente e vinheta de cada cenário
+const TONES = {
+  1: { tone: 'rgba(255,140,70,0.10)', vignette: 0.35 },
+  2: { tone: 'rgba(40,60,170,0.12)', vignette: 0.5 },
+  3: { tone: 'rgba(255,255,200,0.05)', vignette: 0.32 },
+  4: { tone: 'rgba(255,110,60,0.10)', vignette: 0.42 },
+  5: { tone: 'rgba(120,170,220,0.06)', vignette: 0.32 },
+  6: { tone: 'rgba(255,170,80,0.10)', vignette: 0.45 },
+};
+
 function buildScene(sc, images) {
   const rng = new Random(sc.id * 7919);
   if (!images['gen/shadow']) {
@@ -293,6 +395,9 @@ function buildScene(sc, images) {
   }
   return {
     id: sc.id, name: sc.name,
-    data: { name: sc.name, width: sc.width, zboundary: sc.z, shadow: 'gen/shadow', shadowsize: [37, 9], layer: sc.layers(images, rng) },
+    data: {
+      name: sc.name, width: sc.width, zboundary: sc.z, shadow: 'gen/shadow', shadowsize: [37, 9],
+      layer: [...sc.layers(images, rng), ...(FRONTS[sc.id] ? FRONTS[sc.id](images, rng, sc) : [])], ...TONES[sc.id],
+    },
   };
 }

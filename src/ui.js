@@ -118,6 +118,22 @@ class LoadingScreen {
   }
 }
 
+// lutador parado (animação de respiração) desenhado em tamanho grande nos menus
+const idleSheets = {};
+function drawIdleFighter(ctx, id, x, feetY, scale, flip, t) {
+  const o = Assets.obj(id);
+  if (!o) return;
+  const sheet = idleSheets[id] || (idleSheets[id] = new SpriteSheet(o.data.bmp));
+  const F = o.data.frame[[0, 1, 2, 3, 2, 1][Math.floor(t / 7) % 6]];
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.translate(x, feetY);
+  ctx.scale(flip ? -scale : scale, scale);
+  sheet.draw(ctx, F.pic, -F.centerx, -F.centery, false);
+  ctx.restore();
+}
+
 // ---- tela inicial ----
 
 const TITLE_ITEMS = [{ name: 'Jogar' }, { name: 'Jogar em rede' }, { name: 'Ajustes' }, { name: 'Sobre' }];
@@ -138,6 +154,10 @@ class TitleScreen {
   }
   draw(ctx) {
     menuBackdrop(ctx, this.t);
+    // os lutadores do elenco nas laterais (dois por vez, trocam a cada ~8 s)
+    const cast = [1, 2, 3, 4, 5, 6, 7, 8], k = Math.floor(this.t / 240) % 4;
+    drawIdleFighter(ctx, cast[k * 2 % 8], 112, 430, 2.5, false, this.t);
+    drawIdleFighter(ctx, cast[(k * 2 + 5) % 8], LF.W - 112, 430, 2.5, true, this.t + 20);
     drawLogo(ctx, LF.W / 2, 124, 0.8, this.t);
     drawMenuList(ctx, TITLE_ITEMS, this.sel, 262, 40);
     if (!Input.touchActive) {

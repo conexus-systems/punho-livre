@@ -58,3 +58,29 @@ class VisualEffect {
     this.sheet.draw(ctx, this.D.pic, this.ps.x - this.D.centerx - camX, this.ps.y - this.D.centery + this.ps.z, false);
   }
 }
+
+// poeira e fagulhas simples (só visual, não afetam a partida)
+class Puff {
+  constructor(x, y, z, vx, vy, size, color, life) {
+    this.ps = { x, y, z };
+    this.vx = vx; this.vy = vy;
+    this.size = size; this.color = color;
+    this.life = this.max = life;
+    this.dead = false;
+  }
+  TU() {
+    this.ps.x += this.vx; this.ps.y += this.vy;
+    this.vx *= 0.92; this.vy *= 0.92;
+    if (--this.life <= 0) this.dead = true;
+  }
+  get z() { return this.ps.z + 2; }
+  draw(ctx, camX) {
+    const t = this.life / this.max;
+    ctx.globalAlpha = Math.min(0.7, t);
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.ps.x - camX, this.ps.y + this.ps.z, this.size * (1.6 - t * 0.7), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}

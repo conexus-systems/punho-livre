@@ -96,17 +96,20 @@ function smallCanvas(def) {
 
 function buildBall(entry, images) {
   const o = entry.ball, wave = o.style === 'wave';
-  const W = 80, H = wave ? 56 : 48, cx = wave ? 52 : 50, cy = wave ? H - 14 : 24;
+  const K = { fire: 1.75, orb: 1.55, shard: 1.45, star: 1.3, wave: 1.3 }[o.style] || 1.5;
+  const W = 130, H = wave ? 76 : 80, cx = 88, cy = wave ? H - 20 : 40;
   const c = makeCanvas(W * 10, H), ctx = c.getContext('2d');
   for (let i = 0; i < 10; i++) {
     ctx.save(); ctx.beginPath(); ctx.rect(i * W, 0, W - 1, H - 1); ctx.clip();
-    if (i < 4) drawOrb(ctx, i * W + cx, cy, o.color, i, o.style);
-    else if (i < 8) drawEnergyBurst(ctx, i * W + cx, cy, o.color, i - 4, o.style === 'star' ? 0.6 : 1);
+    ctx.translate(i * W + cx, cy); ctx.scale(K, K);
+    if (i < 4) drawOrb(ctx, 0, 0, o.color, i, o.style);
+    else if (i < 8) drawEnergyBurst(ctx, 0, 0, o.color, i - 4, o.style === 'star' ? 0.7 : 1.1);
     ctx.restore();
   }
   const key = `gen/ball${entry.id}`;
   images[key] = c;
-  const box = wave ? { x: cx - 30, y: cy - 22, w: 44, h: 32 } : { x: cx - 16, y: cy - 11, w: 30, h: 22 };
+  const r = (v) => Math.round(v * K);
+  const box = wave ? { x: cx - r(30), y: cy - r(22), w: r(44), h: r(32) } : { x: cx - r(15), y: cy - r(10), w: r(28), h: r(20) };
   const itr = { kind: 0, ...box, injury: o.injury, dvx: 7, fall: o.fall, arest: 6, bdefend: 12, effect: o.effect };
   if (wave) { itr.dvy = -8; itr.vrest = 15; delete itr.arest; }
   const frame = {};

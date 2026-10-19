@@ -88,6 +88,47 @@ function placePose(p, scale, cx, base) {
   return J;
 }
 
+// luz vem de cima, um pouco da esquerda
+const LIGHT = [-0.5, -0.85];
+
+// membro cônico com contorno, brilho do lado da luz e sombra do lado oposto
+function limb(ctx, a, b, w1, w2, hex, back) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy) || 1;
+  let nx = -dy / len, ny = dx / len;
+  if (nx * LIGHT[0] + ny * LIGHT[1] < 0) { nx = -nx; ny = -ny; }
+  const base = back ? shade(hex, 0.74) : hex;
+  const path = () => {
+    ctx.beginPath();
+    ctx.moveTo(a[0] + nx * w1 / 2, a[1] + ny * w1 / 2);
+    ctx.lineTo(b[0] + nx * w2 / 2, b[1] + ny * w2 / 2);
+    ctx.lineTo(b[0] - nx * w2 / 2, b[1] - ny * w2 / 2);
+    ctx.lineTo(a[0] - nx * w1 / 2, a[1] - ny * w1 / 2);
+    ctx.closePath();
+    ctx.moveTo(a[0] + w1 / 2, a[1]); ctx.arc(a[0], a[1], w1 / 2, 0, Math.PI * 2);
+    ctx.moveTo(b[0] + w2 / 2, b[1]); ctx.arc(b[0], b[1], w2 / 2, 0, Math.PI * 2);
+  };
+  ctx.lineJoin = 'round';
+  path(); ctx.strokeStyle = INK; ctx.lineWidth = 2.6; ctx.stroke();
+  // o preenchimento é feito em partes: sentidos opostos dos subcaminhos abririam buracos
+  ctx.fillStyle = base;
+  ctx.beginPath();
+  ctx.moveTo(a[0] + nx * w1 / 2, a[1] + ny * w1 / 2); ctx.lineTo(b[0] + nx * w2 / 2, b[1] + ny * w2 / 2);
+  ctx.lineTo(b[0] - nx * w2 / 2, b[1] - ny * w2 / 2); ctx.lineTo(a[0] - nx * w1 / 2, a[1] - ny * w1 / 2);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.arc(a[0], a[1], w1 / 2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(b[0], b[1], w2 / 2, 0, Math.PI * 2); ctx.fill();
+  ctx.lineCap = 'round';
+  const edge = (k, w, col, alpha) => {
+    ctx.globalAlpha = alpha; ctx.strokeStyle = col; ctx.lineWidth = Math.max(0.8, w);
+    ctx.beginPath();
+    ctx.moveTo(a[0] + nx * k * w1, a[1] + ny * k * w1);
+    ctx.lineTo(b[0] + nx * k * w2, b[1] + ny * k * w2);
+    ctx.stroke(); ctx.globalAlpha = 1;
+  };
+  edge(0.22, Math.min(w1, w2) * 0.2, shade(hex, back ? 1.1 : 1.4), 0.55);
+  edge(-0.26, Math.min(w1, w2) * 0.26, shade(hex, 0.5), 0.35);
+}
+
 function capsule(ctx, a, b, w, fill) {
   ctx.lineCap = 'round';
   ctx.strokeStyle = INK;
@@ -122,10 +163,45 @@ function disc(ctx, c, r, fill) {
   ctx.fill();
 }
 
+// esfera com luz: cabeça, mãos
+function ball(ctx, c, r, hex, back) {
+  ctx.beginPath(); ctx.arc(c[0], c[1], r, 0, Math.PI * 2); ctx.fillStyle = INK; ctx.fill();
+  const g = ctx.createRadialGradient(c[0] - r * 0.35, c[1] - r * 0.4, r * 0.1, c[0], c[1], r);
+  g.addColorStop(0, shade(hex, back ? 1.1 : 1.28)); g.addColorStop(0.55, back ? shade(hex, 0.74) : hex); g.addColorStop(1, shade(hex, back ? 0.55 : 0.78));
+  ctx.beginPath(); ctx.arc(c[0], c[1], Math.max(0.5, r - 1.2), 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
+}
+
+// símbolo no peito, no sistema de coordenadas do tronco (x para a frente, y para cima)
+function drawEmblem(ctx, e, at, ang, size) {
+  ctx.save();
+  ctx.translate(at[0], at[1]); ctx.rotate(ang);
+  ctx.fillStyle = e.color; ctx.strokeStyle = e.color; ctx.lineWidth = Math.max(1, size * 0.14); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const r = size;
+  switch (e.type) {
+    case 'flame':
+      ctx.beginPath(); ctx.moveTo(0, -r); ctx.quadraticCurveTo(r * 0.9, -r * 0.1, r * 0.4, r * 0.7); ctx.quadraticCurveTo(0, r * 1.1, -r * 0.5, r * 0.6);
+      ctx.quadraticCurveTo(-r * 0.9, 0, -r * 0.2, -r * 0.3); ctx.quadraticCurveTo(-r * 0.2, -r * 0.7, 0, -r); ctx.fill(); break;
+    case 'snow':
+      for (let k = 0; k < 3; k++) { const a = (k * Math.PI) / 3; ctx.beginPath(); ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r); ctx.lineTo(-Math.cos(a) * r, -Math.sin(a) * r); ctx.stroke(); } break;
+    case 'bolt':
+      ctx.beginPath(); ctx.moveTo(r * 0.3, -r); ctx.lineTo(-r * 0.5, r * 0.1); ctx.lineTo(r * 0.05, r * 0.1); ctx.lineTo(-r * 0.3, r); ctx.lineTo(r * 0.6, -r * 0.2); ctx.lineTo(0, -r * 0.2); ctx.closePath(); ctx.fill(); break;
+    case 'star':
+      ctx.beginPath(); for (let k = 0; k < 10; k++) { const rr = k % 2 ? r * 0.45 : r, a = (k * Math.PI) / 5 - Math.PI / 2; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.closePath(); ctx.fill(); break;
+    case 'moon':
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath(); ctx.arc(r * 0.45, -r * 0.2, r * 0.85, 0, Math.PI * 2); ctx.fill(); break;
+    case 'ring':
+      ctx.beginPath(); ctx.arc(0, 0, r * 0.8, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, r * 0.25, 0, Math.PI * 2); ctx.fill(); break;
+    case 'fist':
+      ctx.beginPath(); ctx.arc(0, 0, r * 0.85, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = shade('#000000', 1); break;
+    default: break;
+  }
+  ctx.restore();
+}
+
 // Desenha um lutador numa pose já posicionada (J de placePose).
 function drawBody(ctx, J, look, p, s = 1) {
   const w = look.build || 1;
-  const dark = (c) => shade(c, 0.78);
   const skin = look.skin;
   const sleeveUp = look.sleeves === 'none' ? skin : look.shirt;
   const sleeveLow = look.sleeves === 'long' ? look.shirt : skin;
@@ -133,59 +209,75 @@ function drawBody(ctx, J, look, p, s = 1) {
   const handColor = look.gloves || skin;
 
   const drawLeg = (k, back) => {
-    const f = back ? dark : (c) => c;
-    capsule(ctx, J['k' + k], J['a' + k], 7 * w * s, f(shinColor));
-    capsule(ctx, J.pelvis, J['k' + k], 8.6 * w * s, f(look.pants));
-    capsule(ctx, J['heel' + k], J['t' + k], 5.2 * s, f(look.shoes));
-    if (look.shorts) capsule(ctx, J['a' + k], J['a' + k], 6.6 * s, f(look.socks || '#f2f2f2'));
+    limb(ctx, J.pelvis, J['k' + k], 10 * w * s, 8 * w * s, look.pants, back);
+    limb(ctx, J['k' + k], J['a' + k], 8 * w * s, 6 * w * s, shinColor, back);
+    if (look.shorts) limb(ctx, along(J['a' + k], 0, -3 * s), J['a' + k], 6.4 * s, 6 * s, look.socks || '#f2f2f2', back);
+    // pé: sapato com sola clara
+    limb(ctx, J['heel' + k], J['t' + k], 6 * s, 5 * s, look.shoes, back);
+    ctx.globalAlpha = back ? 0.6 : 0.85;
+    capsule(ctx, [J['heel' + k][0] - 0.5 * s, J['heel' + k][1] + 2.4 * s], [J['t' + k][0], J['t' + k][1] + 2.2 * s], 1.5 * s, '#efeae0');
+    ctx.globalAlpha = 1;
   };
   const drawArm = (k, back) => {
-    const f = back ? dark : (c) => c;
-    capsule(ctx, J['e' + k], J['h' + k], 6 * w * s, f(sleeveLow));
-    capsule(ctx, J.shoulder, J['e' + k], 7 * w * s, f(sleeveUp));
-    if (look.wrist) capsule(ctx, along(J['h' + k], J['fa' + k] + 180, 3 * s), J['h' + k], 5.6 * s, f(look.wrist));
-    disc(ctx, J['h' + k], (p.open ? 3.2 : 4) * Math.sqrt(w) * s, f(handColor));
+    limb(ctx, J.shoulder, J['e' + k], 7.4 * w * s, 6.2 * w * s, sleeveUp, back);
+    limb(ctx, J['e' + k], J['h' + k], 6.2 * w * s, 5 * w * s, sleeveLow, back);
+    if (look.wrist) limb(ctx, along(J['h' + k], J['fa' + k] + 180, 3.4 * s), J['h' + k], 6 * s, 5.4 * s, look.wrist, back);
+    ball(ctx, J['h' + k], (p.open ? 3.4 : 4.3) * Math.sqrt(w) * s, handColor, back);
   };
 
-  // faixa ou cachecol esvoaçando atrás
   const hu = sub(J.headUp, J.head), fw = [-hu[1], hu[0]];
-  // fw: para a frente do rosto (perpendicular ao topo da cabeça)
   const H = (lx, ly) => [J.head[0] + fw[0] * lx * s + hu[0] * ly * s, J.head[1] + fw[1] * lx * s + hu[1] * ly * s];
+
+  // cachecol: as pontas esvoaçam para trás
   if (look.scarf) {
-    const n = J.neck, b = [n[0] - fw[0] * 13 * s + hu[0] * -2 * s, n[1] - fw[1] * 13 * s - hu[1] * 2 * s];
-    capsule(ctx, n, b, 3.6 * s, dark(look.scarf));
+    const n = J.neck, wob = Math.sin(p.lean || 0) * 2;
+    const t1 = [n[0] - fw[0] * 9 * s, n[1] - fw[1] * 9 * s + 3 * s + wob], t2 = [t1[0] - fw[0] * 8 * s, t1[1] + 3 * s];
+    limb(ctx, n, t1, 4.4 * s, 3.4 * s, look.scarf, true);
+    limb(ctx, t1, t2, 3.4 * s, 2 * s, look.scarf, true);
   }
 
   drawArm('b', true);
   drawLeg('b', true);
 
-  // tronco: trapézio do quadril aos ombros
+  // tronco: quadril, cintura, peito e ombros
   const ax = sub(J.neck, J.pelvis), len = Math.hypot(ax[0], ax[1]) || 1;
   const n = [-ax[1] / len, ax[0] / len];
-  const hw = 6.4 * w * s, sw = 8.4 * w * s;
-  const tp = [
-    [J.pelvis[0] + n[0] * hw, J.pelvis[1] + n[1] * hw], [J.pelvis[0] - n[0] * hw, J.pelvis[1] - n[1] * hw],
-    [J.neck[0] - n[0] * sw, J.neck[1] - n[1] * sw], [J.neck[0] + n[0] * sw, J.neck[1] + n[1] * sw],
-  ];
-  blob(ctx, tp, look.shirt);
+  const hw = 6.6 * w * s, sw = 8.8 * w * s;
+  const at = (t, k) => [J.pelvis[0] + ax[0] * t + n[0] * k, J.pelvis[1] + ax[1] * t + n[1] * k];
+  const tp = [at(0, hw), at(0.42, hw * 0.9), at(0.8, sw), at(1, sw * 0.62), at(1, -sw * 0.62), at(0.8, -sw), at(0.42, -hw * 0.9), at(0, -hw)];
+  const grad = ctx.createLinearGradient(...at(0.5, hw * 1.1), ...at(0.5, -hw * 1.1));
+  const lightFront = n[0] * LIGHT[0] + n[1] * LIGHT[1] > 0;
+  grad.addColorStop(0, shade(look.shirt, lightFront ? 1.25 : 0.72));
+  grad.addColorStop(0.5, look.shirt);
+  grad.addColorStop(1, shade(look.shirt, lightFront ? 0.72 : 1.25));
+  blob(ctx, tp, grad, 1.3);
+  // gola e barra da camisa
+  ctx.globalAlpha = 0.9;
+  blob(ctx, [at(1, sw * 0.4), at(0.74, 0), at(1, -sw * 0.4)], sleeveUp === skin && !look.vest ? skin : shade(look.shirt, 0.6), 0.5);
+  ctx.globalAlpha = 1;
   if (look.vest) {
-    // colete aberto: faixa da pele/camiseta no meio
     const m = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
-    blob(ctx, [m(tp[0], tp[1], 0.4), m(tp[0], tp[1], 0.6), m(tp[3], tp[2], 0.62), m(tp[3], tp[2], 0.38)], look.vest, 0.5);
+    blob(ctx, [m(tp[0], tp[7], 0.38), m(tp[0], tp[7], 0.62), m(tp[3], tp[4], 0.64), m(tp[3], tp[4], 0.36)], look.vest, 0.6);
+  }
+  if (look.emblem) {
+    const c = at(0.62, hw * 0.35 * (look.emblemSide || 0.6));
+    drawEmblem(ctx, look.emblem, c, Math.atan2(ax[1], ax[0]) + Math.PI / 2, 2.8 * w * s);
   }
   if (look.belt) {
-    const b0 = along(J.pelvis, 180 - (p.lean || 0) - (p.rot || 0), 2.5 * s);
-    const bl = [[b0[0] + n[0] * hw * 1.05, b0[1] + n[1] * hw * 1.05], [b0[0] - n[0] * hw * 1.05, b0[1] - n[1] * hw * 1.05]];
-    capsule(ctx, bl[0], bl[1], 2.4 * s, look.belt);
+    capsule(ctx, at(0.06, hw * 1.02), at(0.06, -hw * 1.02), 2.8 * s, look.belt);
+    ctx.globalAlpha = 0.9;
+    capsule(ctx, at(0.06, hw * 0.1 + 0.5 * s), at(0.06, hw * 0.1 + 0.6 * s), 3.2 * s, '#ffd54a');
+    ctx.globalAlpha = 1;
   }
   drawLeg('f', false);
 
   // cabeça
-  disc(ctx, J.head, (BODY.HEAD + 0.6) * s, skin);
-  disc(ctx, H(-1.5, -0.5), 2.1 * s, skin);
+  const R = (BODY.HEAD + 0.6) * s;
+  ball(ctx, J.head, R, skin, false);
+  ball(ctx, H(-1.6, -0.6), 2.3 * s, skin, true);
   drawHair(ctx, H, look, s);
   drawFace(ctx, H, look, p.face, s);
-  if (look.scarf) capsule(ctx, along(J.neck, 0, 0), J.neck, 6.5 * s, look.scarf);
+  if (look.scarf) { limb(ctx, J.neck, along(J.neck, 180 - (p.lean || 0), 1.5 * s), 7 * s, 7 * s, look.scarf, false); }
 
   drawArm('f', false);
 }
@@ -194,43 +286,56 @@ function sub(a, b) { return [a[0] - b[0], a[1] - b[1]]; }
 
 function drawHair(ctx, H, look, s) {
   const c = look.hair, poly = (pts, col = c) => blob(ctx, pts.map(([x, y]) => H(x * 1.12, y * 1.12)), col, 1.1);
+  const shine = (a, ctl, b, col = shade(c, 1.7)) => {
+    ctx.save(); ctx.globalAlpha = 0.55; ctx.strokeStyle = col; ctx.lineWidth = 1.5 * s; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(...H(a[0] * 1.12, a[1] * 1.12)); ctx.quadraticCurveTo(...H(ctl[0] * 1.12, ctl[1] * 1.12), ...H(b[0] * 1.12, b[1] * 1.12)); ctx.stroke(); ctx.restore();
+  };
   switch (look.hairStyle) {
     case 'spiky':
       poly([[6, 5], [4, 12], [1, 8], [-2, 14], [-4, 8], [-9, 12], [-8, 5], [-13, 4], [-9, 0], [-10, -4], [-7, -2], [-5, 3], [0, 5], [4, 3]]);
+      shine([-5, 7], [-1, 10], [3, 7]);
       break;
     case 'short':
       poly([[7, 3], [6, 7], [2, 9.6], [-3, 9.4], [-7.5, 6.5], [-9.4, 1.5], [-8.8, -3], [-6.5, -2], [-5, 3], [0, 5], [5, 5.2]]);
+      shine([-5, 7.5], [-1, 9.5], [3, 8]);
       break;
     case 'flat':
       poly([[7.5, 4], [7.5, 9], [-8.5, 9], [-9.5, 0], [-8.5, -3], [-6, 2], [0, 5.5]]);
+      shine([-5, 7.5], [-1, 8.5], [4, 8]);
       break;
     case 'long':
       poly([[7, 3], [6, 8], [1, 10], [-5, 9], [-9, 5], [-11, -3], [-10, -11], [-6, -12], [-5, -4], [-4, 2], [0, 5], [5, 5]]);
+      shine([-5, 8], [-1, 10], [4, 8]);
+      shine([-9, -2], [-9.5, -6], [-8, -9]);
       break;
     case 'bun':
       poly([[7, 3], [5.5, 8], [0, 9.8], [-6, 8], [-9, 3], [-8.5, -2], [-6, 2], [0, 5], [5, 5]]);
-      disc(ctx, H(-7, 9), 3.6 * s, c);
+      ball(ctx, H(-7, 9), 3.8 * s, c, false);
       break;
     case 'ponytail':
       poly([[7, 3], [6, 8], [1, 10], [-5, 9], [-9, 5], [-9, 0], [-6, 2], [0, 5], [5, 5]]);
       poly([[-7, 7], [-14, 5], [-17, -2], [-15, -9], [-12, -3], [-9, 2]]);
+      shine([-4, 8], [0, 9.5], [4, 7.5]);
       break;
     case 'mohawk':
       poly([[5, 7], [3, 13], [-1, 12], [-5, 13], [-8, 9], [-9, 4], [-6, 7], [0, 8]]);
+      shine([-6, 10], [-2, 12], [2, 11]);
       break;
     case 'hood':
       poly([[7.5, 2], [7, 8], [1, 11], [-6, 10], [-10, 4], [-11, -6], [-7, -9], [-5, -3], [-3, 2], [3, 3.5]]);
+      shine([-6, 9], [-1, 10.5], [4, 8.5], '#7a7a94');
       break;
     case 'bandana':
       poly([[7.5, 2.5], [6.5, 7.5], [1, 9.8], [-5, 9], [-8.5, 5], [-9, 1], [-3, 2.5], [3, 3]], look.accent);
       poly([[-8, 3], [-15, 1], [-16, -4], [-10, -1]], look.accent);
+      shine([-5, 7.5], [-1, 9], [3, 8], shade(look.accent, 1.6));
       break;
     default: break; // careca
   }
   if (look.headband) {
-    capsule(ctx, H(7.8, 3.2), H(-8.6, 3.6), 2.6 * s, look.headband);
-    capsule(ctx, H(-8.6, 3.6), H(-15, 1), 2 * s, look.headband);
-    capsule(ctx, H(-8.6, 3.6), H(-14, -2.5), 2 * s, look.headband);
+    capsule(ctx, H(7.8, 3.2), H(-8.6, 3.6), 2.8 * s, look.headband);
+    capsule(ctx, H(-8.6, 3.6), H(-15, 1), 2.2 * s, look.headband);
+    capsule(ctx, H(-8.6, 3.6), H(-14, -2.5), 2.2 * s, look.headband);
   }
 }
 
@@ -238,23 +343,44 @@ function drawFace(ctx, H, look, face, s) {
   ctx.lineCap = 'round';
   ctx.strokeStyle = INK;
   ctx.fillStyle = INK;
-  const K = 1.12, line = (a, b, w = 1.3) => { ctx.lineWidth = w * s; ctx.beginPath(); ctx.moveTo(...H(a[0] * K, a[1] * K)); ctx.lineTo(...H(b[0] * K, b[1] * K)); ctx.stroke(); };
+  const K = 1.12, Q = (x, y) => H(x * K, y * K);
+  const line = (a, b, w = 1.3) => { ctx.lineWidth = w * s; ctx.beginPath(); ctx.moveTo(...Q(a[0], a[1])); ctx.lineTo(...Q(b[0], b[1])); ctx.stroke(); };
+  const oval = (c, rx, ry, fill, rot = 0) => { ctx.beginPath(); ctx.ellipse(...Q(c[0], c[1]), rx * s, ry * s, rot, 0, Math.PI * 2); ctx.fillStyle = fill; ctx.fill(); };
   if (look.mask) {
-    blob(ctx, [H(8.3, -0.5), H(7, -6), H(1, -8.2), H(-4, -6), H(-2, -0.5)].map((q) => q), look.mask, 0.8);
+    blob(ctx, [Q(8.4, -0.4), Q(7, -6), Q(1, -8.4), Q(-4, -6), Q(-2, -0.4)], look.mask, 0.8);
+    ctx.globalAlpha = 0.35; line([-1, -3], [6, -2], 1.2); ctx.globalAlpha = 1;
+  } else if (face !== 'ko') {
+    ctx.globalAlpha = 0.28; oval([3.6, -2.6], 2.2, 1.3, '#ff6b6b'); ctx.globalAlpha = 1; // bochecha
   }
   if (face === 'ko') {
-    line([3.5, 2.5], [6.5, -0.5]); line([3.5, -0.5], [6.5, 2.5]);
+    ctx.strokeStyle = INK;
+    line([3.4, 2.8], [6.8, -0.4], 1.5); line([3.4, -0.4], [6.8, 2.8], 1.5);
   } else if (face === 'hurt') {
-    line([3.5, 2.6], [6.8, 0.8]); line([3.5, -0.2], [6.8, 0.8]);
-    if (!look.mask) line([4.8, -4.2], [7, -4.6], 1.6);
+    ctx.strokeStyle = INK;
+    line([3.4, 2.6], [7, 0.6], 1.5); line([3.4, -0.4], [7, 0.6], 1.5);
+    if (!look.mask) { oval([5.8, -4.6], 1.5, 1.1, '#3a1010'); }
+    line([3, 4.6], [7.2, 3.4], 1.4);
   } else {
-    ctx.lineWidth = 1.2 * s;
-    ctx.beginPath(); ctx.ellipse(...H(6, 0.9), 1.3 * s, 2 * s, 0, 0, Math.PI * 2); ctx.fill();
-    line([3.2, 3.6], [7, 2.8], 1.4);
-    if (!look.mask) line(face === 'shout' ? [5, -3.6] : [5.2, -4.4], face === 'shout' ? [7.4, -4.8] : [7.2, -4.2], face === 'shout' ? 2.4 : 1.1);
+    const shout = face === 'shout';
+    // olho: branco, íris e brilho
+    const ey = shout ? 1.9 : 2.6;
+    oval([5.7, 1.2], 1.9, ey, '#ffffff');
+    ctx.lineWidth = 0.9 * s; ctx.strokeStyle = INK; ctx.beginPath(); ctx.ellipse(...Q(5.7, 1.2), 1.9 * s, ey * s, 0, 0, Math.PI * 2); ctx.stroke();
+    oval([6.3, 1.1], 1.45, ey - 0.35, look.eye || '#3a2418');
+    oval([6.5, 1.1], 0.8, ey - 1, '#0c0810');
+    oval([6.8, 1.9], 0.55, 0.55, '#ffffff');
+    // sobrancelha (brava se gritando)
+    ctx.strokeStyle = look.brow || INK;
+    line(shout ? [3, 5.8] : [3.4, 5.4], shout ? [8, 3.6] : [8, 5.2], shout ? 1.9 : 1.3);
+    ctx.strokeStyle = INK;
+    if (!look.mask) {
+      if (shout) { oval([6.2, -4.6], 1.8, 1.4, '#4a0f18'); oval([6.2, -5.2], 1, 0.5, '#e86a7a'); }
+      else line([4.6, -4.4], [7.4, -4.1], 1.2);
+      line([8.6, -1.4], [9.2, -2.2], 1);
+    }
   }
-  if (look.beard) blob(ctx, [H(7.8, -2.5), H(6, -7.6), H(1, -9), H(-3, -6), H(-1, -3), H(4, -4.5)], look.hair, 0.8);
-  if (look.glasses) { line([2.5, 1.2], [8, 1.2], 2.6); }
+  if (look.beard) blob(ctx, [Q(7.8, -2.5), Q(6, -7.6), Q(1, -9), Q(-3, -6), Q(-1, -3), Q(4, -4.5)], look.hair, 0.8);
+  if (look.glasses) { ctx.strokeStyle = INK; line([2.5, 1.2], [8, 1.2], 2.6); }
 }
 
 // desenha uma pose numa célula de w x h com o pé em `base`
@@ -267,7 +393,7 @@ function drawPoseCell(ctx, look, pose, x0, y0, w, base) {
 
 // Retrato (cabeça e ombros) num quadrado de `size`
 function drawPortrait(ctx, look, x, y, size, bg) {
-  const s = size / 26;
+  const s = size / 29;
   ctx.save();
   ctx.beginPath(); ctx.rect(x, y, size, size); ctx.clip();
   if (bg) {
@@ -277,7 +403,7 @@ function drawPortrait(ctx, look, x, y, size, bg) {
   }
   const pose = { lean: 4, head: 2, af: [8, 30], ab: [-8, 30], lf: [6, 2], lb: [-6, 2] };
   const J = solvePose(pose, s);
-  const ox = x + size * 0.5 - J.head[0], oy = y + size * 0.42 - J.head[1];
+  const ox = x + size * 0.5 - J.head[0], oy = y + size * 0.47 - J.head[1];
   for (const k in J) if (Array.isArray(J[k])) J[k] = [J[k][0] + ox, J[k][1] + oy];
   drawBody(ctx, J, look, pose, s);
   ctx.restore();
@@ -356,6 +482,10 @@ function drawOrb(ctx, cx, cy, color, i, style) {
     ctx.globalAlpha = 1;
     glow(ctx, cx, cy, 16 + (i % 2) * 2, rgba(color, 0.95));
     if (style === 'fire') {
+      // línguas de fogo para trás
+      for (let k = 0; k < 3; k++) {
+        ctx.save(); ctx.translate(cx - 14 - k * 9, cy + (k - 1) * 5); ctx.rotate(-Math.PI / 2); drawFlame(ctx, 0, 0, i + k, 1.1 - k * 0.2); ctx.restore();
+      }
       ctx.fillStyle = rgba('#ffe066', 0.9);
       for (let k = 0; k < 5; k++) {
         const a = (k / 5) * Math.PI * 2 + i;
@@ -387,7 +517,7 @@ function drawEnergyBurst(ctx, cx, cy, color, k, size = 1) {
 // faísca de golpe em estrela
 function drawSpark(ctx, cx, cy, k, big, color = '#fff27a') {
   ctx.save();
-  const R = (big ? 22 : 13) * (0.6 + k * 0.25), r = R * 0.38;
+  const R = (big ? 32 : 19) * (0.6 + k * 0.25), r = R * 0.38;
   ctx.globalAlpha = 1 - k * 0.2;
   const pts = [];
   for (let i = 0; i < 16; i++) {

@@ -154,7 +154,10 @@ class Living {
     this.trans.setWait(this.frame.D.wait, 99);
     this.trans.setNext(this.frame.D.next, 99);
     this.stateUpdate('frame');
-    if (this.frame.D.sound) Sound.play(this.frame.D.sound);
+    if (this.frame.D.sound) {
+      Sound.play(this.frame.D.sound);
+      if (this.type === 'character' && (this.frame.D.sound === 'step' || this.frame.D.sound === 'land')) this.match.puff(this.ps.x - this.ps.dir * 6, this.ps.z, 2);
+    }
   }
 
   frameForce() {

@@ -553,6 +553,7 @@ const CHAR_STATES = {
           $.caughtThrowInjury = null;
         }
         Sound.play('fall');
+        $.match.puff($.ps.x, $.ps.z, 5, undefined, 1.4);
         const ps = $.ps, N = $.frame.N;
         if ($.speed() > GC.bounce_xy || ps.vy > GC.bounce_y_limit) {
           $.linearFriction(lookupAbs(LOOKUP.bounce_absorb, ps.vx), lookupAbs(LOOKUP.bounce_absorb, ps.vz));
@@ -898,6 +899,7 @@ class Character extends Living {
       $.vrestUpdate(att.uid, ITR);
     }
     $.injury(inj);
+    if (accept && inj >= 30) $.match.addShake(Math.min(6, inj / 9));
     return accept ? inj : false;
   }
 

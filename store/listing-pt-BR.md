@@ -66,7 +66,7 @@ O app não coleta dados pessoais.
 ## Categoria e etiquetas
 
 - Tipo: **Jogo** · Categoria: **Ação** (ou *Luta*, se aparecer como etiqueta)
-- Preço: **R$ 49,99** (a Play mostra faixas de preço; 49,99 é o valor "psicológico" mais próximo de R$ 50)
+- Preço: **R$ 19,99** (aplicado em *Monetizar → Preço do app*; a Play converte para os outros países e você pode ajustar por país)
 
 ## Arte (já gerada na pasta store/)
 

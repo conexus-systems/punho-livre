@@ -35,7 +35,7 @@
 - [ ] Contas pessoais novas precisam de um **teste fechado com pelo menos 12 testadores por
       14 dias** antes de liberar para produção (regra da Google para contas criadas depois de 2023).
 - [ ] Preencher: ficha da loja (store/listing-pt-BR.md), classificação de conteúdo, segurança dos
-      dados, público-alvo, preço (R$ 49,99) e países de distribuição.
+      dados, público-alvo, preço (R$ 19,99) e países de distribuição.
 
 ## Depois de publicar
 

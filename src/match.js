@@ -166,6 +166,18 @@ class Match {
     this.effects.push(new VisualEffect(this, 320, { ...pos }, frame, true, { mass: id === 302 ? 0 : 1, rect }));
   }
 
+  // poeira no chão (n bolinhas ao redor de x, z)
+  puff(x, z, n = 3, color = 'rgba(220,210,190,1)', spread = 1) {
+    if (this.net && this.noVisuals) return;
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      this.effects.push(new Puff(x + (Math.random() - 0.5) * 10, -2, z, Math.cos(a) * 1.6 * spread, -0.4 - Math.random() * 0.8, 3 + Math.random() * 3, color, 10 + Math.floor(Math.random() * 6)));
+    }
+  }
+
+  // tremor de tela em golpes fortes (só visual)
+  addShake(v) { this.shakeAmt = Math.min(7, Math.max(this.shakeAmt || 0, v)); }
+
   dropWeapons(n) {
     const ids = Assets.data.objects.filter((o) => o.id >= 100 && o.id < 200).map((o) => o.id);
     if (!ids.length) return;
@@ -323,12 +335,28 @@ class Match {
 
   // ---- desenho ----
 
+  // cor de ambiente do cenário e vinheta nas bordas da tela
+  drawAmbience(ctx) {
+    const bg = this.bg;
+    if (bg.tone) { ctx.fillStyle = bg.tone; ctx.fillRect(0, LF.HUD_H, LF.W, LF.H - LF.HUD_H); }
+    if (bg.vignette) {
+      if (!this.vig) {
+        const g = ctx.createRadialGradient(LF.W / 2, LF.H * 0.58, LF.H * 0.38, LF.W / 2, LF.H * 0.58, LF.W * 0.62);
+        g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(5,5,20,1)');
+        this.vig = g;
+      }
+      ctx.globalAlpha = bg.vignette; ctx.fillStyle = this.vig; ctx.fillRect(0, LF.HUD_H, LF.W, LF.H - LF.HUD_H); ctx.globalAlpha = 1;
+    }
+  }
+
   draw(ctx) {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, LF.W, LF.H);
     // o cenário começa em y=128; a cena sobe para caber sob o painel compacto
     ctx.save();
-    ctx.translate(0, -LF.WORLD_Y);
+    let sx = 0, sy = 0;
+    if (this.shakeAmt > 0.3 && !this.paused) { sx = (Math.random() - 0.5) * this.shakeAmt; sy = (Math.random() - 0.5) * this.shakeAmt; this.shakeAmt *= 0.82; }
+    ctx.translate(sx, sy - LF.WORLD_Y);
     this.bg.draw(ctx);
     // estica a última linha do chão até o pé da tela, escurecendo
     const by = this.bg.bottom() - LF.WORLD_Y;
@@ -350,7 +378,9 @@ class Match {
     const list = [...this.live, ...this.effects];
     list.sort((a, b) => ((a.ps.sz !== undefined ? a.ps.sz + (a.ps.zz || 0) : a.z) - (b.ps.sz !== undefined ? b.ps.sz + (b.ps.zz || 0) : b.z)) || ((a.uid || 0) - (b.uid || 0)));
     for (const o of list) o.draw(ctx, camX);
+    this.bg.draw(ctx, true);
     ctx.restore();
+    this.drawAmbience(ctx);
     drawHud(ctx, this);
     if (this.modeLogic && this.modeLogic.draw) this.modeLogic.draw(ctx, this);
     if (this.demo && !this.summary) {

@@ -18,6 +18,8 @@ class Background {
     this.layers.sort((a, b) => a.width - b.width || a.i - b.i);
     const span = this.width - LF.W;
     for (const l of this.layers) l.ratio = span > 0 ? (l.width - LF.W) / span : 0;
+    this.tone = d.tone || null;      // cor de ambiente sobre a cena
+    this.vignette = d.vignette ?? 0.4;
   }
 
   // atualiza a câmera seguindo os personagens (segue a média dos lutadores, adiantada para onde olham)
@@ -39,17 +41,20 @@ class Background {
     let b = 0;
     for (const l of this.layers) {
       const h = l.rect ? l.height : (l.img && l.img.naturalHeight) || 0;
-      if (!l.cc) b = Math.max(b, l.y + h);
+      if (!l.cc && !l.front) b = Math.max(b, l.y + h);
     }
     return b;
   }
 
-  draw(ctx) {
+  // front = true desenha só as camadas de primeiro plano (passam na frente dos lutadores)
+  draw(ctx, front = false) {
     for (const l of this.layers) {
+      if (!!l.front !== front) continue;
       if (l.cc) {
         const t = this.timer % l.cc;
         if (t < l.c1 || t > l.c2) continue;
       }
+      if (l.alpha !== undefined && l.alpha < 1) ctx.globalAlpha = l.alpha;
       const off = -this.camX * l.ratio;
       const w = l.rect ? l.width : (l.img && l.img.naturalWidth) || 0;
       const h = l.rect ? l.height : (l.img && l.img.naturalHeight) || 0;
@@ -77,13 +82,17 @@ class Background {
       } else {
         one(l.x, false);
       }
+      ctx.globalAlpha = 1;
     }
   }
 
   drawShadow(ctx, o) {
     if (!this.shadow || !this.shadow.complete) return;
-    const s = this.shadow;
-    ctx.drawImage(s, Math.floor(o.ps.x - s.naturalWidth / 2 - this.camX), Math.floor(o.ps.z - s.naturalHeight / 2));
+    const s = this.shadow, h = Math.min(1, Math.max(0, -o.ps.y / 220)), k = 1 - 0.45 * h;
+    const w = s.naturalWidth * k * (o.shadowScale || 1), hh = s.naturalHeight * k;
+    ctx.globalAlpha = 1 - 0.5 * h;
+    ctx.drawImage(s, Math.floor(o.ps.x - w / 2 - this.camX), Math.floor(o.ps.z - hh / 2), w, hh);
+    ctx.globalAlpha = 1;
   }
 
   pos(rx, rz) {
