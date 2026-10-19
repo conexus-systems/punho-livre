@@ -14,7 +14,7 @@ type Props = {
 };
 
 /** Cabeçalho W10M: rótulo em maiúsculas + título grande e leve à esquerda. */
-export function MetroHeader({ kicker = "MUGEN ARENA", title, subtitle, actions }: Props) {
+export function MetroHeader({ kicker = "BAMBA", title, subtitle, actions }: Props) {
   const t = useTokens();
   return (
     <View style={{ paddingTop: space.sm, paddingBottom: space.sm, flexDirection: "row", alignItems: "flex-end" }}>

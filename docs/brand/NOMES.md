@@ -1,6 +1,38 @@
 # Nome do jogo — candidatos
 
-Status: proposta do PO. **Nenhum nome foi registrado nem verificado juridicamente.**
+## Decisão: **BAMBA** (19/10/2026)
+
+O dono do projeto escolheu **BAMBA**. O nome já foi trocado no app (nome na loja e na tela, `slug`,
+pacote Android e bundle iOS `br.com.conexus.bamba`, esquema de deep link), na versão web, nos e-mails
+e na documentação. **O registro no INPI ainda não foi feito** — a busca de anterioridade e o depósito
+continuam pendentes (abaixo), e precisam acontecer antes de qualquer divulgação.
+
+### O que mudou por fora do código (precisa de uma pessoa)
+
+- **bff-auth:** registrar o redirect `br.com.conexus.bamba://oauth/callback` no cliente
+  `mugen-arena-mobile`. Sem isso o login no app novo falha.
+- **Play Console / App Store Connect:** criar o app com o pacote `br.com.conexus.bamba` (o antigo nunca foi
+  publicado).
+- **EAS:** o `slug` virou `bamba`; o projeto do EAS precisa ter o mesmo slug (`EAS_PROJECT_ID`).
+- **Play Integrity:** `PLAY_INTEGRITY_PACKAGE` passou a `br.com.conexus.bamba` (padrão no servidor e no
+  Terraform).
+
+### O que ficou com o nome antigo de propósito (identificadores técnicos, invisíveis ao jogador)
+
+Trocar estes quebraria dados ou integrações sem ganho para o jogador; mudam só se houver migração planejada:
+
+| Identificador | Onde | Por que ficou |
+|---|---|---|
+| `mugen-arena.*` | chaves do AsyncStorage/localStorage | trocar apagaria ajustes, sessão e personagens instalados |
+| `mugen-arena-pack/1` | formato dos packs (app, servidor, ferramentas) | contrato do docs/PROTOCOL.md; packs já enviados |
+| `mugen-arena-mobile` | client_id no bff-auth | registrado na plataforma CONEXUS |
+| `mugen-arena.conexus-systems.com.br` | domínio da API | DNS e certificado; troca é decisão de infra |
+| `MugenArena`, `mugen_arena_*`, nomes no Terraform/k8s | módulo Rails, bancos, recursos de infra | renomear exige migração de banco e de cluster |
+| `mugen-arena-admin` (`ADMIN_GROUPS`) | grupo de admin | configurado no bff-auth |
+
+## Histórico da escolha
+
+Status original: proposta do PO. **Nenhum nome foi registrado nem verificado juridicamente.**
 
 > **A disponibilidade no INPI, no USPTO, nas lojas (Google Play e App Store), nas redes sociais e em
 > domínios NÃO foi verificada.** A checagem abaixo é só uma busca preliminar na web por jogos com o mesmo

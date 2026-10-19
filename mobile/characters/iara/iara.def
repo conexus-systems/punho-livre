@@ -1,5 +1,5 @@
 ; Iara — Guardiã dos rios da Amazônia. Luta com a água como se fosse uma extensão do corpo.
-; Personagem original do MUGEN Arena (CONEXUS). Gerado por scripts/roster/generate.mjs.
+; Personagem original do BAMBA (CONEXUS). Gerado por scripts/roster/generate.mjs.
 
 [Info]
 name = "Iara"
@@ -15,7 +15,7 @@ cns = iara.cns
 stcommon = common1.cns ; fornecido pela engine
 anim = iara.air
 
-; Extensão do MUGEN Arena (ignorada pelo MUGEN): cores do HUD/efeitos
+; Extensão do BAMBA (ignorada pelo MUGEN): cores do HUD/efeitos
 [Arena]
 body = #0E7490
 accent = #FACC15

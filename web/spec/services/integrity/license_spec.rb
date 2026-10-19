@@ -8,7 +8,7 @@ RSpec.describe Integrity::License do
   let(:nonce) { Integrity::Challenge.issue(player) }
   let(:fake_client) { Struct.new(:payload) { def decode(_pkg, _token) = payload } }
 
-  def verdict(hash: Integrity::Challenge.request_hash(nonce), package: "br.com.conexus.mugenarena", at: now,
+  def verdict(hash: Integrity::Challenge.request_hash(nonce), package: "br.com.conexus.bamba", at: now,
               app: "PLAY_RECOGNIZED", license: "LICENSED", device: [ "MEETS_DEVICE_INTEGRITY" ])
     {
       "requestDetails" => { "requestPackageName" => package, "requestHash" => hash, "timestampMillis" => (at.to_f * 1000).to_i.to_s },

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Configuração específica do MUGEN Arena (ver docs/PROTOCOL.md na raiz do repo).
+# Configuração específica do BAMBA (ver docs/PROTOCOL.md na raiz do repo).
 Rails.application.config.x.mugen = ActiveSupport::OrderedOptions.new
 
 # Claim `groups` do JWT que dá acesso às rotas /api/v1/admin.

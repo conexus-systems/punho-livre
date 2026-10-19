@@ -6,7 +6,7 @@
 #   paths: web/**, deploy/**, .github/workflows/ci.yml, deploy-production.yml
 #   NÃO incluir mobile/** — CI mobile fica em mobile-ci.yml (ci-mobile.yml@v1);
 #   build EAS em eas-build.yml.
-#   MUGEN Arena: Rails em web/; este CI não tem gatilho de push/PR (fleet: testes
+#   BAMBA: Rails em web/; este CI não tem gatilho de push/PR (fleet: testes
 #   só no Deploy — Production). Se ligar push, use:
 #     paths: ["web/**", "deploy/**", ".github/workflows/ci.yml",
 #             ".github/workflows/deploy-production.yml"]

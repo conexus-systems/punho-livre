@@ -1,5 +1,5 @@
 ; Brasa — Capoeirista de Salvador; ginga imprevisível e chutes em chamas.
-; Personagem original do MUGEN Arena (CONEXUS). Gerado por scripts/roster/generate.mjs.
+; Personagem original do BAMBA (CONEXUS). Gerado por scripts/roster/generate.mjs.
 
 [Info]
 name = "Brasa"
@@ -15,7 +15,7 @@ cns = brasa.cns
 stcommon = common1.cns ; fornecido pela engine
 anim = brasa.air
 
-; Extensão do MUGEN Arena (ignorada pelo MUGEN): cores do HUD/efeitos
+; Extensão do BAMBA (ignorada pelo MUGEN): cores do HUD/efeitos
 [Arena]
 body = #FACC15
 accent = #16A34A

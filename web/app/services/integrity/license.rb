@@ -19,7 +19,7 @@ module Integrity
     end
 
     def package_name
-      ENV.fetch("PLAY_INTEGRITY_PACKAGE", "br.com.conexus.mugenarena")
+      ENV.fetch("PLAY_INTEGRITY_PACKAGE", "br.com.conexus.bamba")
     end
 
     def licensed?(player)

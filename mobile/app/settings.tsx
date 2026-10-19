@@ -171,7 +171,7 @@ export default function Settings() {
           {pivot === 2 ? (
             <>
               <MetroRow
-                title="MUGEN Arena"
+                title="BAMBA"
                 secondary={`Versão ${Constants.expoConfig?.version ?? "?"}`}
                 onPress={() => {
                   // 7 toques na versão liberam as opções de desenvolvedor (QA)

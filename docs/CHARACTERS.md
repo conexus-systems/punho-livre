@@ -1,6 +1,6 @@
 # Personagens
 
-O MUGEN Arena usa o **formato de personagem do MUGEN**: um `.def` que aponta para
+O BAMBA usa o **formato de personagem do MUGEN**: um `.def` que aponta para
 `.cmd` (comandos), `.cns` (constantes e estados), `.air` (animações + caixas de colisão)
 e `.sff` (sprites). O app recebe isso empacotado em JSON (`mugen-arena-pack/1`, ver
 [PROTOCOL.md](PROTOCOL.md#pack-formato-mugen-arena-pack1)).

@@ -1,4 +1,4 @@
-# MUGEN Arena — orientação para continuidade
+# BAMBA — orientação para continuidade
 
 Leia HANDOFF.md, docs/UPDATE_0.1.0.md, docs/W10M_DESIGN_SYSTEM.md, docs/PROTOCOL.md, docs/CHARACTERS.md e
 CONEXUS.md antes de alterar comportamento. O fluxo de trabalho com agentes está em SKILL.md (+ agents/*.md,

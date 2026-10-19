@@ -150,7 +150,7 @@ export async function writeSampleFolder(dir, { omit = [], recommended = true } =
   const manifest = {
     id: "exemplo",
     name: "Exemplo",
-    author: "MUGEN Arena",
+    author: "BAMBA",
     pixelsPerUnit: SAMPLE_PPU,
     style: { body: "#4670C8", energy: "#60A5FA" },
     meta: { bio: "Boneco de teste do importador de sprites." },

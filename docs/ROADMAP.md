@@ -1,6 +1,6 @@
 # Roadmap — do protótipo 0.4.0 ao jogo comercial
 
-Nome provisório: **MUGEN Arena**. O nome será trocado antes de qualquer divulgação pública (ver
+Nome: **BAMBA** (escolhido em 19/10/2026; registro no INPI pendente — ver
 [brand/NOMES.md](brand/NOMES.md)), porque "MUGEN" é ligado ao software da Elecbyte.
 
 Documentos relacionados: [gdd/GDD.md](gdd/GDD.md), [gdd/ELENCO_LANCAMENTO.md](gdd/ELENCO_LANCAMENTO.md),
@@ -48,7 +48,7 @@ comercial.
 
 - Escolher o nome e iniciar a checagem de marca (INPI, USPTO, lojas, domínios) com o jurídico.
 - Trocar o nome e os identificadores do app **antes** da primeira publicação em loja
-  (`br.com.conexus.mugenarena` não pode mudar depois de publicado).
+  (`br.com.conexus.bamba` não pode mudar depois de publicado).
 - Contratar diretor de arte e designer de combate; contratar os 3 testes de estilo.
 - Ferramentas: visualizador de frame data, importador de sprites (PNG + manifest), editor de hitbox.
 - Telemetria, relatório de crash, medição de desempenho e um lab com aparelhos de referência.

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Concern do Conexus::WebhooksController (copiado do template
-# conexus-bff-stack, com os handlers preenchidos para o MUGEN Arena).
+# conexus-bff-stack, com os handlers preenchidos para o BAMBA).
 #
 # - user.created / user.updated (bff-auth)  → upsert do Player (nome, e-mail, avatar)
 # - user.deleted (bff-auth, LGPD)           → anonimiza o Player

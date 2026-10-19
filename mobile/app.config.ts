@@ -1,21 +1,21 @@
 import type { ExpoConfig } from "expo/config";
 
 const config: ExpoConfig = {
-  name: "MUGEN Arena",
-  slug: "mugen-arena",
-  version: "0.5.0",
+  name: "BAMBA",
+  slug: "bamba",
+  version: "0.5.1",
   orientation: "landscape",
   userInterfaceStyle: "dark",
-  scheme: ["br.com.conexus.mugenarena", "mugenarena"],
+  scheme: ["br.com.conexus.bamba", "bamba"],
   backgroundColor: "#0B0B12",
   ios: {
-    bundleIdentifier: "br.com.conexus.mugenarena",
+    bundleIdentifier: "br.com.conexus.bamba",
     supportsTablet: true,
     requireFullScreen: true,
     infoPlist: { ITSAppUsesNonExemptEncryption: false },
   },
   android: {
-    package: "br.com.conexus.mugenarena",
+    package: "br.com.conexus.bamba",
     // jogo pago, sem anúncios: nada de identificador de publicidade
     blockedPermissions: ["com.google.android.gms.permission.AD_ID"],
   },

@@ -1,5 +1,5 @@
 ; Kaze — Carateca andarilho que domina o vento. Equilibrado e direto.
-; Personagem original do MUGEN Arena (CONEXUS). Gerado por scripts/roster/generate.mjs.
+; Personagem original do BAMBA (CONEXUS). Gerado por scripts/roster/generate.mjs.
 
 [Info]
 name = "Kaze"
@@ -15,7 +15,7 @@ cns = kaze.cns
 stcommon = common1.cns ; fornecido pela engine
 anim = kaze.air
 
-; Extensão do MUGEN Arena (ignorada pelo MUGEN): cores do HUD/efeitos
+; Extensão do BAMBA (ignorada pelo MUGEN): cores do HUD/efeitos
 [Arena]
 body = #F4F1EA
 accent = #DC2626

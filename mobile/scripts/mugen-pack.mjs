@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Converte um personagem do MUGEN (pasta com .def) em pack do MUGEN Arena.
+// Converte um personagem do MUGEN (pasta com .def) em pack do BAMBA.
 //
 //   npm run pack -- <pasta-do-personagem> [--def kfm.def] [--id kfm] [--pal 1]
 //                   [--no-sound] [--out kfm.pack.json] [--upload https://host --token <JWT>]

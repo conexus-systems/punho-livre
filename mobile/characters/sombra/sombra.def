@@ -1,5 +1,5 @@
 ; Sombra — Monge que trocou a luz pela sombra. Controla o espaço de longe.
-; Personagem original do MUGEN Arena (CONEXUS). Gerado por scripts/roster/generate.mjs.
+; Personagem original do BAMBA (CONEXUS). Gerado por scripts/roster/generate.mjs.
 
 [Info]
 name = "Sombra"
@@ -15,7 +15,7 @@ cns = sombra.cns
 stcommon = common1.cns ; fornecido pela engine
 anim = sombra.air
 
-; Extensão do MUGEN Arena (ignorada pelo MUGEN): cores do HUD/efeitos
+; Extensão do BAMBA (ignorada pelo MUGEN): cores do HUD/efeitos
 [Arena]
 body = #3B0764
 accent = #A855F7

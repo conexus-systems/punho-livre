@@ -105,5 +105,5 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$apk" "$apk.sha256" --clobber
           else
-            gh release create "$TAG" "$apk" "$apk.sha256" --title "MUGEN Arena $VERSION" --notes-file notes.md --prerelease --verify-tag
+            gh release create "$TAG" "$apk" "$apk.sha256" --title "BAMBA $VERSION" --notes-file notes.md --prerelease --verify-tag
           fi

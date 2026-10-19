@@ -12,7 +12,7 @@ export const config = {
   /** Número do projeto do Google Cloud ligado ao app no Play Console (Play Integrity). */
   playCloudProject: env("EXPO_PUBLIC_PLAY_CLOUD_PROJECT", ""),
   /** Redirect nativo (esquema reverse-DNS exigido pelo bff-auth para clientes públicos). */
-  redirectUri: "br.com.conexus.mugenarena://oauth/callback",
+  redirectUri: "br.com.conexus.bamba://oauth/callback",
 };
 
 export function cableUrl(token: string): string {

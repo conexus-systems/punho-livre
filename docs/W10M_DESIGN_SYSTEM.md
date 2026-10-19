@@ -1,4 +1,4 @@
-# Design system W10M — MUGEN Arena (0.1.0)
+# Design system W10M — BAMBA (0.1.0)
 
 Mesmo design system do **conexus-launcher** (`docs/W10M_DESIGN_SYSTEM.md` lá) e do **multi-miner**, inspirado no
 Windows 10 Mobile, portado de Kotlin/Android Views para **React Native** porque o jogo é Expo (Android + iOS).
@@ -57,7 +57,7 @@ linhas: ajustado ao fundo até 4,5:1. Testado para as 20 cores nos dois fundos (
 | `GROUP` | 16 | regular | cabeçalho de grupo (destaque) |
 | `BODY` | 15 | regular | linhas, botões, campos |
 | `CAPTION` | 12 | regular | segunda linha, ajuda, nome nos blocos |
-| `KICKER` | 12 | seminegrito, maiúsculas | "MUGEN ARENA" acima do título |
+| `KICKER` | 12 | seminegrito, maiúsculas | "BAMBA" acima do título |
 
 Fonte do sistema (a Segoe UI é licenciada e não vai no app).
 

@@ -34,10 +34,10 @@ RSpec.describe "Licença do jogo pago (Play Integrity)" do
     key = OpenSSL::PKey::RSA.generate(2048)
     nonce = Integrity::Challenge.issue(player)
     stub_request(:post, "https://oauth2.googleapis.com/token").to_return(status: 200, body: { access_token: "g" }.to_json)
-    stub_request(:post, "https://playintegrity.googleapis.com/v1/br.com.conexus.mugenarena:decodeIntegrityToken")
+    stub_request(:post, "https://playintegrity.googleapis.com/v1/br.com.conexus.bamba:decodeIntegrityToken")
       .with(headers: { "Authorization" => "Bearer g" }, body: { integrity_token: "tok" }.to_json)
       .to_return(status: 200, body: { tokenPayloadExternal: {
-        requestDetails: { requestPackageName: "br.com.conexus.mugenarena", requestHash: Digest::SHA256.hexdigest(nonce),
+        requestDetails: { requestPackageName: "br.com.conexus.bamba", requestHash: Digest::SHA256.hexdigest(nonce),
                           timestampMillis: (Time.current.to_f * 1000).to_i.to_s },
         appIntegrity: { appRecognitionVerdict: "PLAY_RECOGNIZED" },
         deviceIntegrity: { deviceRecognitionVerdict: [ "MEETS_DEVICE_INTEGRITY" ] },

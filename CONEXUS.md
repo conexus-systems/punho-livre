@@ -1,4 +1,4 @@
-# Padrão CONEXUS — MUGEN Arena
+# Padrão CONEXUS — BAMBA
 
 - App mobile Expo em `mobile/` (base: template `conexus-app`).
 - Backend consumidor Rails em `web/` (base: `conexus-bff-stack`; gem `conexus-platform` vendorizada).

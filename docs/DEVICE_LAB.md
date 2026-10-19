@@ -1,4 +1,4 @@
-# Laboratório de aparelhos — MUGEN Arena
+# Laboratório de aparelhos — BAMBA
 
 Fase 0 do roadmap comercial: medir antes de otimizar. Este documento diz **o que medir, em quais
 aparelhos, como medir e onde ficam os números**. Dono: QA/Performance + Security/DevOps.
@@ -20,7 +20,7 @@ aparelhos, como medir e onde ficam os números**. Dono: QA/Performance + Securit
 
 | Ferramenta | O que faz | Como usar |
 |---|---|---|
-| Overlay de desempenho | fps médio e p5, tempo de quadro p95, simulação p95, desenho p95, rollbacks (janela de 500 ms) | Sempre ligado no build de desenvolvimento. No APK: Ajustes › Sobre › tocar 7× em "MUGEN Arena" › Desenvolvedor › Overlay de desempenho |
+| Overlay de desempenho | fps médio e p5, tempo de quadro p95, simulação p95, desenho p95, rollbacks (janela de 500 ms) | Sempre ligado no build de desenvolvimento. No APK: Ajustes › Sobre › tocar 7× em "BAMBA" › Desenvolvedor › Overlay de desempenho |
 | Modo bench (app) | Luta fixa CPU × CPU por 60 s com o mesmo laço e renderizador da luta; mostra e **exporta** o JSON (compartilhar) | Ajustes › Sobre › Desenvolvedor › Modo bench (tela `/bench`) |
 | `?bench=1` (web) | A mesma luta fixa na versão web (`mobile/play`), resultado no painel, "Baixar JSON" e `window.__MUGEN_BENCH__` | `npm run play:build` e abrir `play/dist/index.html?bench=1`; `?perf=1` liga só o overlay |
 | `npm run bench` | Engine pura em Node: frames/s da simulação e do rollback (8 frames re-simulados por frame) | `BENCH_JSON=out/bench-engine.json npm run bench` |
@@ -38,7 +38,7 @@ comparáveis entre aparelhos e versões.
 - `sim_ms_p95` = todos os passos de simulação de um quadro (no online inclui a re-simulação do rollback).
 - `draw_ms_p95` = **gravação** da `SkPicture` no JS (app) ou desenho no Canvas 2D (web). No app o
   desenho na GPU acontece na thread de UI e **não** entra nesse número: para ele use
-  `adb shell dumpsys gfxinfo br.com.conexus.mugenarena framestats` ou Perfetto (Android) e
+  `adb shell dumpsys gfxinfo br.com.conexus.bamba framestats` ou Perfetto (Android) e
   Instruments › Core Animation (iOS).
 - Amostragem: histograma de baldes de 0,25 ms, O(1) por quadro, sem alocação; percentis só quando o
   overlay (2×/s) ou o fim da luta pedem.
@@ -90,7 +90,7 @@ Cada caso: passos → resultado esperado. Anotar "ok", "falhou (descrição + v�
 | Rede ruim (online) | Wi-Fi com 150–300 ms (hotspot distante ou limitador) | `ping` em vermelho, rollbacks no overlay, jogo continua jogável; sem dessincronia |
 | Segundo plano | Na luta, apertar Home, esperar 30 s, voltar | Volta pausado ou no mesmo ponto, sem pular rounds; áudio volta; no online, conta como desconexão só se passar do limite |
 | Ligação/alarme | Receber ligação durante a luta | Áudio para; ao voltar, retoma |
-| Pouca memória | Abrir 5–6 apps pesados (câmera, jogo 3D, navegador com abas), voltar ao jogo; Android: `adb shell am send-trim-memory br.com.conexus.mugenarena RUNNING_CRITICAL` | Se o sistema matar o processo, o jogo reabre no menu sem perder ajustes/conta; sem crash |
+| Pouca memória | Abrir 5–6 apps pesados (câmera, jogo 3D, navegador com abas), voltar ao jogo; Android: `adb shell am send-trim-memory br.com.conexus.bamba RUNNING_CRITICAL` | Se o sistema matar o processo, o jogo reabre no menu sem perder ajustes/conta; sem crash |
 | Rotação | Girar o aparelho em todas as telas | Fica em paisagem (rotação travada) |
 | Recortes de tela | Telas com notch/furo e 21:9 | HUD e botões fora do recorte; nada cortado |
 | Fonte grande | Fonte do sistema no máximo | Menus legíveis; a luta não quebra |

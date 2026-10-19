@@ -1,4 +1,4 @@
-// Elenco nativo do MUGEN Arena — personagens originais (sem IP de terceiros).
+// Elenco nativo do BAMBA — personagens originais (sem IP de terceiros).
 //
 // Especiais disponíveis (ver generate.mjs → SPECIALS):
 //   projectile, rising, spin, dash, teleport, slam, cartwheel, divekick

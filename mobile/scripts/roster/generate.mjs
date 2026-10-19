@@ -733,7 +733,7 @@ function cmdFile(ch, specials, superDef, super2) {
 function defFile(ch) {
   return [
     `; ${ch.name} — ${ch.bio}`,
-    "; Personagem original do MUGEN Arena (CONEXUS). Gerado por scripts/roster/generate.mjs.",
+    "; Personagem original do BAMBA (CONEXUS). Gerado por scripts/roster/generate.mjs.",
     "",
     "[Info]",
     `name = "${ch.name}"`,
@@ -749,7 +749,7 @@ function defFile(ch) {
     "stcommon = common1.cns ; fornecido pela engine",
     `anim = ${ch.id}.air`,
     "",
-    "; Extensão do MUGEN Arena (ignorada pelo MUGEN): cores do HUD/efeitos",
+    "; Extensão do BAMBA (ignorada pelo MUGEN): cores do HUD/efeitos",
     "[Arena]",
     ...Object.entries(ch.style).map(([k, v]) => `${k} = ${v}`),
     "",

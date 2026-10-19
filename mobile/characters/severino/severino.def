@@ -1,5 +1,5 @@
 ; Severino — Vaqueiro do sertão do Cariri. Facão afiado, gibão de couro e nenhuma pressa.
-; Personagem original do MUGEN Arena (CONEXUS). Gerado por scripts/roster/generate.mjs.
+; Personagem original do BAMBA (CONEXUS). Gerado por scripts/roster/generate.mjs.
 
 [Info]
 name = "Severino"
@@ -15,7 +15,7 @@ cns = severino.cns
 stcommon = common1.cns ; fornecido pela engine
 anim = severino.air
 
-; Extensão do MUGEN Arena (ignorada pelo MUGEN): cores do HUD/efeitos
+; Extensão do BAMBA (ignorada pelo MUGEN): cores do HUD/efeitos
 [Arena]
 body = #B45309
 accent = #FBBF24

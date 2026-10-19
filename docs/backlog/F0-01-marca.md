@@ -2,7 +2,7 @@
 
 Fase: 0 — Fundação (nov/2026). Status do épico: **TODO**.
 Dono do épico: po. Humanos: jurídico, dono do projeto.
-Objetivo: trocar "MUGEN Arena" por um nome próprio, verificado juridicamente, antes de qualquer divulgação ou
+Objetivo: trocar "MUGEN Arena" por um nome próprio (escolhido: **BAMBA**, 19/10/2026; nome já trocado no app e nos docs), verificado juridicamente, antes de qualquer divulgação ou
 publicação em loja. Base: [../brand/NOMES.md](../brand/NOMES.md).
 
 ---

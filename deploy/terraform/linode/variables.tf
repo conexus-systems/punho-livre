@@ -132,7 +132,7 @@ variable "play_integrity_required" {
 variable "play_integrity_package" {
   description = "Pacote Android verificado no Play Integrity."
   type        = string
-  default     = "br.com.conexus.mugenarena"
+  default     = "br.com.conexus.bamba"
 }
 
 variable "play_integrity_service_account" {

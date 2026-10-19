@@ -1,4 +1,4 @@
-# Handoff — MUGEN Arena
+# Handoff — BAMBA
 
 Data: 18/10/2026. Versão **0.4.0** (`docs/UPDATE_0.4.0.md`: 20 lutadores, 8 cenários, som, compatibilidade MUGEN). Branch de trabalho: `ccr-0c9af399-ubmxeu` em `tantoniazi/mugen`
 (privado). O repositório definitivo deve ser `conexus-systems/mugen-arena` (privado) — a criação na org foi
@@ -33,7 +33,7 @@ personagem de terceiros é distribuído; os 6 nativos são originais.
 | Testes | Jest (jest-expo) + react-test-renderer, `node --test`, Playwright (preview web) |
 | Web | Rails 8.1 API, Postgres, Solid Queue/Cable/Cache, RSpec, `conexus-platform` vendorizada |
 | Infra | `platform-infra` (callers), GHCR, Terraform LKE (`deploy/terraform/linode`), EAS |
-| IDs | `br.com.conexus.mugenarena`, slug `mugen-arena`, redirect `br.com.conexus.mugenarena://oauth/callback` |
+| IDs | `br.com.conexus.bamba`, slug `mugen-arena`, redirect `br.com.conexus.bamba://oauth/callback` |
 
 ## 4. Mapa do código
 

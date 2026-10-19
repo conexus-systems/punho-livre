@@ -1,5 +1,5 @@
 ; Jaguara — Luchador mascarado das arenas de Guadalajara. Voa das cordas e cai como um meteoro.
-; Personagem original do MUGEN Arena (CONEXUS). Gerado por scripts/roster/generate.mjs.
+; Personagem original do BAMBA (CONEXUS). Gerado por scripts/roster/generate.mjs.
 
 [Info]
 name = "Jaguara"
@@ -15,7 +15,7 @@ cns = jaguara.cns
 stcommon = common1.cns ; fornecido pela engine
 anim = jaguara.air
 
-; Extensão do MUGEN Arena (ignorada pelo MUGEN): cores do HUD/efeitos
+; Extensão do BAMBA (ignorada pelo MUGEN): cores do HUD/efeitos
 [Arena]
 body = #16A34A
 accent = #FACC15

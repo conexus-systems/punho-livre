@@ -1,4 +1,4 @@
-# MUGEN Arena — contrato cliente ⇄ backend
+# BAMBA — contrato cliente ⇄ backend
 
 Fonte da verdade entre `mobile/` (Expo) e `web/` (Rails 8 API). Mudou aqui, muda nos dois lados.
 
@@ -9,7 +9,7 @@ app, e o app não usa mais o `bff-payment`. A licença do online é conferida pe
 ## Autenticação
 
 - O app faz login no **bff-auth** via OAuth2 Authorization Code + PKCE (S256), cliente público.
-  Redirect: `br.com.conexus.mugenarena://oauth/callback`.
+  Redirect: `br.com.conexus.bamba://oauth/callback`.
 - Todas as chamadas autenticadas ao backend usam `Authorization: Bearer <access_token do bff-auth>`
   (JWT RS256, `kid` em `<CONEXUS_AUTH_URL>/.well-known/jwks.json`, `aud` = client_id do app).
 - O backend verifica o JWT (iss, aud ∈ `CONEXUS_AUTH_ALLOWED_AUDIENCES`, exp, `sub` UUID) e faz
@@ -119,7 +119,7 @@ usados pelos estados (PlaySnd, hitsound, guardsound). Packs sem esse campo conti
 
 ## Licença (jogo pago)
 
-O MUGEN Arena é vendido na Google Play (compra única). O **online** (fila ranqueada e salas) só aceita cópias
+O BAMBA é vendido na Google Play (compra única). O **online** (fila ranqueada e salas) só aceita cópias
 compradas; o **modo offline nunca depende de licença**. A prova é o veredito do **Play Integrity**
 (`@expo/app-integrity` no app, `web/app/services/integrity/*` no servidor).
 
@@ -138,7 +138,7 @@ Fluxo (`mobile/src/services/license.ts`, só Android, antes de entrar no online)
    - `503 { "error": "license_unavailable" }` — conta de serviço não configurada ou API do Google fora.
 
 O servidor decodifica o token no Google (`decodeIntegrityToken` do pacote `PLAY_INTEGRITY_PACKAGE`, padrão
-`br.com.conexus.mugenarena`) com a conta de serviço em `PLAY_INTEGRITY_SERVICE_ACCOUNT` (JSON, nunca no Git) e
+`br.com.conexus.bamba`) com a conta de serviço em `PLAY_INTEGRITY_SERVICE_ACCOUNT` (JSON, nunca no Git) e
 exige os três vereditos: `PLAY_RECOGNIZED` + `LICENSED` + `MEETS_DEVICE_INTEGRITY`.
 
 Com `PLAY_INTEGRITY_REQUIRED=1` (produção), o `MatchmakingChannel` responde `{ type: "error", error:

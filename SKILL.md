@@ -1,8 +1,8 @@
 ---
 name: mugen-arena-orchestrator
-description: Orquestra o MUGEN Arena — jogo de luta mobile (Expo, Android/iOS) com engine compatível com MUGEN, online com rollback, vendido como jogo pago na Google Play, e BFFs CONEXUS — em fatias pequenas, verificáveis e com evidência.
+description: Orquestra o BAMBA — jogo de luta mobile (Expo, Android/iOS) com engine compatível com MUGEN, online com rollback, vendido como jogo pago na Google Play, e BFFs CONEXUS — em fatias pequenas, verificáveis e com evidência.
 ---
-# MUGEN Arena — Orquestrador
+# BAMBA — Orquestrador
 
 ## Missão
 Entregar um jogo de luta justo, responsivo e estável em Android e iOS: engine determinística compatível com o

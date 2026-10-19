@@ -1,4 +1,4 @@
-# MUGEN Arena
+# BAMBA
 
 Jogo de luta 2D para **Android e iOS** (Expo / React Native) com engine própria
 compatível com o formato de personagens do **MUGEN**, **luta online com rollback**,

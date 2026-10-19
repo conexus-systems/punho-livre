@@ -1,4 +1,4 @@
-# Terraform — MUGEN Arena (Linode LKE)
+# Terraform — BAMBA (Linode LKE)
 
 Raiz do Terraform de produção. Fica em `deploy/terraform/linode` **na raiz do repo** (nunca em
 `web/deploy`), como o layout "produto Expo" do

@@ -22,7 +22,7 @@ class CharacterSubmittedNotificationJob < ApplicationJob
       cc: recipients.drop(1),
       event: "character.submitted",
       idempotency_key: "character-submitted-#{character.id}",
-      subject: "[MUGEN Arena] Novo personagem para revisar: #{character.name}",
+      subject: "[BAMBA] Novo personagem para revisar: #{character.name}",
       body: <<~TEXT,
         #{character.submitted_by&.display_name || character.author} enviou o personagem "#{character.name}"
         (id #{character.slug}, versão #{character.version}, #{character.size_bytes} bytes).

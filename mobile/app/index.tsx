@@ -107,7 +107,7 @@ export default function Start() {
         <View style={{ width: 200, paddingTop: space.md, justifyContent: "space-between", paddingBottom: space.md }}>
           <View style={{ gap: space.sm }}>
             <AppMark size={40} color={t.accent} />
-            <Text style={[TYPE.KICKER, { color: t.text }]}>MUGEN ARENA</Text>
+            <Text style={[TYPE.KICKER, { color: t.text }]}>BAMBA</Text>
             <Text style={[TYPE.HEADER, { color: t.text }]}>Iniciar</Text>
           </View>
           <Text style={[TYPE.CAPTION, { color: t.muted }]}>

@@ -1,6 +1,6 @@
 {
-  "name": "mugen-arena",
-  "version": "0.5.0",
+  "name": "bamba",
+  "version": "0.5.1",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {

@@ -1,5 +1,5 @@
 ; Mei — Mestra de kung fu de Macau. Golpes de carga, pés rápidos e uma palma que vira dragão.
-; Personagem original do MUGEN Arena (CONEXUS). Gerado por scripts/roster/generate.mjs.
+; Personagem original do BAMBA (CONEXUS). Gerado por scripts/roster/generate.mjs.
 
 [Info]
 name = "Mei"
@@ -15,7 +15,7 @@ cns = mei.cns
 stcommon = common1.cns ; fornecido pela engine
 anim = mei.air
 
-; Extensão do MUGEN Arena (ignorada pelo MUGEN): cores do HUD/efeitos
+; Extensão do BAMBA (ignorada pelo MUGEN): cores do HUD/efeitos
 [Arena]
 body = #DC2626
 accent = #FACC15

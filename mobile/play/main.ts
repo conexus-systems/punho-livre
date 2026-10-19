@@ -1,5 +1,5 @@
 /**
- * MUGEN Arena — versão web jogável. Usa o mesmo código do app: engine (src/engine),
+ * BAMBA — versão web jogável. Usa o mesmo código do app: engine (src/engine),
  * elenco gerado (src/characters), IA e macros (src/game) e o renderizador da luta
  * (src/game/renderer.ts, desenhando em Canvas 2D pelo adaptador skia-canvas2d.ts).
  * Muda só a casca: menus em DOM no padrão W10M e controles de teclado/toque.

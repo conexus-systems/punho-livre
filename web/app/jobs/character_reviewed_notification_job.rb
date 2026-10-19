@@ -30,9 +30,9 @@ class CharacterReviewedNotificationJob < ApplicationJob
 
   def subject_for(character, status)
     if status == "approved"
-      "[MUGEN Arena] #{character.name} foi aprovado!"
+      "[BAMBA] #{character.name} foi aprovado!"
     else
-      "[MUGEN Arena] #{character.name} não foi aprovado"
+      "[BAMBA] #{character.name} não foi aprovado"
     end
   end
 

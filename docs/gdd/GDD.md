@@ -1,6 +1,6 @@
 # Documento de design do jogo (GDD)
 
-Nome provisório: **MUGEN Arena** (será trocado; ver [../brand/NOMES.md](../brand/NOMES.md)).
+Nome: **BAMBA** (escolhido em 19/10/2026; registro no INPI pendente — ver [../brand/NOMES.md](../brand/NOMES.md)).
 Dono: PO. Frame data e números de balanceamento: designer de combate. Arte: diretor de arte.
 Status: proposta para aprovação do dono do projeto.
 

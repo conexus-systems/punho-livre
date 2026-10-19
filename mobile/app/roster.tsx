@@ -131,7 +131,7 @@ export default function RosterScreen() {
           {pivot === 2 && !admin ? (
             <View style={{ gap: space.sm, maxWidth: 560 }}>
               <Text style={[TYPE.BODY, { color: t.text }]}>
-                O MUGEN Arena lê personagens no formato do MUGEN (.def, .air, .cmd, .cns e sprites .sff). Para enviar um, rode na pasta mobile do projeto:
+                O BAMBA lê personagens no formato do MUGEN (.def, .air, .cmd, .cns e sprites .sff). Para enviar um, rode na pasta mobile do projeto:
               </Text>
               <Text selectable style={[TYPE.BODY, { color: t.accentText, fontFamily: "monospace" }]}>
                 npm run pack -- pasta/do/personagem --upload {"<API>"} --token {"<JWT>"}

@@ -1,6 +1,6 @@
 # Play Console — ficha pt-BR (colar na Console)
 
-Pacote: `br.com.conexus.mugenarena` · Versão: a de `mobile/app.config.ts`
+Pacote: `br.com.conexus.bamba` · Versão: a de `mobile/app.config.ts`
 Modelo: **jogo pago, compra única** — preço **R$ 49,99** (faixa de R$ 50). **Sem anúncios e sem compras no app.**
 O preço é configurado no Play Console, não no código.
 Categoria: Jogos › Luta. Requisitos: Android 7.0 ou mais novo (`minSdkVersion` 24 em `mobile/app.config.ts`).
@@ -14,7 +14,7 @@ Categoria: Jogos › Luta. Requisitos: Android 7.0 ou mais novo (`minSdkVersion`
 ## Título (máx. 30)
 
 ```
-MUGEN Arena
+BAMBA
 ```
 
 ## Descrição curta (máx. 80)
@@ -26,7 +26,7 @@ Luta 2D completa, sem anúncios: arcade, versus, treino e online com rollback.
 ## Descrição completa (máx. 4000)
 
 ```
-MUGEN Arena é um jogo de luta 2D feito para celular. Compra única: sem anúncios, sem compras no app e
+BAMBA é um jogo de luta 2D feito para celular. Compra única: sem anúncios, sem compras no app e
 nada bloqueado atrás de pagamento.
 
 • 6 lutadores originais, cada um com especiais e super
@@ -96,7 +96,7 @@ lançamento (meta ≤ 10%, ver `docs/ROADMAP.md`).
    projeto vai em `EXPO_PUBLIC_PLAY_CLOUD_PROJECT` (build do app).
 4. No Google Cloud: ativar a Play Integrity API e criar uma **conta de serviço** com acesso a ela; o JSON da chave
    vai em `PLAY_INTEGRITY_SERVICE_ACCOUNT` no servidor (segredo, nunca no Git). `PLAY_INTEGRITY_PACKAGE` =
-   `br.com.conexus.mugenarena` e `PLAY_INTEGRITY_REQUIRED=1` em produção (`docs/PROTOCOL.md` § Licença).
+   `br.com.conexus.bamba` e `PLAY_INTEGRITY_REQUIRED=1` em produção (`docs/PROTOCOL.md` § Licença).
 5. **Teste**: faixa de **teste interno** + **testadores de licença** (Configuração › Teste de licença) para
    comprar sem cobrança e conferir `LICENSED`; testar também uma cópia instalada fora da Play (deve dar
    `unrecognized_app`/`not_licensed` só no online, com o offline funcionando).

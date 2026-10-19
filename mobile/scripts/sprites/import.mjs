@@ -60,7 +60,7 @@ function defFile(m, files) {
     `name = "${m.name}"`,
     `displayname = "${m.name}"`,
     "mugenversion = 1.0",
-    `author = "${m.author ?? "MUGEN Arena"}"`,
+    `author = "${m.author ?? "BAMBA"}"`,
     "localcoord = 320, 240",
     "",
     "[Files]",
@@ -71,7 +71,7 @@ function defFile(m, files) {
     `anim = ${m.id}.air`,
     "",
     ...(STYLE_KEYS.some((k) => style[k])
-      ? ["; Extensão do MUGEN Arena (ignorada pelo MUGEN): cores do HUD/efeitos", "[Arena]", ...STYLE_KEYS.filter((k) => style[k]).map((k) => `${k} = ${style[k]}`), ""]
+      ? ["; Extensão do BAMBA (ignorada pelo MUGEN): cores do HUD/efeitos", "[Arena]", ...STYLE_KEYS.filter((k) => style[k]).map((k) => `${k} = ${style[k]}`), ""]
       : []),
   ].join("\n");
 }
@@ -307,7 +307,7 @@ export async function importSprites(dir, opts = {}) {
     format: engine.PACK_FORMAT,
     id: m.id,
     name: m.name,
-    author: m.author ?? "MUGEN Arena",
+    author: m.author ?? "BAMBA",
     version: m.version ?? "1.0.0",
     def: `${m.id}.def`,
     files: packFiles,

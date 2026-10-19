@@ -1,6 +1,6 @@
-# MUGEN Arena — web (API Rails)
+# BAMBA — web (API Rails)
 
-API Rails 8.1 (API-only) + Action Cable do **MUGEN Arena**, jogo de luta 2D mobile.
+API Rails 8.1 (API-only) + Action Cable do **BAMBA**, jogo de luta 2D mobile.
 Fica em `web/` (layout "produto Expo" da frota CONEXUS: app em `mobile/`, Rails em `web/`,
 Terraform em `deploy/terraform/linode` na raiz). O contrato com o app (`mobile/`) está em [`../docs/PROTOCOL.md`](../docs/PROTOCOL.md): mudou lá, muda aqui.
 
@@ -74,7 +74,7 @@ bin/ci                          # tudo acima em sequência
 | `CORS_ORIGINS` | origens CORS, separadas por vírgula (padrão `*`) |
 | `SECRET_KEY_BASE` | obrigatório em produção (sem `config/master.key` na imagem) |
 | `PLAY_INTEGRITY_REQUIRED` | `1` em produção: o online exige licença (fila/salas respondem `license_required`). Desligado, todos contam como licenciados |
-| `PLAY_INTEGRITY_PACKAGE` | pacote conferido no veredito (padrão `br.com.conexus.mugenarena`) |
+| `PLAY_INTEGRITY_PACKAGE` | pacote conferido no veredito (padrão `br.com.conexus.bamba`) |
 | `PLAY_INTEGRITY_SERVICE_ACCOUNT` | JSON da conta de serviço do Google Cloud com acesso à Play Integrity API (segredo; sem ele, `verify` → `503 license_unavailable`) |
 | `SOLID_CABLE_POLLING_INTERVAL` | polling do Solid Cable em segundos (padrão `0.05`) |
 
@@ -159,8 +159,8 @@ gh workflow run "Deploy — Production" --ref main -f skip_build=true # só Terr
 
    ```ruby
    client = OAuthClient.find_or_initialize_by(client_id: "mugen-arena")
-   client.update!(name: "MUGEN Arena", public_client: true, client_secret_digest: nil, active: true,
-                  redirect_uris: [ "br.com.conexus.mugenarena://oauth/callback" ])
+   client.update!(name: "BAMBA", public_client: true, client_secret_digest: nil, active: true,
+                  redirect_uris: [ "br.com.conexus.bamba://oauth/callback" ])
    ```
 
 2. **bff-auth — webhooks `user.*`**: crie o `WebhookEndpoint` desse client apontando para

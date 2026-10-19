@@ -1,4 +1,4 @@
-# MUGEN Arena — online (Fase 3)
+# BAMBA — online (Fase 3)
 
 Desenho do online em produção: determinismo entre aparelhos, rollback, reconexão, ranqueada e anti-trapaça
 básica. O contrato app ⇄ web está em `docs/PROTOCOL.md`; aqui ficam o porquê e os números medidos.
