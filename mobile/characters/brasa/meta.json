@@ -14,10 +14,22 @@
     {
       "name": "Armada",
       "cmd": "qcf_k"
+    },
+    {
+      "name": "Chuva de Martelos",
+      "cmd": "dd_k"
     }
   ],
   "super": {
     "name": "Roda de Fogo",
     "cmd": "super_k"
-  }
+  },
+  "super2": {
+    "name": "Roda Final",
+    "cmd": "super2_k"
+  },
+  "quotes": [
+    "A roda é minha casa, e você caiu nela.",
+    "Ginga não se ensina: se sente."
+  ]
 }

@@ -5,7 +5,7 @@
 
 import { COMMON1_CNS } from "./common1";
 import { parseAir, finalizeAnimation } from "./mugen/air";
-import { parseCmd, parseCommandElement } from "./mugen/cmd";
+import { parseCmd, parseCommandElement, prioritizeCommandStates } from "./mugen/cmd";
 import { COSMETIC_CONTROLLERS, parseConstants, parseStates, withJumpAliases } from "./mugen/cns";
 import { findSection, parseIni, sectionMap, unquote } from "./mugen/ini";
 import type { Animation, CharacterData, CharacterStyle, CommandDef, SpriteSheet } from "./types";
@@ -21,6 +21,8 @@ export interface CharacterPack {
   def: string;
   files: Record<string, string>;
   sprites: SpriteSheet | null;
+  /** Sons do .snd convertidos ("grupo,índice" → data URI WAV), opcional. */
+  sounds?: Record<string, string> | null;
 }
 
 export class PackError extends Error {}
@@ -51,6 +53,15 @@ export function fallbackAnimChain(n: number): number[] {
   if (n === 100) return [20, 0];
   if (n === 105) return [43, 41, 0];
   if (n === 21) return [20, 0];
+  // sistema SNK (common1 6000+): personagens importados usam o que tiverem de parecido
+  if (n === 6000 || n === 6001) return [6000, 11, 10, 0];
+  if (n === 6010) return [240, 250, 210, 200, 0];
+  if (n === 6015) return [640, 630, 610, 600, 41, 0];
+  if (n === 6030) return [800, 810, 210, 200, 0];
+  if (n === 6040) return [5002, 5001, 5000, 0];
+  if (n === 6050) return [150, 130, 0];
+  if (n === 6060) return [5002, 5001, 5000, 0];
+  if (n === 6070) return [3000, 181, 180, 0];
   return [0];
 }
 
@@ -138,6 +149,10 @@ export function loadCharacter(pack: CharacterPack): CharacterData {
     }
   }
 
+  // super > especial > normal quando várias entradas casam no mesmo quadro
+  const root = parsed.states[-1];
+  if (root) root.controllers = prioritizeCommandStates(root.controllers, commands);
+
   return {
     id: pack.id,
     name: unquote(info["name"] ?? pack.name),
@@ -151,9 +166,26 @@ export function loadCharacter(pack: CharacterPack): CharacterData {
     style: parseStyle(defSections),
     sprites: pack.sprites,
     unsupported: parsed.unsupported.filter((t) => !COSMETIC_CONTROLLERS.has(t)),
+    sounds: pack.sounds ?? null,
   };
 }
 
+/**
+ * Substitutas já montadas. Ficam fora de `ch.anims` de propósito: o renderizador
+ * pede animações que a simulação não pediu, e `AnimExist` não pode mudar por
+ * causa disso (os dois lados do online precisam ver o mesmo).
+ */
+const substitutes = new WeakMap<CharacterData, Map<number, Animation>>();
+
 export function getAnim(ch: CharacterData, n: number): Animation {
-  return ch.anims[n] ?? synthesize(ch.anims, n) ?? ch.anims[0];
+  const a = ch.anims[n];
+  if (a) return a;
+  let cache = substitutes.get(ch);
+  if (!cache) substitutes.set(ch, (cache = new Map()));
+  let s = cache.get(n);
+  if (!s) {
+    s = synthesize(ch.anims, n) ?? ch.anims[0];
+    cache.set(n, s);
+  }
+  return s;
 }

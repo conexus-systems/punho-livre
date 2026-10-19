@@ -3,7 +3,7 @@
 import type { MatchInfo } from "@/src/net/online";
 import { createStore } from "@/src/store";
 
-export type Mode = "arcade" | "versus" | "training" | "online";
+export type Mode = "arcade" | "versus" | "training" | "online" | "team";
 
 export interface MatchSetup {
   mode: Mode;
@@ -16,6 +16,9 @@ export interface MatchSetup {
   stageNo: number;
   continues: number;
   online: MatchInfo | null;
+  /** Equipes 3×3 (KOF): lutadores na ordem de entrada. */
+  team1: string[];
+  team2: string[];
 }
 
 export const matchSetup = createStore<MatchSetup>({
@@ -27,6 +30,8 @@ export const matchSetup = createStore<MatchSetup>({
   stageNo: 0,
   continues: 0,
   online: null,
+  team1: [],
+  team2: [],
 });
 
 export function shuffle<T>(list: T[]): T[] {

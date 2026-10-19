@@ -14,10 +14,22 @@
     {
       "name": "Maré Negra",
       "cmd": "qcb_p"
+    },
+    {
+      "name": "Passo Sombrio",
+      "cmd": "dd_k"
     }
   ],
   "super": {
     "name": "Eclipse",
     "cmd": "super_p"
-  }
+  },
+  "super2": {
+    "name": "Noite Eterna",
+    "cmd": "super2_p"
+  },
+  "quotes": [
+    "Toda luz projeta uma sombra. Você é a minha.",
+    "Feche os olhos. Dói menos."
+  ]
 }

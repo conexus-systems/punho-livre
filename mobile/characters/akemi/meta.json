@@ -1,0 +1,35 @@
+{
+  "id": "akemi",
+  "name": "Akemi",
+  "bio": "Professora de aikidô de Kyoto. Usa a força de quem ataca contra ele mesmo.",
+  "specials": [
+    {
+      "name": "Kote Gaeshi",
+      "cmd": "dd_p"
+    },
+    {
+      "name": "Irimi Nage",
+      "cmd": "hcf_p"
+    },
+    {
+      "name": "Fluxo de Ki",
+      "cmd": "qcf_p"
+    },
+    {
+      "name": "Tenkan",
+      "cmd": "dp_p"
+    }
+  ],
+  "super": {
+    "name": "Tenchi",
+    "cmd": "super_p"
+  },
+  "super2": {
+    "name": "Shihō Nage Final",
+    "cmd": "super2_p"
+  },
+  "quotes": [
+    "Você atacou. Eu só acompanhei.",
+    "Respire. Já acabou."
+  ]
+}

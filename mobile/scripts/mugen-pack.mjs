@@ -2,17 +2,19 @@
 // Converte um personagem do MUGEN (pasta com .def) em pack do MUGEN Arena.
 //
 //   npm run pack -- <pasta-do-personagem> [--def kfm.def] [--id kfm] [--pal 1]
-//                   [--out kfm.pack.json] [--upload https://host --token <JWT>]
+//                   [--no-sound] [--out kfm.pack.json] [--upload https://host --token <JWT>]
 //
 // O que entra no pack: .def, .cmd, .cns, st*, .air (texto) e os sprites usados
-// pelo .air, convertidos do .sff para atlas PNG (data URI). Sons (.snd) não são
-// usados pela engine. Verifique se você tem direito de distribuir o personagem.
+// pelo .air, convertidos do .sff para atlas PNG (data URI), e os sons do .snd
+// referenciados nos estados (PlaySnd, hitsound, guardsound) como WAV (data URI;
+// até 4 MB, sem --no-sound). Verifique se você tem direito de distribuir o personagem.
 
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { readAct, readSff } from "./lib/sff.mjs";
+import { readSnd, usedSounds } from "./lib/snd.mjs";
 import { Canvas, packAtlas } from "./roster/raster.mjs";
 
 function parseArgs(argv) {
@@ -121,6 +123,22 @@ export function buildPack(dir, opts = {}) {
     console.warn("sem .sff: o app vai desenhar o personagem pelas caixas de colisão");
   }
 
+  let sounds = null;
+  const sndPath = opts.sound === false ? null : findFile(dir, files.sound);
+  if (sndPath) {
+    const used = usedSounds(Object.values(texts));
+    const all = readSnd(readFileSync(sndPath));
+    sounds = {};
+    let total = 0;
+    for (const snd of all) {
+      const key = `${snd.group},${snd.index}`;
+      if (!used.has(key) || total + snd.data.length > 4_000_000) continue;
+      sounds[key] = `data:audio/wav;base64,${snd.data.toString("base64")}`;
+      total += snd.data.length;
+    }
+    console.log(`sons: ${Object.keys(sounds).length} usados de ${all.length} no SND (${Math.round(total / 1024)} KB)`);
+  }
+
   return {
     format: "mugen-arena-pack/1",
     id,
@@ -130,6 +148,7 @@ export function buildPack(dir, opts = {}) {
     def: path.basename(defPath),
     files: texts,
     sprites,
+    ...(sounds && Object.keys(sounds).length ? { sounds } : {}),
   };
 }
 
@@ -149,10 +168,10 @@ if (isMain) {
   const args = parseArgs(process.argv.slice(2));
   const dir = args._[0];
   if (!dir) {
-    console.error("uso: npm run pack -- <pasta-do-personagem> [--def x.def] [--id slug] [--pal 1] [--out arquivo] [--upload URL --token JWT]");
+    console.error("uso: npm run pack -- <pasta-do-personagem> [--def x.def] [--id slug] [--pal 1] [--no-sound] [--out arquivo] [--upload URL --token JWT]");
     process.exit(1);
   }
-  const pack = buildPack(path.resolve(dir), { def: args.def, id: args.id, pal: args.pal, version: args.version });
+  const pack = buildPack(path.resolve(dir), { def: args.def, id: args.id, pal: args.pal, version: args.version, sound: !args["no-sound"] });
   const body = JSON.stringify(pack);
   const out = args.out ?? `${pack.id}.pack.json`;
   writeFileSync(out, body);

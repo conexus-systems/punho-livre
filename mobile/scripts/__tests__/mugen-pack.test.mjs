@@ -180,3 +180,68 @@ test("pack completo a partir de uma pasta MUGEN", () => {
   assert.deepEqual(Object.keys(pack.sprites.frames), ["0,0"]);
   assert.match(pack.sprites.atlas[0], /^data:image\/png;base64,/);
 });
+
+// ------------------------------------------------------------- .snd
+
+function wav(n) {
+  const data = Buffer.alloc(n, 128);
+  const h = Buffer.alloc(44);
+  h.write("RIFF", 0, "latin1");
+  h.writeUInt32LE(36 + n, 4);
+  h.write("WAVEfmt ", 8, "latin1");
+  h.writeUInt32LE(16, 16);
+  h.writeUInt16LE(1, 20);
+  h.writeUInt16LE(1, 22);
+  h.writeUInt32LE(11025, 24);
+  h.writeUInt32LE(11025, 28);
+  h.writeUInt16LE(1, 32);
+  h.writeUInt16LE(8, 34);
+  h.write("data", 36, "latin1");
+  h.writeUInt32LE(n, 40);
+  return Buffer.concat([h, data]);
+}
+
+function snd(list) {
+  const head = Buffer.alloc(512);
+  head.write("ElecbyteSnd\0", 0, "latin1");
+  head.writeInt32LE(list.length, 16);
+  head.writeInt32LE(512, 20);
+  const parts = [head];
+  let off = 512;
+  list.forEach((s, i) => {
+    const w = wav(s.n);
+    const sub = Buffer.alloc(16);
+    const next = i === list.length - 1 ? 0 : off + 16 + w.length;
+    sub.writeUInt32LE(next, 0);
+    sub.writeUInt32LE(w.length, 4);
+    sub.writeInt32LE(s.group, 8);
+    sub.writeInt32LE(s.index, 12);
+    parts.push(sub, w);
+    off += 16 + w.length;
+  });
+  return Buffer.concat(parts);
+}
+
+test("SND: lê a lista ligada de WAVs e o pack leva só os sons usados", async () => {
+  const { readSnd } = await import("../lib/snd.mjs");
+  const file = snd([
+    { group: 1, index: 0, n: 100 },
+    { group: 1, index: 2, n: 50 },
+    { group: 9, index: 9, n: 10 },
+  ]);
+  const all = readSnd(file);
+  assert.deepEqual(all.map((s) => [s.group, s.index]), [[1, 0], [1, 2], [9, 9]]);
+  assert.equal(all[1].data.toString("latin1", 0, 4), "RIFF");
+
+  const dir = mkdtempSync(path.join(tmpdir(), "mugen-snd-"));
+  const src = path.join(here, "../../characters/kaze");
+  for (const f of ["kaze.cmd", "kaze.air"]) cpSync(path.join(src, f), path.join(dir, f));
+  const cns = `${readFileSync(path.join(src, "kaze.cns"), "utf8")}\n[Statedef 4000]\ntype = S\n\n[State 4000, som]\ntype = PlaySnd\ntrigger1 = Time = 0\nvalue = S1, 2\n`;
+  writeFileSync(path.join(dir, "kaze.cns"), cns);
+  writeFileSync(path.join(dir, "kaze.def"), readFileSync(path.join(src, "kaze.def"), "utf8").replace("anim = kaze.air", "anim = kaze.air\nsound = kaze.snd"));
+  writeFileSync(path.join(dir, "kaze.snd"), file);
+  const pack = buildPack(dir, { id: "kaze-snd" });
+  assert.deepEqual(Object.keys(pack.sounds), ["1,2"]);
+  assert.match(pack.sounds["1,2"], /^data:audio\/wav;base64,/);
+  assert.equal(buildPack(dir, { id: "kaze-snd", sound: false }).sounds, undefined);
+});

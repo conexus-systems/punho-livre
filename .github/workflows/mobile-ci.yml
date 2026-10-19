@@ -1,0 +1,41 @@
+# CI mobile padronizado — caller de mobile/** (produto Expo CONEXUS).
+# A lógica vive em conexus-systems/platform-infra (ci-mobile.yml@v1). Não copiar steps para cá.
+#
+# Path-filter:
+#   mobile/** → este workflow (PR e push em main). Barato: ubuntu-latest, sem EXPO_TOKEN.
+#   web/** + deploy/** → .github/workflows/ci.yml (Rails).
+#   Build/submit EAS continua manual em eas-build.yml.
+#
+# Ajuste os inputs ao package.json do app (ex.: test-command Jest, node-version-file).
+name: Mobile CI
+
+on:
+  pull_request:
+    paths:
+      - "mobile/**"
+      - ".github/workflows/mobile-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/mobile-ci.yml"
+  workflow_call:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  mobile:
+    name: Mobile
+    uses: conexus-systems/platform-infra/.github/workflows/ci-mobile.yml@v1
+    with:
+      working-directory: mobile
+      # node-version-file: mobile/.nvmrc   # sem .nvmrc no app: default node 22
+      # typecheck: `npm run typecheck` (tsc --noEmit); lint: --if-present.
+      # test:ci = jest --ci + testes das ferramentas (node --test scripts/__tests__).
+      test-command: npm run test:ci

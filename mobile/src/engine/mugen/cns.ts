@@ -56,6 +56,23 @@ export const SUPPORTED_CONTROLLERS = new Set([
   "fallenvshake",
   "playsnd",
   "stopsnd",
+  "explod",
+  "removeexplod",
+  "modifyexplod",
+  "helper",
+  "destroyself",
+  "bindtoparent",
+  "bindtoroot",
+  "parentvaradd",
+  "parentvarset",
+  "targetstate",
+  "targetbind",
+  "targetfacing",
+  "targetvelset",
+  "targetveladd",
+  "targetpoweradd",
+  "targetdrop",
+  "bindtotarget",
   "sprpriority",
   "assertspecial",
   "explod",
@@ -122,6 +139,9 @@ export const COSMETIC_CONTROLLERS = new Set([
   "forcefeedback",
   "fallenvshake",
 ]);
+
+/** Parâmetros que são flags/palavras, lidos crus pelos controladores. */
+const FLAG_PARAMS = new Set(["attr", "hitflag", "guardflag", "animtype", "air.animtype", "fall.animtype", "ground.type", "air.type", "statetype", "movetype", "physics"]);
 
 function safeExpr(src: string, problems: string[], where: string): Expr {
   try {
@@ -237,6 +257,8 @@ function parseController(section: IniSection, index: number, problems: string[])
       continue;
     }
     ctrl.raw[l.key] = l.value;
+    // flags (M-, SCA, Hard...) não são expressões: ficam só em `raw`
+    if (FLAG_PARAMS.has(l.key)) continue;
     ctrl.params[l.key] = splitTopLevel(l.value).map((v) => safeExpr(v, problems, `${where} ${l.key}`));
   }
 

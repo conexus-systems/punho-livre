@@ -7,8 +7,17 @@
 import { advanceAnim, contactPoint, currentFrame, overlap, resetAnim, worldBox } from "./anim";
 import { getAnim } from "./character";
 import {
+  COUNTER_HITSTOP_BONUS,
+  GROUND_Y,
+  GUARD_CRUSH_HITSTOP,
+  GUARD_MAX,
+  GUARD_REGEN_DELAY,
   INTRO_FRAMES,
+  JUST_DEFEND_HITSTOP_MAX,
   KO_FRAMES,
+  KO_HITSTOP_FRAMES,
+  KO_SLOWMO_FRAMES,
+  POWER_PER_LEVEL,
   OVER_FRAMES,
   SCREEN_MARGIN,
   SCREEN_W,
@@ -21,7 +30,9 @@ import {
   advanceFighterAnim,
   buildHitDef,
   changeAnim,
+  animCharOf,
   changeState,
+  emptyGetHit,
   faceOpponent,
   FighterCtx,
   holding,
@@ -36,40 +47,28 @@ import {
   type StateRunner,
 } from "./fighter";
 import { INPUT_HISTORY, toRelative } from "./input";
+import {
+  attackBoost,
+  guardCost,
+  isJustDefend,
+  isRolling,
+  resolveThrows,
+  SYS,
+  systemInput,
+  tickSystem,
+} from "./snk";
 import type {
   Box,
   CharacterData,
   Controller,
+  ExplodState,
   FighterState,
-  GetHitVars,
   HitDefState,
   MatchConfig,
   ProjectileState,
   WorldState,
 } from "./types";
 import { Key } from "./types";
-
-function emptyGetHit(): GetHitVars {
-  return {
-    damage: 0,
-    hitTime: 0,
-    slideTime: 0,
-    ctrlTime: 0,
-    xvel: 0,
-    yvel: 0,
-    yaccel: 0.35,
-    fall: 0,
-    fallXVel: 0,
-    fallYVel: -4.5,
-    fallRecover: 1,
-    animType: 0,
-    groundType: 1,
-    airType: 1,
-    guarded: 0,
-    hitCount: 0,
-    hitTimeLeft: 0,
-  };
-}
 
 function createFighter(side: 0 | 1, ch: CharacterData): FighterState {
   const lifeMax = Math.max(1, Math.trunc(ch.consts["data.life"] ?? 1000));
@@ -118,12 +117,28 @@ function createFighter(side: 0 | 1, ch: CharacterData): FighterState {
     roundsWon: 0,
     attackMul: (ch.consts["data.attack"] ?? 100) / 100,
     defenceMul: (ch.consts["data.defence"] ?? 100) / 100,
+    maxTime: 0,
+    maxTotal: 0,
+    guardMeter: GUARD_MAX,
+    guardRegenDelay: 0,
+    throwDir: 0,
+    customOwner: -1,
+    animOwner: -1,
+    hasTarget: false,
+    bindTime: 0,
+    bindX: 0,
+    bindY: 0,
+    helper: null,
   };
 }
 
 export function createWorld(cfg: MatchConfig, roster: Roster): WorldState {
-  const [a, b] = cfg.chars;
-  if (!roster[a] || !roster[b]) throw new Error(`personagem não carregado: ${!roster[a] ? a : b}`);
+  const teams = cfg.teams ? cfg.teams.map((m) => m.filter(Boolean).slice(0, 3)) : null;
+  if (teams && (teams[0].length === 0 || teams[1].length === 0)) throw new Error("equipe vazia");
+  const [a, b] = teams ? [teams[0][0], teams[1][0]] : cfg.chars;
+  for (const id of teams ? [...teams[0], ...teams[1]] : [a, b]) {
+    if (!roster[id]) throw new Error(`personagem não carregado: ${id}`);
+  }
   const w: WorldState = {
     frame: 0,
     rng: (cfg.seed >>> 0) || 0x9e3779b9,
@@ -144,6 +159,10 @@ export function createWorld(cfg: MatchConfig, roster: Roster): WorldState {
     superPauseOwner: -1,
     events: [],
     stageId: cfg.stageId,
+    teams: teams ? [{ members: teams[0], index: 0 }, { members: teams[1], index: 0 }] : null,
+    explods: [],
+    helpers: [],
+    nextUid: 1,
   };
   return w;
 }
@@ -183,7 +202,150 @@ function makeRunner(w: WorldState, roster: Roster): StateRunner {
       resetAnim(pr, anim, ch.anims[anim]);
       w.projectiles.push(pr);
     },
+
+    spawnHelper(p: FighterState, c: Controller, ctx: FighterCtx) {
+      if (w.helpers.filter((h) => h.side === p.side).length >= MAX_HELPERS) return;
+      const ch = roster[p.charId];
+      const h = createFighter(p.side, ch);
+      const root = w.fighters[p.side];
+      h.helper = { id: paramValue(c, "id", ctx, 0, 0), uid: w.nextUid++ };
+      const at = place(w, p, (c.raw["postype"] ?? "p1").trim().toLowerCase(), paramValue(c, "pos", ctx, 0, 0), paramValue(c, "pos", ctx, 1, 0));
+      h.x = at.x;
+      h.y = at.y;
+      h.facing = (paramValue(c, "facing", ctx, 0, 1) >= 0 ? p.facing : -p.facing) as 1 | -1;
+      h.life = root.life;
+      h.lifeMax = root.lifeMax;
+      h.ctrl = false;
+      w.helpers.push(h);
+      changeState(h, w, roster, paramValue(c, "stateno", ctx, 0, 0));
+    },
+
+    spawnExplod(p: FighterState, c: Controller, ctx: FighterCtx) {
+      const raw = (c.raw["anim"] ?? "").trim();
+      if (!raw || /^f/i.test(raw)) return; // animações comuns do fight.def: não temos
+      if (w.explods.length >= MAX_EXPLODS) return;
+      const ch = roster[p.charId];
+      const anim = paramValue(c, "anim", ctx, 0, -1);
+      if (!ch.anims[anim]) return;
+      const postype = (c.raw["postype"] ?? "p1").trim().toLowerCase();
+      const offX = paramValue(c, "pos", ctx, 0, 0);
+      const offY = paramValue(c, "pos", ctx, 1, 0);
+      const at = place(w, p, postype, offX, offY);
+      const facing = (paramValue(c, "facing", ctx, 0, 1) >= 0 ? p.facing : -p.facing) as 1 | -1;
+      const bindTo = postype === "p2" ? opponentOf(w, p).side : postype === "p1" ? p.side : -1;
+      const trans = (c.raw["trans"] ?? "").trim().toLowerCase();
+      const e: ExplodState = {
+        uid: w.nextUid++,
+        id: paramValue(c, "id", ctx, 0, -1),
+        owner: p.side,
+        charId: p.charId,
+        anim,
+        animElem: 0,
+        animElemTime: 0,
+        animTick: 0,
+        x: at.x,
+        y: at.y,
+        vx: paramValue(c, "vel", ctx, 0, 0) * facing,
+        vy: paramValue(c, "vel", ctx, 1, 0),
+        ax: paramValue(c, "accel", ctx, 0, 0) * facing,
+        ay: paramValue(c, "accel", ctx, 1, 0),
+        facing,
+        bindTo,
+        bindTime: bindTo >= 0 ? paramValue(c, "bindtime", ctx, 0, 0) : 0,
+        offX: offX * (postype === "p2" ? opponentOf(w, p).facing : p.facing),
+        offY,
+        removeTime: paramValue(c, "removetime", ctx, 0, -2),
+        age: 0,
+        onTop: paramValue(c, "ontop", ctx, 0, 0) !== 0 || paramValue(c, "sprpriority", ctx, 0, 0) > 0,
+        scaleX: paramValue(c, "scale", ctx, 0, 1),
+        scaleY: paramValue(c, "scale", ctx, 1, 1),
+        removeOnGetHit: paramValue(c, "removeongethit", ctx, 0, 0) !== 0,
+        additive: trans.startsWith("add"),
+      };
+      resetAnim(e, anim, ch.anims[anim]);
+      w.explods.push(e);
+    },
   };
+}
+
+const MAX_HELPERS = 24;
+const MAX_EXPLODS = 64;
+
+/** Posição de um Explod/Helper pelo `postype` do MUGEN. */
+function place(w: WorldState, p: FighterState, postype: string, x: number, y: number): { x: number; y: number } {
+  const half = SCREEN_W / 2;
+  switch (postype) {
+    case "p2": {
+      const o = opponentOf(w, p);
+      return { x: o.x + x * o.facing, y: o.y + y };
+    }
+    case "front":
+      return { x: (p.facing === 1 ? w.cameraX + half : w.cameraX - half) + x * p.facing, y: -GROUND_Y + y };
+    case "back":
+      return { x: (p.facing === 1 ? w.cameraX - half : w.cameraX + half) + x * p.facing, y: -GROUND_Y + y };
+    case "left":
+      return { x: w.cameraX - half + x, y: -GROUND_Y + y };
+    case "right":
+      return { x: w.cameraX + half + x, y: -GROUND_Y + y };
+    default:
+      return { x: p.x + x * p.facing, y: p.y + y };
+  }
+}
+
+/** Explods: animação, movimento, presos ao lutador e remoção. */
+function updateExplods(w: WorldState, roster: Roster): void {
+  if (w.explods.length === 0) return;
+  const keep: ExplodState[] = [];
+  for (const e of w.explods) {
+    const anim = getAnim(roster[e.charId], e.anim);
+    e.age++;
+    advanceAnim(e, anim);
+    if (e.bindTime !== 0 && e.bindTo >= 0) {
+      const f = w.fighters[e.bindTo];
+      e.x = f.x + e.offX;
+      e.y = f.y + e.offY;
+      if (e.bindTime > 0) e.bindTime--;
+    } else {
+      e.x += e.vx;
+      e.y += e.vy;
+      e.vx += e.ax;
+      e.vy += e.ay;
+    }
+    const done = e.removeTime === -2 ? !anim.infinite && e.age >= anim.totalTime : e.removeTime >= 0 && e.age >= e.removeTime;
+    if (!done) keep.push(e);
+  }
+  w.explods = keep;
+}
+
+/** TargetBind / BindToParent: prende o lutador (ou helper) ao oponente (ou ao pai). */
+function applyBinds(w: WorldState): void {
+  for (const p of [...w.fighters, ...w.helpers]) {
+    if (p.bindTime === 0) continue;
+    const anchor = p.helper ? w.fighters[p.side] : opponentOf(w, p);
+    p.x = anchor.x + p.bindX * anchor.facing;
+    p.y = anchor.y + p.bindY;
+    if (p.bindTime > 0) p.bindTime--;
+  }
+}
+
+/** Helpers: rodam os próprios estados (sem os comandos -1), física e animação. */
+function runHelpers(w: WorldState, roster: Roster, runner: StateRunner): void {
+  if (w.helpers.length === 0) return;
+  for (const h of [...w.helpers]) {
+    if (h.hitPause > 0) {
+      h.hitPause--;
+      continue;
+    }
+    if (h.notHitBy > 0) h.notHitBy--;
+    for (let guard = 0; guard < 16; guard++) {
+      if (!runStateDef(h, h.stateNo, w, roster, runner) || (h.helper?.uid ?? 0) < 0) break;
+    }
+    if ((h.helper?.uid ?? 0) < 0) continue;
+    physicsAndMove(h, w, roster);
+    advanceFighterAnim(h, animCharOf(w, roster, h));
+    tickCounters(h);
+  }
+  w.helpers = w.helpers.filter((h) => (h.helper?.uid ?? 0) >= 0);
 }
 
 function updateProjectiles(w: WorldState, roster: Roster): void {
@@ -290,25 +452,34 @@ function applyHit(
 ): void {
   const defCh = roster[def.charId];
   const wasHit = def.moveType === "H";
+  // apanhar devolve aos próprios estados e solta qualquer TargetBind
+  def.customOwner = -1;
+  def.bindTime = 0;
+  if (w.explods.length) w.explods = w.explods.filter((e) => !(e.owner === def.side && e.removeOnGetHit));
   if (fromProjectile) def.facing = fromProjectile.facing === 1 ? -1 : 1;
   else faceOpponent(def, att);
 
+  const boost = attackBoost(att, hd);
   if (canGuard(hd, def)) {
-    const dmg = Math.round((hd.guardDamage * att.attackMul) / def.defenceMul);
+    // Just Defend (Garou): sem dano, recupera um pouco e sai mais rápido da defesa
+    const jd = isJustDefend(def);
+    const dmg = jd ? 0 : Math.round((hd.guardDamage * att.attackMul * boost) / def.defenceMul);
     def.life -= dmg;
     if (def.life <= 0) def.life = hd.guardKill ? 0 : 1;
+    if (jd) def.life = Math.min(def.lifeMax, def.life + 6);
     const air = def.stateType === "A";
+    const hitTime = jd ? Math.max(3, Math.round(hd.guardHitTime / 2)) : hd.guardHitTime;
     def.getHit = {
       ...emptyGetHit(),
       damage: dmg,
-      hitTime: hd.guardHitTime,
-      slideTime: hd.guardSlideTime,
-      ctrlTime: hd.guardCtrlTime,
-      xvel: air ? hd.airGuardVelX : hd.guardVelX,
+      hitTime,
+      slideTime: jd ? 0 : hd.guardSlideTime,
+      ctrlTime: jd ? hitTime : hd.guardCtrlTime,
+      xvel: jd ? 0 : air ? hd.airGuardVelX : hd.guardVelX,
       yvel: air ? hd.airGuardVelY : 0,
       yaccel: hd.yaccel,
       guarded: 1,
-      hitTimeLeft: hd.guardHitTime,
+      hitTimeLeft: hitTime,
     };
     if (!fromProjectile) {
       att.moveGuarded = 1;
@@ -316,19 +487,33 @@ function applyHit(
       att.hitPause = hd.guardPauseP1;
       att.hitDefActive = false;
     }
-    def.hitPause = hd.guardPauseP2;
-    changeState(def, w, roster, air ? 154 : def.stateType === "C" ? 152 : 150);
+    def.hitPause = jd ? Math.min(hd.guardPauseP2, JUST_DEFEND_HITSTOP_MAX) : hd.guardPauseP2;
+    // medidor de defesa: quem só defende acaba aberto (guard crush)
+    const crush = !jd && !air && (def.guardMeter -= guardCost(hd)) <= 0;
+    if (!jd) def.guardRegenDelay = GUARD_REGEN_DELAY;
+    if (crush) {
+      def.guardMeter = GUARD_MAX;
+      changeState(def, w, roster, SYS.GUARD_CRUSH);
+      def.hitPause = Math.max(def.hitPause, GUARD_CRUSH_HITSTOP);
+    } else {
+      changeState(def, w, roster, air ? 154 : def.stateType === "C" ? 152 : 150);
+    }
     def.ctrl = false;
     addPower(att, hd.getPower / 2);
-    addPower(def, hd.givePower / 2);
-    w.events.push({ kind: "guard", x: at.x, y: at.y, side: att.side, level: hd.sparkLevel, frame: w.frame });
+    addPower(def, jd ? 40 : hd.givePower / 2);
+    w.events.push({ kind: "guard", x: at.x, y: at.y, side: att.side, level: hd.hitLevel, frame: w.frame });
+    if (hd.guardSound) w.events.push({ kind: "sound", x: at.x, y: at.y, side: att.side, level: 0, frame: w.frame, snd: [hd.guardSound[0], hd.guardSound[1]], common: hd.guardSound[2], charId: att.charId });
+    if (jd) w.events.push({ kind: "justdefend", x: def.x, y: def.y - 70, side: def.side, level: 0, frame: w.frame });
+    if (crush) w.events.push({ kind: "guardcrush", x: def.x, y: def.y - 70, side: def.side, level: 2, frame: w.frame });
     if (def.life <= 0) w.events.push({ kind: "ko", x: def.x, y: def.y, side: def.side, level: 2, frame: w.frame });
     return;
   }
 
+  // contra-ataque: acertar quem estava atacando dá mais dano e mais atordoamento
+  const counter = !wasHit && def.moveType === "A";
   const combo = wasHit ? def.comboHits + 1 : 1;
   const scale = combo > 3 ? Math.max(0.4, 1 - 0.1 * (combo - 3)) : 1;
-  const dmg = Math.max(hd.damage > 0 ? 1 : 0, Math.round(((hd.damage * att.attackMul) / def.defenceMul) * scale));
+  const dmg = Math.max(hd.damage > 0 ? 1 : 0, Math.round(((hd.damage * att.attackMul * boost * (counter ? 1.25 : 1)) / def.defenceMul) * scale));
   def.life -= dmg;
   if (def.life <= 0) def.life = hd.kill ? 0 : 1;
   def.comboHits = combo;
@@ -350,7 +535,7 @@ function applyHit(
     fall = 1;
     if (yvel === 0) yvel = -3;
   }
-  const hitTime = airborne ? hd.airHitTime : hd.groundHitTime;
+  const hitTime = (airborne ? hd.airHitTime : hd.groundHitTime) + (counter ? 4 : 0);
   def.getHit = {
     damage: dmg,
     hitTime,
@@ -371,13 +556,16 @@ function applyHit(
     hitTimeLeft: hitTime,
   };
 
+  // hitstop: o do HitDef (ou o do nível do golpe), mais longo no contra-ataque e no K.O.
+  const bonus = counter && hd.pauseP2 > 0 ? COUNTER_HITSTOP_BONUS : 0;
+  const koStop = def.life <= 0 && !w.training ? KO_HITSTOP_FRAMES : 0;
   if (!fromProjectile) {
     att.moveHit = 1;
     att.moveContact = 1;
-    att.hitPause = hd.pauseP1;
+    att.hitPause = Math.max(hd.pauseP1 + (hd.pauseP1 > 0 ? bonus : 0), koStop);
     att.hitDefActive = false;
   }
-  def.hitPause = hd.pauseP2;
+  def.hitPause = Math.max(hd.pauseP2 + bonus, koStop);
 
   const stateNo = airborne ? 5020 : def.stateType === "C" ? 5010 : 5000;
   changeState(def, w, roster, stateNo);
@@ -389,9 +577,18 @@ function applyHit(
   addPower(att, hd.getPower);
   addPower(def, hd.givePower * 0.6);
 
+  if (!fromProjectile) att.hasTarget = true;
   if (!fromProjectile && hd.p1StateNo >= 0) changeState(att, w, roster, hd.p1StateNo);
+  // arremesso do MUGEN: o oponente passa a rodar um estado do atacante
+  if (!fromProjectile && hd.p2StateNo >= 0 && def.life > 0) {
+    def.customOwner = att.side;
+    changeState(def, w, roster, hd.p2StateNo);
+    if (hd.p2Facing !== 0) def.facing = (hd.p2Facing > 0 ? -att.facing : att.facing) as 1 | -1;
+  }
+  if (hd.hitSound) w.events.push({ kind: "sound", x: at.x, y: at.y, side: att.side, level: 0, frame: w.frame, snd: [hd.hitSound[0], hd.hitSound[1]], common: hd.hitSound[2], charId: att.charId });
 
-  w.events.push({ kind: "hit", x: at.x, y: at.y, side: att.side, level: hd.sparkLevel, frame: w.frame });
+  w.events.push({ kind: "hit", x: at.x, y: at.y, side: att.side, level: hd.hitLevel, frame: w.frame });
+  if (counter) w.events.push({ kind: "counter", x: def.x, y: def.y - 70, side: att.side, level: 0, frame: w.frame });
   if (def.life <= 0) w.events.push({ kind: "ko", x: def.x, y: def.y, side: def.side, level: 2, frame: w.frame });
 }
 
@@ -400,13 +597,16 @@ function detectHits(w: WorldState, roster: Roster): void {
   type Pending = { att: FighterState; def: FighterState; hd: HitDefState; at: { x: number; y: number } };
   const pending: Pending[] = [];
 
-  for (const [att, def] of [
+  // lutadores e helpers atacam o lutador do outro lado
+  const attackers: [FighterState, FighterState][] = [
     [p0, p1],
     [p1, p0],
-  ] as const) {
+  ];
+  for (const h of w.helpers) attackers.push([h, opponentOf(w, h)]);
+  for (const [att, def] of attackers) {
     if (!att.hitDefActive || !att.hitDef || def.notHitBy > 0) continue;
     if (!hitFlagAllows(att.hitDef, def)) continue;
-    const at = firstContact(fighterBoxes(att, roster[att.charId], 1), fighterBoxes(def, roster[def.charId], 2));
+    const at = firstContact(fighterBoxes(att, animCharOf(w, roster, att), 1), fighterBoxes(def, animCharOf(w, roster, def), 2));
     if (at) pending.push({ att, def, hd: att.hitDef, at });
   }
   // aplicar depois de checar os dois lados: golpes simultâneos trocam (trade)
@@ -433,7 +633,7 @@ function detectHits(w: WorldState, roster: Roster): void {
     const att = w.fighters[pr.owner];
     const def = opponentOf(w, att);
     if (def.notHitBy > 0 || !hitFlagAllows(pr.hitDef, def)) continue;
-    const at = firstContact(projectileBoxes(pr, roster, w), fighterBoxes(def, roster[def.charId], 2));
+    const at = firstContact(projectileBoxes(pr, roster, w), fighterBoxes(def, animCharOf(w, roster, def), 2));
     if (!at) continue;
     applyHit(w, roster, att, def, pr.hitDef, at, pr);
     finishProjectile(pr, roster, w);
@@ -497,8 +697,9 @@ function runFighter(p: FighterState, w: WorldState, roster: Roster, runner: Stat
   applyFriction(p, ch);
 
   // -3/-2/-1 sempre rodam; depois os movimentos internos; depois o estado atual.
-  let changed = false;
-  for (const special of [-3, -2, -1]) {
+  // sistema SNK (rolamento, blowback, arremesso, MAX, guard cancel) antes dos comandos do personagem
+  let changed = systemInput(p, w, roster);
+  if (!changed) for (const special of [-3, -2, -1]) {
     if (ch.states[special] && runStateDef(p, special, w, roster, runner)) changed = true;
   }
   if (!changed) internalMovement(p, w, roster);
@@ -528,7 +729,6 @@ function tickCounters(p: FighterState): void {
   if (p.moveContact > 0) p.moveContact++;
   if (p.moveHit > 0) p.moveHit++;
   if (p.moveGuarded > 0) p.moveGuarded++;
-  if (p.notHitBy > 0) p.notHitBy--;
   if (p.moveType === "H") p.getHit.hitTimeLeft--;
   else p.comboHits = 0;
 }
@@ -538,6 +738,7 @@ function tickCounters(p: FighterState): void {
 function separate(w: WorldState, roster: Roster): void {
   const [a, b] = w.fighters;
   if (a.stateType === "L" || b.stateType === "L") return;
+  if (isRolling(a) || isRolling(b)) return; // o rolamento atravessa o oponente
   const ha = roster[a.charId].consts["size.height"] ?? 60;
   const hb = roster[b.charId].consts["size.height"] ?? 60;
   if (a.y < b.y - hb || b.y < a.y - ha) return; // um passou por cima do outro
@@ -567,7 +768,7 @@ function clampPositions(w: WorldState): void {
   }
   // se os dois estiverem colados na mesma parede, empurra o de dentro
   const [l, r] = a.x <= b.x ? [a, b] : [b, a];
-  if (r.x - l.x < 8) r.x = Math.min(hi, l.x + 8);
+  if (r.x - l.x < 8 && !isRolling(a) && !isRolling(b)) r.x = Math.min(hi, l.x + 8);
 }
 
 function autoTurn(w: WorldState, roster: Roster): void {
@@ -587,17 +788,20 @@ function autoTurn(w: WorldState, roster: Roster): void {
 
 // -------------------------------------------------------------- rounds
 
-function resetRound(w: WorldState, roster: Roster): void {
+function resetRound(w: WorldState, roster: Roster, keepLife: readonly [boolean, boolean] = [false, false]): void {
   w.roundState = 1;
   w.roundStateTime = 0;
   w.roundWinner = -1;
   w.projectiles = [];
+  w.explods = [];
+  w.helpers = [];
   w.superPause = 0;
   w.cameraX = 0;
   w.timer = w.roundTicks;
   for (const p of w.fighters) {
     const ch = roster[p.charId];
-    const keep = { roundsWon: p.roundsWon, power: p.power };
+    const keep: Partial<FighterState> = { roundsWon: p.roundsWon, power: p.power };
+    if (keepLife[p.side]) keep.life = p.life;
     Object.assign(p, createFighter(p.side, ch), keep);
     changeState(p, w, roster, ch.states[190] && ch.anims[190] ? 190 : 0);
     p.ctrl = false;
@@ -669,7 +873,9 @@ function updateRound(w: WorldState, roster: Roster): void {
       }
       return;
     case 4:
-      if (w.matchWinner < 0 && w.roundStateTime >= OVER_FRAMES) {
+      if (w.matchWinner < 0 && w.roundStateTime >= OVER_FRAMES && w.teams) {
+        nextTeamRound(w, roster);
+      } else if (w.matchWinner < 0 && w.roundStateTime >= OVER_FRAMES) {
         const aWon = a.roundsWon >= w.roundsToWin;
         const bWon = b.roundsWon >= w.roundsToWin;
         if (aWon || bWon || w.roundNo >= 9) {
@@ -681,6 +887,35 @@ function updateRound(w: WorldState, roster: Roster): void {
       }
       return;
   }
+}
+
+/**
+ * Equipes (KOF): quem perdeu dá lugar ao próximo, que entra com +1 estoque;
+ * quem venceu continua com a vida que tinha e recupera 30% do que perdeu.
+ */
+function nextTeamRound(w: WorldState, roster: Roster): void {
+  const teams = w.teams;
+  if (!teams) return;
+  const lost: [boolean, boolean] = [w.roundWinner === 1 || w.roundWinner === 2, w.roundWinner === 0 || w.roundWinner === 2];
+  for (const side of [0, 1] as const) if (lost[side]) teams[side].index++;
+  const out = teams.map((t) => t.index >= t.members.length);
+  if (out[0] || out[1]) {
+    w.matchWinner = out[0] && out[1] ? 2 : out[0] ? 1 : 0;
+    return;
+  }
+  w.roundNo++;
+  for (const side of [0, 1] as const) {
+    const prev = w.fighters[side];
+    if (lost[side]) {
+      const next = createFighter(side, roster[teams[side].members[teams[side].index]]);
+      next.power = Math.min(next.powerMax, prev.power + POWER_PER_LEVEL);
+      next.roundsWon = prev.roundsWon;
+      w.fighters[side] = next;
+    } else {
+      prev.life = Math.min(prev.lifeMax, prev.life + Math.round((prev.lifeMax - prev.life) * 0.3));
+    }
+  }
+  resetRound(w, roster, [!lost[0], !lost[1]]);
 }
 
 // ---------------------------------------------------------------- step
@@ -696,21 +931,31 @@ export function stepWorld(w: WorldState, inputs: readonly [number, number], rost
     p.rawInput = raw;
     p.inputHead = (p.inputHead + 1) % INPUT_HISTORY;
     p.inputs[p.inputHead] = toRelative(raw, p.facing);
-    updateCommands(p, roster[p.charId], w.frame);
+    // congelado neste quadro (superpause ou hitstop): o buffer dos especiais não envelhece
+    updateCommands(p, roster[p.charId], w.frame, w.superPause > 0 || p.hitPause > 0);
   }
 
+  // pausa de super: o mundo inteiro congela, inclusive quem soltou (pausemovetime = 0 do MUGEN);
+  // antes a animação dele andava sozinha e os golpes do começo do super se perdiam
   if (w.superPause > 0) {
     w.superPause--;
-    const owner = w.superPauseOwner === -1 ? null : w.fighters[w.superPauseOwner];
-    if (owner) advanceFighterAnim(owner, roster[owner.charId]);
     return;
+  }
+
+  // câmera lenta do K.O.: os lutadores andam 1 frame a cada 3
+  if (w.roundState === 3 && w.roundStateTime < KO_SLOWMO_FRAMES && w.roundStateTime % 3 !== 0 && !w.training) {
+    if (w.fighters[0].life <= 0 || w.fighters[1].life <= 0) return;
   }
 
   const runner = makeRunner(w, roster);
   for (const p of w.fighters) {
     if (p.hitPause > 0) continue;
+    // NotHitBy conta a partir do frame em que é ligado (time = 1 vale para este frame)
+    if (p.notHitBy > 0) p.notHitBy--;
     runFighter(p, w, roster, runner);
   }
+  resolveThrows(w, roster);
+  if (w.roundState === 2) for (const p of w.fighters) tickSystem(p, w);
 
   for (const p of w.fighters) {
     if (p.hitPause > 0) {
@@ -718,10 +963,13 @@ export function stepWorld(w: WorldState, inputs: readonly [number, number], rost
       continue;
     }
     physicsAndMove(p, w, roster);
-    advanceFighterAnim(p, roster[p.charId]);
+    advanceFighterAnim(p, animCharOf(w, roster, p));
     tickCounters(p);
   }
 
+  runHelpers(w, roster, runner);
+  applyBinds(w);
+  updateExplods(w, roster);
   updateProjectiles(w, roster);
   separate(w, roster);
   clampPositions(w);

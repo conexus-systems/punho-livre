@@ -1,0 +1,278 @@
+<meta charset="utf-8">
+<title>MUGEN Arena</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;600&family=Barlow+Condensed:wght@700&display=swap">
+<style>
+  /* Layout: tela única de jogo; menus no padrão W10M (plano, quadrado, tipografia leve, destaque com função). */
+  :root {
+    --bg: #000000;
+    --chrome: #1a1a1a;
+    --surface: #2b2b2b;
+    --text: #ffffff;
+    --muted: #cccccc;
+    --edge: rgba(255, 255, 255, 0.2);
+    --accent: #e51400;      /* bloco: texto branco ≥ 4,5:1 */
+    --accent-text: #ff5a45; /* destaque como texto no preto ≥ 4,5:1 */
+    --ui: "Barlow", "Segoe UI", system-ui, sans-serif;
+    --hud: "Barlow Condensed", "Arial Narrow", sans-serif;
+    color-scheme: dark;
+  }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--ui);
+    font-size: 15px;
+    overflow: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+  .screen {
+    position: fixed;
+    inset: 0;
+    padding-left: max(24px, env(safe-area-inset-left, 0px));
+    padding-right: max(24px, env(safe-area-inset-right, 0px));
+    padding-block: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-bottom, 0px));
+    overflow: auto;
+  }
+  .kicker { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+  .header { font-size: 34px; font-weight: 300; line-height: 1.1; margin: 2px 0 0; text-wrap: balance; }
+  .caption { font-size: 12px; color: var(--muted); }
+
+  /* ---------------------------------------------------------- Iniciar */
+  #menu { display: flex; gap: 32px; align-items: flex-start; }
+  #menu > .side { width: 220px; flex: none; display: flex; flex-direction: column; gap: 8px; min-height: 100%; }
+  .mark { width: 40px; height: 40px; background: var(--accent); display: grid; place-items: center; }
+  .heroes { display: flex; margin-top: auto; }
+  .heroes canvas { width: 110px; height: 150px; }
+  .tiles {
+    /* 5 linhas de células (largo 2 + médios 2 + pequeno 1) cabem na altura da tela */
+    --cell: clamp(56px, calc((100dvh - 56px - 24px) / 5), 112px);
+    display: grid;
+    grid-template-columns: repeat(4, var(--cell));
+    grid-auto-rows: var(--cell);
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+    align-content: start;
+  }
+  .tile {
+    background: var(--accent);
+    position: relative;
+    display: grid;
+    place-items: center;
+    transition: transform 100ms ease-out;
+  }
+  .tile:active { transform: scale(0.97); }
+  .tile svg { width: 40px; height: 40px; }
+  .tile .name { position: absolute; left: 8px; bottom: 6px; font-size: 13px; }
+  .tile.wide { grid-column: span 4; grid-row: span 2; }
+  .tile.medium { grid-column: span 2; grid-row: span 2; }
+  .tile.small svg { width: 26px; height: 26px; }
+  .tile.quiet { background: var(--surface); }
+
+  /* ---------------------------------------------------------- Seleção */
+  #select { display: flex; gap: 24px; }
+  #select .side { width: 250px; flex: none; display: flex; flex-direction: column; gap: 8px; }
+  #pick-portrait { width: 160px; height: 170px; }
+  #pick-name { font-size: 28px; font-weight: 300; }
+  #pick-moves { color: var(--accent-text); font-size: 12px; }
+  #select .main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+  #roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
+  .fighter { background: var(--surface); display: flex; flex-direction: column; align-items: stretch; border: 2px solid transparent; text-align: left; }
+  .fighter canvas { width: 100%; aspect-ratio: 1; max-width: 100%; }
+  .fighter span { font-size: 12px; padding: 0 6px 4px; }
+  .fighter[aria-pressed="true"] { background: var(--accent); border-color: var(--text); }
+  .row { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+  .link { color: var(--muted); font-size: 17px; min-height: 40px; }
+  .link[aria-pressed="true"] { color: var(--accent-text); }
+  .btn { background: var(--surface); border: 2px solid var(--surface); min-height: 40px; padding: 0 16px; font-weight: 600; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); }
+  .btn:active { transform: scale(0.97); }
+  .actions { display: flex; gap: 8px; margin-top: auto; }
+
+  /* ---------------------------------------------------------- Luta */
+  #fight { position: fixed; inset: 0; background: #000; }
+  #stage { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #pause-btn {
+    position: absolute; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); left: 50%; transform: translateX(-50%);
+    width: 44px; height: 44px; background: rgba(0, 0, 0, 0.5); display: grid; place-items: center; z-index: 3;
+  }
+  #arcade-step { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 64px); left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--muted); z-index: 3; }
+  #assists { position: absolute; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); display: flex; gap: 6px; z-index: 3; }
+  body.touch #assists { bottom: calc(env(safe-area-inset-bottom, 0px) + 190px); }
+  .assist { background: rgba(229, 20, 0, 0.85); min-height: 36px; padding: 0 10px; font-size: 12px; }
+  .assist:disabled { background: rgba(0, 0, 0, 0.45); color: rgba(255, 255, 255, 0.4); border: 1px solid var(--edge); cursor: default; }
+  #keys-hint { position: absolute; left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); font-size: 12px; color: rgba(255,255,255,0.75); z-index: 3; text-shadow: 0 1px 2px #000; }
+  body.touch #keys-hint { display: none; }
+
+  #touch { position: absolute; inset: 0; z-index: 2; display: none; touch-action: none; }
+  body.touch #touch { display: block; }
+  #stick { position: absolute; width: 100px; height: 100px; border: 2px solid rgba(255, 255, 255, 0.5); background: rgba(0, 0, 0, 0.3); pointer-events: none; }
+  #stick-knob { position: absolute; left: 30px; top: 30px; width: 40px; height: 40px; background: rgba(255, 255, 255, 0.6); }
+  #stick-knob.on { background: var(--accent); }
+  .pad { position: absolute; right: max(20px, env(safe-area-inset-right, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); display: grid; grid-template-columns: repeat(3, 56px); gap: 10px; }
+  .pad .b { width: 56px; height: 56px; border: 2px solid rgba(255, 255, 255, 0.7); background: rgba(0, 0, 0, 0.4); display: grid; place-items: center; font-size: 26px; font-weight: 300; }
+  .pad .b.on { background: var(--accent); border-color: var(--accent); }
+  .pad .b.combo { width: 44px; height: 44px; margin: 6px; font-size: 14px; border-width: 1px; }
+  .pad:not(.simple) .b:nth-child(n+4) { transform: translateX(14px); }
+  /* modo simples: Especial e Super em cima, Chute e Soco (maior) embaixo */
+  .pad.simple { grid-template-columns: 64px 76px; grid-template-areas: "special super" "kick punch"; align-items: end; justify-items: center; }
+  .pad.simple .b { font-size: 13px; font-weight: 400; }
+  .pad.simple [data-id="punch"] { grid-area: punch; width: 76px; height: 76px; font-size: 15px; }
+  .pad.simple [data-id="kick"] { grid-area: kick; width: 64px; height: 64px; }
+  .pad.simple [data-id="special"] { grid-area: special; width: 64px; height: 64px; }
+  .pad.simple [data-id="super"] { grid-area: super; width: 56px; height: 56px; }
+  .pad .b.off { opacity: 0.4; }
+  #fight-tools { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 96px); left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 3; }
+  #fight-tools button { min-height: 44px; min-width: 44px; padding: 0 12px; background: rgba(0, 0, 0, 0.5); font-size: 13px; }
+  #pad-status { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 146px); left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 12px; color: var(--muted); z-index: 3; text-shadow: 0 1px 2px #000; }
+  .move-hint { position: absolute; left: 40px; bottom: calc(env(safe-area-inset-bottom, 0px) + 40px); width: 100px; height: 100px; border: 2px solid rgba(255,255,255,0.25); display: grid; place-items: center; font-size: 12px; color: rgba(255,255,255,0.5); pointer-events: none; }
+
+  #overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); display: grid; place-items: center; z-index: 4; }
+  .panel { background: var(--chrome); width: min(480px, 92%); padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+  #panel-actions { display: flex; flex-direction: column; gap: 8px; }
+  #panel-text { margin: 0; font-size: 15px; }
+  #panel-text b { color: var(--accent-text); font-weight: 400; }
+  .team-picks { display: flex; gap: 4px; min-height: 0; }
+  .team-picks canvas { width: 48px; height: 48px; background: var(--surface); }
+
+  #help { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); display: grid; place-items: center; z-index: 5; }
+  #help table { border-collapse: collapse; font-size: 14px; }
+  #help .panel { max-height: 92dvh; overflow: auto; }
+  #help td { padding: 4px 16px 4px 0; vertical-align: top; }
+  #help td:first-child { color: var(--accent-text); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #loading { position: fixed; inset: 0; display: grid; place-items: center; }
+  .dots { display: flex; gap: 8px; }
+  .dots i { width: 4px; height: 4px; background: var(--accent-text); animation: run 1.4s infinite ease-in-out; }
+  .dots i:nth-child(2) { animation-delay: .12s } .dots i:nth-child(3) { animation-delay: .24s } .dots i:nth-child(4) { animation-delay: .36s } .dots i:nth-child(5) { animation-delay: .48s }
+  @keyframes run { 0%, 100% { transform: translateX(-30px); opacity: 0 } 50% { transform: translateX(30px); opacity: 1 } }
+
+  @media (max-width: 640px) {
+    #menu, #select { flex-direction: column; gap: 16px; }
+    #menu > .side, #select .side { width: auto; min-height: 0; }
+    .heroes { display: none; }
+    .tiles { --cell: calc((100vw - 64px) / 4); width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) { .dots i { animation: none; opacity: 1 } .tile:active, .btn:active { transform: none } }
+</style>
+
+<div id="loading"><div class="dots" aria-label="Carregando"><i></i><i></i><i></i><i></i><i></i></div></div>
+
+<section id="menu" class="screen" hidden>
+  <div class="side">
+    <div class="mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="28" height="28"><path d="M6 6l12 12M18 6L6 18" stroke="#fff" stroke-width="2.2"/><circle cx="12" cy="12" r="2.2" fill="#fff"/></svg>
+    </div>
+    <div class="kicker">MUGEN ARENA</div>
+    <h1 class="header">Iniciar</h1>
+    <p class="caption">Versão web jogável — mesma engine, personagens e renderizador do app Android/iOS.</p>
+    <div class="heroes" aria-hidden="true">
+      <canvas data-hero="kaze"></canvas>
+      <canvas data-hero="tita" data-flip="1"></canvas>
+    </div>
+  </div>
+  <div class="tiles">
+    <button class="tile wide" data-mode="arcade" aria-label="Arcade">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><path d="M6 20h12M8 20v-4h8v4M12 16V9M12 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
+      <span class="name">Arcade</span>
+    </button>
+    <button class="tile medium" data-mode="versus" aria-label="Versus CPU">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><path d="M4 4l9 9M20 4l-9 9M7 14l-3 3 3 3 3-3M17 14l3 3-3 3-3-3"/></svg>
+      <span class="name">Versus CPU</span>
+    </button>
+    <button class="tile medium" data-mode="team" aria-label="Equipes 3×3">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><path d="M12 4a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM5 7a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM19 7a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7.5 19v-3a4.5 4.5 0 0 1 9 0v3M2 18v-2a3 3 0 0 1 4-2.8M22 18v-2a3 3 0 0 0-4-2.8"/></svg>
+      <span class="name">Equipes 3×3</span>
+    </button>
+    <button class="tile small" data-mode="training" aria-label="Treino" title="Treino">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 11v2M11 12h2"/></svg>
+    </button>
+    <button id="help-open" class="tile small quiet" aria-label="Como jogar" title="Como jogar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><rect x="2.5" y="6.5" width="19" height="11"/><path d="M6 10h2M10 10h2M14 10h2M18 10h0M7 14h10"/></svg>
+    </button>
+  </div>
+</section>
+
+<section id="select" class="screen" hidden>
+  <div class="side">
+    <div class="kicker" id="select-kicker">Versus CPU</div>
+    <h1 class="header" id="select-title">Seu lutador</h1>
+    <div class="team-picks" id="team-picks" hidden></div>
+    <canvas id="pick-portrait"></canvas>
+    <div id="pick-name"></div>
+    <div class="caption" id="pick-bio"></div>
+    <div id="pick-moves"></div>
+    <div class="actions">
+      <button class="btn" id="select-back" type="button">Voltar</button>
+      <button class="btn primary" id="select-go" type="button" style="flex:1">Próximo</button>
+    </div>
+  </div>
+  <div class="main">
+    <div id="roster"></div>
+    <div class="row" id="stage-row"><span class="kicker caption">cenário</span><div class="row" id="stages"></div></div>
+    <div class="row" id="difficulty-row"><span class="kicker caption">cpu</span><div class="row" id="difficulty"></div></div>
+  </div>
+</section>
+
+<section id="fight" hidden>
+  <canvas id="stage" aria-label="Luta"></canvas>
+  <div id="touch">
+    <div class="move-hint">mover</div>
+    <div id="stick" hidden><div id="stick-knob"></div></div>
+    <!-- botões do modo atual (main.ts › renderPad): clássico SNK (C D em cima, A B embaixo, atalhos à esquerda) ou simples -->
+    <div class="pad" id="pad"></div>
+  </div>
+  <div id="assists"></div>
+  <button id="pause-btn" type="button" aria-label="Pausar">
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="1.7"><path d="M8 5v14M16 5v14"/></svg>
+  </button>
+  <div id="arcade-step"></div>
+  <div id="fight-tools">
+    <button id="mode-btn" type="button" title="Trocar modo de controle (T)">modo: simples</button>
+    <button id="help-btn" type="button" aria-label="Como jogar (H)" title="Como jogar (H)">?</button>
+  </div>
+  <div id="pad-status" aria-live="polite"></div>
+  <div id="keys-hint"></div>
+  <div id="overlay" hidden>
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="panel-title">
+      <h2 class="header" id="panel-title">pausa</h2>
+      <p id="panel-text" hidden></p>
+      <div id="panel-actions"></div>
+    </div>
+  </div>
+</section>
+
+<div id="help" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="help-title">
+    <h2 class="header" id="help-title">como jogar</h2>
+    <table>
+      <tr><td>Setas / WASD</td><td>andar, pular (cima; toque rápido = pulo curto), agachar; segurar para trás defende; →→ corre</td></tr>
+      <tr><td>U · J</td><td>A soco fraco · B chute fraco</td></tr>
+      <tr><td>I · K</td><td>C soco forte · D chute forte</td></tr>
+      <tr><td>O (A+B)</td><td>rolamento invencível (com ← rola para trás)</td></tr>
+      <tr><td>L (C+D)</td><td>blowback: derruba (também no ar)</td></tr>
+      <tr><td>→ ou ← + I/K</td><td>arremesso colado; quem é agarrado escapa com C ou D</td></tr>
+      <tr><td>M (A+B+C)</td><td>modo MAX: gasta 1 estoque, +20% de dano e super turbinado</td></tr>
+      <tr><td>defendendo</td><td>A+B ou C+D com 1 estoque: guard cancel · ← no último instante: Just Defend</td></tr>
+      <tr><td>↓ ↘ → + soco</td><td>especial de meia-lua, como no MUGEN</td></tr>
+      <tr><td>1 a 6</td><td>especiais e supers em um toque (super com 1 estoque, super 2 com 2)</td></tr>
+      <tr><td>Esc / P</td><td>pausa · no treino, B mostra as caixas de colisão</td></tr>
+      <tr><td>N</td><td>liga/desliga música e efeitos</td></tr>
+      <tr><td>Celular</td><td>direcional na metade esquerda (aparece onde o polegar toca), botões à direita; aparelho deitado</td></tr>
+      <tr><td>T</td><td>troca modo <b>simples</b> / <b>clássico</b> (também pelo botão “modo” na luta)</td></tr>
+      <tr><td>Modo simples</td><td>U soco (toques seguidos = combo curto) · J chute · I especial (+ direção escolhe qual) · K super (baixo + K = super 2)</td></tr>
+      <tr><td>Controle</td><td>Gamepad padrão: X/□ = A ou Soco · A/✕ = B ou Chute · Y/△ = C ou Especial · B/○ = D ou Super · LB A+B · RB C+D · LT MAX · Start pausa · Select troca o modo</td></tr>
+    </table>
+    <h3 class="kicker" id="simple-moves-title">modo simples</h3>
+    <table><tbody id="simple-moves"></tbody></table>
+    <button class="btn primary" id="help-close" type="button">Entendi</button>
+  </div>
+</div>
+
+<script src="play.js"></script>

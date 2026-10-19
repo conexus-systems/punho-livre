@@ -1,0 +1,35 @@
+{
+  "id": "kai",
+  "name": "Kai",
+  "bio": "Faixa-preta de jiu-jitsu e surfista de Floripa. Leva qualquer luta para o chão.",
+  "specials": [
+    {
+      "name": "Raspagem",
+      "cmd": "hcf_p"
+    },
+    {
+      "name": "Guarda Fechada",
+      "cmd": "dd_p"
+    },
+    {
+      "name": "Baiana",
+      "cmd": "qcf_k"
+    },
+    {
+      "name": "Kimura Voadora",
+      "cmd": "dp_p"
+    }
+  ],
+  "super": {
+    "name": "Kimura",
+    "cmd": "super_p"
+  },
+  "super2": {
+    "name": "Finalização",
+    "cmd": "super2_p"
+  },
+  "quotes": [
+    "Relaxa e respira. Já tá finalizado.",
+    "Onda boa e luta boa: é só esperar."
+  ]
+}

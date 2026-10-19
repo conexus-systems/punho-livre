@@ -80,7 +80,7 @@ poweradd = 15
 
 [State 210, golpe]
 type = HitDef
-trigger1 = AnimElem = 2
+trigger1 = AnimElem = 3
 attr = S, NA
 animtype = Medium
 damage = 45, 6
@@ -112,7 +112,7 @@ poweradd = 24
 
 [State 220, golpe]
 type = HitDef
-trigger1 = AnimElem = 2
+trigger1 = AnimElem = 3
 attr = S, NA
 animtype = Hard
 damage = 72, 9
@@ -176,7 +176,7 @@ poweradd = 17
 
 [State 240, golpe]
 type = HitDef
-trigger1 = AnimElem = 2
+trigger1 = AnimElem = 3
 attr = S, NA
 animtype = Medium
 damage = 50, 7
@@ -208,7 +208,7 @@ poweradd = 27
 
 [State 250, golpe]
 type = HitDef
-trigger1 = AnimElem = 2
+trigger1 = AnimElem = 3
 attr = S, NA
 animtype = Hard
 damage = 82, 10
@@ -272,7 +272,7 @@ poweradd = 23
 
 [State 410, golpe]
 type = HitDef
-trigger1 = AnimElem = 2
+trigger1 = AnimElem = 3
 attr = C, NA
 animtype = Hard
 damage = 68, 8
@@ -336,7 +336,7 @@ poweradd = 20
 
 [State 440, golpe]
 type = HitDef
-trigger1 = AnimElem = 2
+trigger1 = AnimElem = 3
 attr = C, NA
 animtype = Hard
 damage = 60, 8
@@ -442,7 +442,7 @@ poweradd = 24
 
 [State 640, golpe]
 type = HitDef
-trigger1 = AnimElem = 2
+trigger1 = AnimElem = 3
 attr = A, NA
 animtype = Hard
 damage = 72, 8
@@ -468,7 +468,7 @@ poweradd = 40
 
 [State 1000, projetil]
 type = Projectile
-trigger1 = AnimElem = 2
+trigger1 = AnimElem = 3
 projid = 1000
 projanim = 1050
 projhitanim = 1060
@@ -586,6 +586,124 @@ trigger1 = AnimTime = 0
 value = 50
 ctrl = 0
 
+[Statedef 1300]
+type = S
+movetype = I
+physics = S
+anim = 1300
+ctrl = 0
+velset = 0, 0
+poweradd = 20
+
+[State 1300, invencivel]
+type = NotHitBy
+trigger1 = Time < 22
+value = SCA
+time = 1
+
+[State 1300, revida]
+type = ChangeState
+trigger1 = Time >= 2 && Time < 22 && P2MoveType = A && P2BodyDist X < 60
+value = 1301
+
+[State 1300, fim]
+type = ChangeState
+trigger1 = AnimTime = 0
+value = 0
+ctrl = 1
+
+[Statedef 1301]
+type = S
+movetype = A
+physics = S
+anim = 1301
+ctrl = 0
+velset = 0, 0
+poweradd = 60
+
+[State 1301, avanca]
+type = PosAdd
+trigger1 = Time = 0
+x = 8
+
+[State 1301, invencivel]
+type = NotHitBy
+trigger1 = Time < 10
+value = SCA
+time = 1
+
+[State 1301, golpe]
+type = HitDef
+trigger1 = AnimElem = 2
+attr = S, SA
+animtype = Hard
+damage = 110, 0
+hitflag = MAF
+pausetime = 14, 16
+ground.type = High
+ground.slidetime = 14
+ground.hittime = 24
+ground.velocity = -6, -6
+air.velocity = -5, -6
+air.fall = 1
+fall = 1
+
+[State 1301, fim]
+type = ChangeState
+trigger1 = AnimTime = 0
+value = 0
+ctrl = 1
+
+[Statedef 3100]
+type = S
+movetype = A
+physics = S
+anim = 3100
+ctrl = 0
+velset = 0, 0
+
+[State 3100, custo]
+type = PowerAdd
+trigger1 = Time = 0
+value = -2000
+
+[State 3100, pausa]
+type = SuperPause
+trigger1 = Time = 0
+time = 45
+
+[State 3100, invencivel]
+type = NotHitBy
+trigger1 = Time = 0
+value = SCA
+time = 25
+
+[State 3100, raio]
+type = Projectile
+trigger1 = AnimElem = 5
+projid = 3100
+projanim = 3150
+projhitanim = 3160
+velocity = 7, 0
+offset = 38, -52
+attr = S, HP
+damage = 380, 63
+animtype = Hard
+guardflag = MA
+hitflag = MAF
+pausetime = 0, 22
+ground.type = High
+ground.hittime = 24
+ground.velocity = -7, -7
+air.velocity = -7, -7
+fall = 1
+
+[State 3100, fim]
+type = ChangeState
+trigger1 = AnimTime = 0
+value = 0
+ctrl = 1
+
 [Statedef 3000]
 type = S
 movetype = A
@@ -612,7 +730,7 @@ time = 25
 
 [State 3000, raio]
 type = Projectile
-trigger1 = AnimElem = 3
+trigger1 = AnimElem = 5
 projid = 3000
 projanim = 3050
 projhitanim = 3060

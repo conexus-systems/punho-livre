@@ -1,0 +1,265 @@
+/**
+ * Adaptador mínimo da API do @shopify/react-native-skia usada pelo renderizador do jogo
+ * (src/game/renderer.ts e stages.ts) sobre o Canvas 2D do navegador. Permite rodar o mesmo
+ * código de desenho da luta numa página web, sem o CanvasKit (7 MB de wasm).
+ */
+
+type Pt = { x: number; y: number };
+type Rect = { x: number; y: number; width: number; height: number };
+type RRect = { rect: Rect; rx: number; ry: number };
+type Shader =
+  | { kind: "linear"; p0: Pt; p1: Pt; colors: string[]; pos: number[] | null }
+  | { kind: "radial"; c: Pt; r: number; colors: string[]; pos: number[] | null };
+
+export const TileMode = { Clamp: 0 } as const;
+export const PaintStyle = { Fill: 0, Stroke: 1 } as const;
+export const StrokeCap = { Butt: 0, Round: 1, Square: 2 } as const;
+
+/** SkPath mínimo: linhas e arcos, desenhado com Path2D. */
+export class Path {
+  readonly p = new Path2D();
+  moveTo(x: number, y: number) {
+    this.p.moveTo(x, y);
+    return this;
+  }
+  lineTo(x: number, y: number) {
+    this.p.lineTo(x, y);
+    return this;
+  }
+  close() {
+    this.p.closePath();
+    return this;
+  }
+  detach() {
+    return this;
+  }
+  /** Arco do oval em graus (início, varredura), como no Skia. */
+  addArc(r: Rect, start: number, sweep: number) {
+    const rad = (d: number) => (d * Math.PI) / 180;
+    this.p.ellipse(r.x + r.width / 2, r.y + r.height / 2, r.width / 2, r.height / 2, 0, rad(start), rad(start + sweep), sweep < 0);
+    return this;
+  }
+}
+export const BlendMode = { Plus: "plus" } as const;
+
+export class Paint {
+  color = "#000000";
+  alpha = 1;
+  style = 0;
+  strokeWidth = 0;
+  cap: CanvasLineCap = "butt";
+  shader: Shader | null = null;
+  blend: string | null = null;
+  setAntiAlias(_aa: boolean) {}
+  setColor(c: string) {
+    this.color = c;
+  }
+  setAlphaf(a: number) {
+    this.alpha = a;
+  }
+  setStyle(s: number) {
+    this.style = s;
+  }
+  setStrokeCap(c: number) {
+    this.cap = c === 1 ? "round" : c === 2 ? "square" : "butt";
+  }
+  setStrokeWidth(w: number) {
+    this.strokeWidth = w;
+  }
+  setShader(s: Shader | null) {
+    this.shader = s;
+  }
+  setBlendMode(b: string) {
+    this.blend = b;
+  }
+  copy() {
+    return Object.assign(new Paint(), this);
+  }
+}
+
+export interface Font {
+  css: string;
+  size: number;
+  measureText(s: string): { width: number };
+  getSize(): number;
+}
+
+let measureCtx: CanvasRenderingContext2D | null = null;
+
+export function matchFont(style: { fontFamily?: string; fontSize?: number; fontWeight?: string }): Font {
+  const size = style.fontSize ?? 14;
+  const weight = style.fontWeight === "bold" ? "700" : style.fontWeight ?? "400";
+  const css = `${weight} ${size}px "Barlow Condensed", "Arial Narrow", sans-serif`;
+  return {
+    css,
+    size,
+    measureText(s: string) {
+      measureCtx ??= document.createElement("canvas").getContext("2d");
+      if (!measureCtx) return { width: s.length * size * 0.5 };
+      measureCtx.font = css;
+      return { width: measureCtx.measureText(s).width };
+    },
+    getSize: () => size,
+  };
+}
+
+/**
+ * "SkPicture" do navegador: a lista de comandos de desenho já calculados. Um
+ * bitmap fora da tela seria uma cópia de tela inteira por camada, cara quando o
+ * navegador desenha sem GPU; repetir os comandos nunca custa mais que antes e
+ * ainda poupa o cálculo das formas e a criação dos Paints.
+ */
+export class Picture {
+  constructor(readonly ops: [keyof Canvas2D, unknown[]][]) {}
+}
+
+/** Grava as chamadas feitas no canvas devolvido por beginRecording. */
+export class PictureRecorder {
+  private ops: [keyof Canvas2D, unknown[]][] = [];
+
+  beginRecording(_bounds: Rect): Canvas2D {
+    const ops: [keyof Canvas2D, unknown[]][] = [];
+    this.ops = ops;
+    return new Proxy({} as Canvas2D, {
+      get: (_t, name) =>
+        (...args: unknown[]) => {
+          ops.push([name as keyof Canvas2D, args]);
+        },
+    });
+  }
+
+  finishRecordingAsPicture(): Picture {
+    return new Picture(this.ops);
+  }
+}
+
+export const Skia = {
+  PictureRecorder: () => new PictureRecorder(),
+  PathBuilder: { Make: () => new Path() },
+  Paint: () => new Paint(),
+  Color: (c: string) => (c === "transparent" ? "rgba(0,0,0,0)" : c),
+  XYWHRect: (x: number, y: number, width: number, height: number): Rect => ({ x, y, width, height }),
+  RRectXY: (rect: Rect, rx: number, ry: number): RRect => ({ rect, rx, ry }),
+  Shader: {
+    MakeLinearGradient: (p0: Pt, p1: Pt, colors: string[], pos: number[] | null): Shader => ({ kind: "linear", p0, p1, colors, pos }),
+    MakeRadialGradient: (c: Pt, r: number, colors: string[], pos: number[] | null): Shader => ({ kind: "radial", c, r, colors, pos }),
+  },
+};
+
+/** SkCanvas sobre CanvasRenderingContext2D. */
+export class Canvas2D {
+  constructor(readonly ctx: CanvasRenderingContext2D) {}
+
+  private style(p: Paint): string | CanvasGradient {
+    const s = p.shader;
+    if (!s) return p.color;
+    const g =
+      s.kind === "linear"
+        ? this.ctx.createLinearGradient(s.p0.x, s.p0.y, s.p1.x, s.p1.y)
+        : this.ctx.createRadialGradient(s.c.x, s.c.y, 0, s.c.x, s.c.y, Math.max(0.001, s.r));
+    s.colors.forEach((c, i) => g.addColorStop(s.pos?.[i] ?? i / Math.max(1, s.colors.length - 1), c));
+    return g;
+  }
+
+  private apply(p: Paint, forceStroke = false): boolean {
+    const ctx = this.ctx;
+    ctx.globalAlpha = p.alpha;
+    ctx.globalCompositeOperation = p.blend === "plus" ? "lighter" : "source-over";
+    const st = this.style(p);
+    const stroke = forceStroke || p.style === 1;
+    if (stroke) {
+      ctx.strokeStyle = st;
+      ctx.lineWidth = p.strokeWidth > 0 ? p.strokeWidth : 1;
+      ctx.lineCap = p.cap;
+    } else {
+      ctx.fillStyle = st;
+    }
+    return stroke;
+  }
+
+  private done() {
+    this.ctx.globalAlpha = 1;
+    this.ctx.globalCompositeOperation = "source-over";
+  }
+
+  drawRect(r: Rect, p: Paint) {
+    if (this.apply(p)) this.ctx.strokeRect(r.x, r.y, r.width, r.height);
+    else this.ctx.fillRect(r.x, r.y, r.width, r.height);
+    this.done();
+  }
+
+  drawRRect(rr: RRect, p: Paint) {
+    const { x, y, width, height } = rr.rect;
+    const ctx = this.ctx;
+    ctx.beginPath();
+    ctx.roundRect(x, y, width, height, Math.min(rr.rx, width / 2, height / 2));
+    if (this.apply(p)) ctx.stroke();
+    else ctx.fill();
+    this.done();
+  }
+
+  drawCircle(cx: number, cy: number, r: number, p: Paint) {
+    const ctx = this.ctx;
+    ctx.beginPath();
+    ctx.arc(cx, cy, Math.max(0, r), 0, Math.PI * 2);
+    if (this.apply(p)) ctx.stroke();
+    else ctx.fill();
+    this.done();
+  }
+
+  drawOval(r: Rect, p: Paint) {
+    const ctx = this.ctx;
+    ctx.beginPath();
+    ctx.ellipse(r.x + r.width / 2, r.y + r.height / 2, Math.abs(r.width / 2), Math.abs(r.height / 2), 0, 0, Math.PI * 2);
+    if (this.apply(p)) ctx.stroke();
+    else ctx.fill();
+    this.done();
+  }
+
+  drawLine(x0: number, y0: number, x1: number, y1: number, p: Paint) {
+    const ctx = this.ctx;
+    this.apply(p, true);
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.stroke();
+    this.done();
+  }
+
+  drawPicture(pic: Picture) {
+    for (const [name, args] of pic.ops) (this[name] as (...a: unknown[]) => void)(...args);
+  }
+
+  drawPath(path: Path, p: Paint) {
+    if (this.apply(p)) this.ctx.stroke(path.p);
+    else this.ctx.fill(path.p);
+    this.done();
+  }
+
+  drawImageRect(img: CanvasImageSource, src: Rect, dst: Rect, p: Paint) {
+    this.ctx.globalAlpha = p.alpha;
+    if (p.blend === "plus") this.ctx.globalCompositeOperation = "lighter";
+    this.ctx.drawImage(img, src.x, src.y, src.width, src.height, dst.x, dst.y, dst.width, dst.height);
+    this.done();
+  }
+
+  drawText(str: string, x: number, y: number, p: Paint, font: Font) {
+    this.ctx.font = font.css;
+    this.apply(p);
+    this.ctx.fillText(str, x, y);
+    this.done();
+  }
+
+  save() {
+    this.ctx.save();
+  }
+  restore() {
+    this.ctx.restore();
+  }
+  translate(x: number, y: number) {
+    this.ctx.translate(x, y);
+  }
+  scale(x: number, y: number) {
+    this.ctx.scale(x, y);
+  }
+}

@@ -2,18 +2,19 @@ import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 
-import { AdBannerSlot } from "@/components/AdBannerSlot";
-import { ArcadeButton } from "@/components/ArcadeButton";
 import { CharacterPortrait } from "@/components/CharacterPortrait";
-import { Screen } from "@/components/Screen";
-import { colors, radii, spacing } from "@/constants/theme";
+import { MetroButton, MetroHeader, MetroPage } from "@/components/metro";
 import { rosterEntries, type RosterEntry } from "@/src/characters/registry";
 import { STAGES } from "@/src/game/stages";
 import { matchSetup, shuffle } from "@/src/match";
+import { TYPE } from "@/src/ui/type";
+import { space, useTokens } from "@/src/ui/theme";
 
-const TITLES = { arcade: "ARCADE", versus: "VERSUS CPU", training: "TREINO", online: "ONLINE" } as const;
+const TITLES = { arcade: "Arcade", versus: "Versus CPU", training: "Treino", online: "Online", team: "Equipes 3×3" } as const;
+const TEAM_SIZE = 3;
 
 export default function Select() {
+  const t = useTokens();
   const setup = matchSetup.use((s) => s);
   const [entries, setEntries] = useState<RosterEntry[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -29,8 +30,24 @@ export default function Select() {
 
   const current = entries.find((e) => e.id === cursor) ?? null;
 
+  const teamMode = setup.mode === "team";
+  const team = setup.team1;
+
   const confirm = () => {
     if (!cursor) return;
+    if (teamMode) {
+      const next = [...team, cursor];
+      if (next.length < TEAM_SIZE) {
+        matchSetup.set({ team1: next });
+        return;
+      }
+      // equipe da CPU: sorteada entre quem sobrou (repete se o elenco for pequeno)
+      const rest = shuffle(entries.map((e) => e.id).filter((id) => !next.includes(id)));
+      const pool = rest.length >= TEAM_SIZE ? rest : shuffle(entries.map((e) => e.id));
+      matchSetup.set({ team1: next, team2: pool.slice(0, TEAM_SIZE), p1: next[0], p2: pool[0] });
+      router.replace("/fight");
+      return;
+    }
     if (setup.mode === "online") {
       matchSetup.set({ p1: cursor });
       router.back();
@@ -50,38 +67,54 @@ export default function Select() {
     router.replace("/fight");
   };
 
+  const tile = 96;
   return (
-    <Screen padded={false}>
-      <View style={{ flex: 1, flexDirection: "row", padding: spacing.lg, gap: spacing.lg }}>
-        <View style={{ width: 230, justifyContent: "space-between" }}>
-          <View>
-            <Text style={{ color: colors.primary, fontWeight: "900", fontSize: 20 }}>{TITLES[setup.mode]}</Text>
-            <Text style={{ color: colors.inkSecondary }}>
-              {picking === 1 ? "Escolha seu lutador" : "Escolha o oponente (CPU)"}
-            </Text>
-          </View>
+    <MetroPage>
+      <View style={{ flex: 1, flexDirection: "row", gap: space.lg }}>
+        <View style={{ width: 240, justifyContent: "space-between", paddingBottom: space.sm }}>
+          <MetroHeader
+            kicker={TITLES[setup.mode]}
+            title={teamMode ? `Lutador ${team.length + 1} de ${TEAM_SIZE}` : picking === 1 ? "Seu lutador" : "Oponente"}
+          />
+          {teamMode && team.length > 0 ? (
+            <View style={{ flexDirection: "row", gap: 4 }} accessibilityLabel={`Equipe: ${team.map((id) => entries.find((e) => e.id === id)?.name ?? id).join(", ")}`}>
+              {team.map((id, i) => (
+                <CharacterPortrait key={`${id}-${i}`} id={id} size={48} />
+              ))}
+            </View>
+          ) : null}
           {current ? (
-            <View style={{ alignItems: "center" }}>
-              <CharacterPortrait id={current.id} size={170} flip={picking === 2} />
-              <Text style={{ color: colors.ink, fontSize: 22, fontWeight: "900" }}>{current.name}</Text>
-              <Text style={{ color: colors.inkSecondary, textAlign: "center", fontSize: 12 }} numberOfLines={3}>
+            <View style={{ gap: space.xs }}>
+              <CharacterPortrait id={current.id} size={150} flip={picking === 2} />
+              <Text style={[TYPE.TITLE, { color: t.text }]}>{current.name}</Text>
+              <Text style={[TYPE.CAPTION, { color: t.muted }]} numberOfLines={3}>
                 {current.bio}
               </Text>
               {current.meta ? (
-                <Text style={{ color: colors.inkSecondary, fontSize: 11, marginTop: 4, textAlign: "center" }}>
-                  {current.meta.specials.map((s) => s.name).join(" · ")} · SUPER: {current.meta.super.name}
+                <Text style={[TYPE.CAPTION, { color: t.accentText }]} numberOfLines={2}>
+                  {current.meta.specials.map((s) => s.name).join(" · ")} · super {current.meta.super.name}
                 </Text>
               ) : null}
             </View>
           ) : null}
-          <View style={{ flexDirection: "row", gap: spacing.sm }}>
-            <ArcadeButton compact label="VOLTAR" onPress={() => (picking === 2 ? matchSetup.set({ p1: null }) : router.back())} />
-            <ArcadeButton compact variant="primary" label={picking === 2 || !needsP2 ? "LUTAR!" : "PRÓXIMO"} onPress={confirm} disabled={!cursor} style={{ flex: 1 }} />
+          <View style={{ flexDirection: "row", gap: space.sm }}>
+            <MetroButton
+              label="Voltar"
+              glyph="back"
+              onPress={() => (teamMode && team.length > 0 ? matchSetup.set({ team1: team.slice(0, -1) }) : picking === 2 ? matchSetup.set({ p1: null }) : router.back())}
+            />
+            <MetroButton
+              kind="primary"
+              label={teamMode ? (team.length + 1 < TEAM_SIZE ? "Próximo" : "Lutar") : picking === 2 || !needsP2 ? "Lutar" : "Próximo"}
+              onPress={confirm}
+              disabled={!cursor}
+              style={{ flex: 1 }}
+            />
           </View>
         </View>
 
-        <View style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
+        <View style={{ flex: 1, paddingTop: space.md }}>
+          <ScrollView contentContainerStyle={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
             {entries.map((e) => {
               const active = e.id === cursor;
               return (
@@ -89,37 +122,31 @@ export default function Select() {
                   key={e.id}
                   accessibilityRole="button"
                   accessibilityLabel={`Escolher ${e.name}`}
+                  accessibilityState={{ selected: active }}
                   onPress={() => setCursor(e.id)}
-                  style={{
-                    width: 104,
-                    height: 124,
-                    borderRadius: radii.sm,
-                    borderWidth: 3,
-                    borderColor: active ? colors.primary : colors.border,
-                    backgroundColor: active ? "#2A2410" : colors.surface,
-                    alignItems: "center",
-                    overflow: "hidden",
-                  }}
+                  style={{ width: tile, height: tile + 22, backgroundColor: active ? t.accent : t.surface, borderWidth: 2, borderColor: active ? t.accentText : "transparent" }}
                 >
-                  <CharacterPortrait id={e.id} size={96} />
-                  <Text style={{ color: active ? colors.primary : colors.ink, fontWeight: "800", fontSize: 12 }}>{e.name}</Text>
-                  {!e.builtin ? (
-                    <Text style={{ position: "absolute", top: 4, right: 6, color: colors.online, fontSize: 9, fontWeight: "900" }}>MUGEN</Text>
-                  ) : null}
+                  <CharacterPortrait id={e.id} size={tile - 4} />
+                  <Text numberOfLines={1} style={[TYPE.CAPTION, { color: active ? "#FFFFFF" : t.text, paddingHorizontal: 6 }]}>
+                    {e.name}
+                  </Text>
+                  {!e.builtin ? <Text style={[TYPE.KICKER, { position: "absolute", top: 4, right: 4, fontSize: 9, color: active ? "#FFFFFF" : t.accentText }]}>mugen</Text> : null}
                 </Pressable>
               );
             })}
           </ScrollView>
           {setup.mode !== "arcade" && setup.mode !== "online" ? (
-            <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm }}>
+            <View style={{ flexDirection: "row", gap: space.md, alignItems: "center", marginTop: space.sm }}>
+              <Text style={[TYPE.KICKER, { color: t.muted }]}>cenário</Text>
               {STAGES.map((s) => (
-                <ArcadeButton key={s.id} compact label={s.name} variant={setup.stage === s.id ? "primary" : "secondary"} onPress={() => matchSetup.set({ stage: s.id })} />
+                <Pressable key={s.id} accessibilityRole="radio" accessibilityState={{ checked: setup.stage === s.id }} onPress={() => matchSetup.set({ stage: s.id })} style={{ minHeight: 40, justifyContent: "center" }}>
+                  <Text style={[TYPE.BODY, { color: setup.stage === s.id ? t.accentText : t.muted }]}>{s.name.toLowerCase()}</Text>
+                </Pressable>
               ))}
             </View>
           ) : null}
         </View>
       </View>
-      <AdBannerSlot />
-    </Screen>
+    </MetroPage>
   );
 }

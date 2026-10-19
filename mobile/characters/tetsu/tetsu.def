@@ -1,0 +1,24 @@
+; Tetsu — Monge do bastão de um templo nas montanhas. Alcance enorme e calma inabalável.
+; Personagem original do MUGEN Arena (CONEXUS). Gerado por scripts/roster/generate.mjs.
+
+[Info]
+name = "Tetsu"
+displayname = "Tetsu"
+versiondate = 10,18,2026
+mugenversion = 1.0
+author = "CONEXUS Arena"
+localcoord = 320, 240
+
+[Files]
+cmd = tetsu.cmd
+cns = tetsu.cns
+stcommon = common1.cns ; fornecido pela engine
+anim = tetsu.air
+
+; Extensão do MUGEN Arena (ignorada pelo MUGEN): cores do HUD/efeitos
+[Arena]
+body = #EA580C
+accent = #D4AF37
+skin = #C68B59
+trim = #78350F
+energy = #FCD34D

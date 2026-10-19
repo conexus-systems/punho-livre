@@ -1,0 +1,35 @@
+{
+  "id": "severino",
+  "name": "Severino",
+  "bio": "Vaqueiro do sertão do Cariri. Facão afiado, gibão de couro e nenhuma pressa.",
+  "specials": [
+    {
+      "name": "Golpe do Facão",
+      "cmd": "qcb_p"
+    },
+    {
+      "name": "Corte Seco",
+      "cmd": "qcf_p"
+    },
+    {
+      "name": "Xique-Xique",
+      "cmd": "dp_p"
+    },
+    {
+      "name": "Mandacaru",
+      "cmd": "dd_p"
+    }
+  ],
+  "super": {
+    "name": "Cangaço",
+    "cmd": "super_p"
+  },
+  "super2": {
+    "name": "Sol do Sertão",
+    "cmd": "super2_p"
+  },
+  "quotes": [
+    "No sertão a gente aprende a resistir.",
+    "Facão não erra duas vezes."
+  ]
+}

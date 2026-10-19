@@ -15,6 +15,21 @@ command.time = 15
 command.buffer.time = 2
 
 [Command]
+name = "super2_p"
+command = ~D, DB, B, D, DB, B, x
+time = 35
+
+[Command]
+name = "super2_p"
+command = ~D, DB, B, D, DB, B, y
+time = 35
+
+[Command]
+name = "super2_p"
+command = ~D, DB, B, D, DB, B, z
+time = 35
+
+[Command]
 name = "super_p"
 command = ~D, DF, F, D, DF, F, x
 time = 35
@@ -76,12 +91,12 @@ time = 15
 
 [Command]
 name = "FF"
-command = F, F
+command = F, >F
 time = 10
 
 [Command]
 name = "BB"
-command = B, B
+command = B, >B
 time = 10
 
 [Command]
@@ -142,6 +157,15 @@ time = 1
 ; ------------------------------------------------------------
 [Statedef -1]
 
+[State -1, Nevasca]
+type = ChangeState
+value = 3100
+triggerall = command = "super2_p"
+triggerall = power >= 2000
+triggerall = statetype != A
+trigger1 = ctrl
+trigger2 = stateno = [200, 2999] && movecontact
+
 [State -1, Mil Flocos]
 type = ChangeState
 value = 3000
@@ -160,6 +184,21 @@ triggerall = NumProjID(1000) = 0
 trigger1 = ctrl
 trigger2 = stateno = [200, 499] && movecontact
 
+[State -1, Avalanche]
+type = ChangeState
+value = 1200
+triggerall = command = "qcf_k"
+triggerall = statetype = A
+trigger1 = ctrl
+
+[State -1, Chuva de Kunai]
+type = ChangeState
+value = 1300
+triggerall = command = "qcf_p"
+triggerall = statetype = A
+triggerall = NumProjID(1300) = 0
+trigger1 = ctrl
+
 [State -1, Passo da Neve]
 type = ChangeState
 value = 1100
@@ -167,13 +206,6 @@ triggerall = command = "dd_k"
 triggerall = statetype != A
 trigger1 = ctrl
 trigger2 = stateno = [200, 499] && movecontact
-
-[State -1, Avalanche]
-type = ChangeState
-value = 1200
-triggerall = command = "qcf_k"
-triggerall = statetype = A
-trigger1 = ctrl
 
 [State -1, Corrida]
 type = ChangeState

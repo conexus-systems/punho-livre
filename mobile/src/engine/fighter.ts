@@ -5,14 +5,27 @@
 
 import { advanceAnim, animTime, resetAnim } from "./anim";
 import { getAnim } from "./character";
-import { GROUND_Y, SCREEN_W, STAGE_LEFT, STAGE_RIGHT } from "./constants";
-import { evalBool, evalNum, evaluate, toNum, type EvalContext, type Expr, type Value } from "./expr";
+import {
+  CommandTier,
+  GROUND_Y,
+  GUARD_HITSTOP_MIN,
+  GUARD_HITSTOP_RATIO,
+  HITSTOP_BY_LEVEL,
+  HitLevel,
+  INPUT_BUFFER_FRAMES,
+  SCREEN_W,
+  STAGE_LEFT,
+  STAGE_RIGHT,
+} from "./constants";
+import * as dm from "./detmath";
+import { evalBool, evalNum, evaluate, parseExpr, toNum, type EvalContext, type Expr, type Value } from "./expr";
 import { INPUT_HISTORY } from "./input";
 import { matchCommand } from "./mugen/cmd";
 import type {
   CharacterData,
   Controller,
   FighterState,
+  GetHitVars,
   HitDefState,
   MoveType,
   Physics,
@@ -35,6 +48,27 @@ export function nextRandom(w: WorldState): number {
 
 export function opponentOf(w: WorldState, p: FighterState): FighterState {
   return w.fighters[p.side === 0 ? 1 : 0];
+}
+
+/** Personagem dono dos estados em execução (outro, em estado personalizado). */
+export function stateCharOf(w: WorldState, roster: Roster, p: FighterState): CharacterData {
+  return roster[p.customOwner >= 0 ? w.fighters[p.customOwner].charId : p.charId];
+}
+
+/** Personagem dono da animação atual (outro, depois de ChangeAnim2 em estado personalizado). */
+export function animCharOf(w: WorldState, roster: Roster, p: FighterState): CharacterData {
+  return roster[p.animOwner >= 0 ? w.fighters[p.animOwner].charId : p.charId];
+}
+
+/** Lê um som "F5, 0" / "S3, 1" / "5, 2": [grupo, índice, comum?]. */
+export function parseSound(raw: string | undefined, evalPart: (src: string) => number): [number, number, boolean] | null {
+  if (!raw) return null;
+  const parts = raw.split(",").map((t) => t.trim());
+  if (!parts[0]) return null;
+  const common = /^f/i.test(parts[0]);
+  const g = evalPart(parts[0].replace(/^[fs]/i, ""));
+  const i = parts[1] ? evalPart(parts[1]) : 0;
+  return Number.isFinite(g) ? [Math.trunc(g), Math.trunc(i), common] : null;
 }
 
 export function inputAgo(p: FighterState, ago: number): number {
@@ -72,6 +106,28 @@ function opponentThreat(w: WorldState, p: FighterState, opp: FighterState, oppCh
   return false;
 }
 
+export function emptyGetHit(): GetHitVars {
+  return {
+    damage: 0,
+    hitTime: 0,
+    slideTime: 0,
+    ctrlTime: 0,
+    xvel: 0,
+    yvel: 0,
+    yaccel: 0.35,
+    fall: 0,
+    fallXVel: 0,
+    fallYVel: -4.5,
+    fallRecover: 1,
+    animType: 0,
+    groundType: 1,
+    airType: 1,
+    guarded: 0,
+    hitCount: 0,
+    hitTimeLeft: 0,
+  };
+}
+
 // ----------------------------------------------------------- contexto
 
 const GETHITVAR: Record<string, keyof FighterState["getHit"]> = {
@@ -104,6 +160,11 @@ export class FighterCtx implements EvalContext {
     return this.roster[this.p.charId];
   }
 
+  /** Personagem das animações em uso (pode ser o oponente em estado personalizado). */
+  get animCh(): CharacterData {
+    return animCharOf(this.w, this.roster, this.p);
+  }
+
   get opp(): FighterState {
     return opponentOf(this.w, this.p);
   }
@@ -120,9 +181,16 @@ export class FighterCtx implements EvalContext {
     return this.p.animElem === n - 1 && this.p.animElemTime === 0;
   }
 
-  redirect(target: string): EvalContext | null {
+  redirect(target: string, arg?: number): EvalContext | null {
     if (target === "p2" || target === "enemy" || target === "enemynear" || target === "target") {
       return new FighterCtx(this.opp, this.w, this.roster);
+    }
+    if (target === "parent" || target === "root") {
+      return this.p.helper ? new FighterCtx(this.w.fighters[this.p.side], this.w, this.roster) : null;
+    }
+    if (target === "helper") {
+      const h = this.w.helpers.find((x) => x.side === this.p.side && (arg === undefined || x.helper?.id === arg));
+      return h ? new FighterCtx(h, this.w, this.roster) : null;
     }
     return null;
   }
@@ -140,7 +208,7 @@ export class FighterCtx implements EvalContext {
       case "anim":
         return p.anim;
       case "animtime":
-        return animTime(p, getAnim(this.ch, p.anim));
+        return animTime(p, getAnim(this.animCh, p.anim));
       case "animelem":
         return p.animElem + 1;
       case "ctrl":
@@ -242,11 +310,14 @@ export class FighterCtx implements EvalContext {
       case "numenemy":
         return 1;
       case "numtarget":
-        return p.moveHit > 0 ? 1 : 0;
+        return p.hasTarget || p.moveHit > 0 ? 1 : 0;
       case "numhelper":
+        return w.helpers.filter((h) => h.side === p.side).length;
       case "numexplod":
-      case "numpartner":
+        return w.explods.filter((e) => e.owner === p.side).length;
       case "ishelper":
+        return p.helper ? 1 : 0;
+      case "numpartner":
       case "projcontact":
       case "projhit":
       case "projguarded":
@@ -298,23 +369,23 @@ export class FighterCtx implements EvalContext {
       case "sqrt":
         return Math.sqrt(Math.max(0, n(0)));
       case "sin":
-        return Math.sin(n(0));
+        return dm.sin(n(0));
       case "cos":
-        return Math.cos(n(0));
+        return dm.cos(n(0));
       case "tan":
-        return Math.tan(n(0));
+        return dm.tan(n(0));
       case "asin":
-        return Math.asin(n(0));
+        return dm.asin(n(0));
       case "acos":
-        return Math.acos(n(0));
+        return dm.acos(n(0));
       case "atan":
-        return Math.atan(n(0));
+        return dm.atan(n(0));
       case "exp":
-        return Math.exp(n(0));
+        return dm.exp(n(0));
       case "ln":
-        return n(0) > 0 ? Math.log(n(0)) : 0;
+        return n(0) > 0 ? dm.ln(n(0)) : 0;
       case "log":
-        return n(0) > 0 && n(1) > 0 ? Math.log(n(1)) / Math.log(n(0)) : 0;
+        return n(0) > 0 && n(1) > 0 ? dm.ln(n(1)) / dm.ln(n(0)) : 0;
       case "ifelse":
       case "cond":
         return toNum(args[0] ?? 0) !== 0 ? (args[1] ?? 0) : (args[2] ?? 0);
@@ -337,12 +408,12 @@ export class FighterCtx implements EvalContext {
       case "selfanimexist":
         return this.ch.anims[n(0)] ? 1 : 0;
       case "animelemtime": {
-        const anim = getAnim(this.ch, p.anim);
+        const anim = getAnim(this.animCh, p.anim);
         const start = anim.starts[n(0) - 1];
         return start === undefined ? 0 : p.animTick - start;
       }
       case "animelemno": {
-        const anim = getAnim(this.ch, p.anim);
+        const anim = getAnim(this.animCh, p.anim);
         const t = p.animTick + n(0);
         let idx = 0;
         for (let i = 0; i < anim.starts.length; i++) if (anim.starts[i] <= t) idx = i;
@@ -350,6 +421,12 @@ export class FighterCtx implements EvalContext {
       }
       case "numprojid":
         return numProjectiles(this.w, p.side, n(0));
+      case "numhelper":
+        return this.w.helpers.filter((h) => h.side === p.side && h.helper?.id === n(0)).length;
+      case "numexplod":
+        return this.w.explods.filter((e) => e.owner === p.side && e.id === n(0)).length;
+      case "ishelper":
+        return p.helper && p.helper.id === n(0) ? 1 : 0;
       default:
         return 0;
     }
@@ -360,6 +437,18 @@ export class FighterCtx implements EvalContext {
 
 export function changeAnim(p: FighterState, ch: CharacterData, id: number, elem = 1): void {
   const anim = getAnim(ch, id);
+  p.animOwner = -1;
+  resetAnim(p, id, anim, elem - 1);
+}
+
+/** ChangeAnim2: animação do dono do estado personalizado. */
+function changeAnim2(p: FighterState, w: WorldState, roster: Roster, id: number, elem = 1): void {
+  if (p.customOwner < 0) {
+    changeAnim(p, roster[p.charId], id, elem);
+    return;
+  }
+  const anim = getAnim(roster[w.fighters[p.customOwner].charId], id);
+  p.animOwner = p.customOwner;
   resetAnim(p, id, anim, elem - 1);
 }
 
@@ -369,13 +458,18 @@ export function faceOpponent(p: FighterState, opp: FighterState): void {
 }
 
 export function changeState(p: FighterState, w: WorldState, roster: Roster, no: number): void {
+  // estados comuns (parado, pulo, apanhar, cair...) e os que o dono não tem são sempre os próprios
+  if (p.customOwner >= 0 && (no < 200 || no >= 5000 || !stateCharOf(w, roster, p).states[no])) p.customOwner = -1;
   const ch = roster[p.charId];
-  const target = ch.states[no] ? no : 0;
-  const sd = ch.states[target];
+  const sch = stateCharOf(w, roster, p);
+  const target = sch.states[no] ? no : 0;
+  const sd = sch.states[target];
+  // o alvo do golpe anterior se perde ao voltar a ficar parado
+  if (target === 0 || target === 11 || target === 20) p.hasTarget = false;
   p.prevStateNo = p.stateNo;
   p.stateNo = target;
   p.stateTime = 0;
-  for (const k of Object.keys(p.fired)) if (!k.startsWith("-")) delete p.fired[k];
+  for (const k in p.fired) if (k.charCodeAt(0) !== 45 /* "-" */) delete p.fired[k];
   if (!sd) return;
 
   if (sd.type) p.stateType = sd.type;
@@ -400,15 +494,49 @@ export function changeState(p: FighterState, w: WorldState, roster: Roster, no: 
 }
 
 export function addPower(p: FighterState, v: number): void {
+  // no MAX a barra não enche (como no KOF '98)
+  if (v > 0 && p.maxTime > 0) return;
   p.power = Math.max(0, Math.min(p.powerMax, p.power + v));
 }
 
 // ------------------------------------------------------- comandos
 
-export function updateCommands(p: FighterState, ch: CharacterData, frame: number): void {
+/** Nomes dos comandos de especial/super de cada personagem (os que ganham buffer). */
+const bufferedNames = new WeakMap<CharacterData, string[]>();
+
+function bufferedCommands(ch: CharacterData): string[] {
+  let names = bufferedNames.get(ch);
+  if (!names) {
+    names = [...new Set(ch.commands.filter((c) => (c.tier ?? CommandTier.NORMAL) >= CommandTier.SPECIAL).map((c) => c.name))];
+    bufferedNames.set(ch, names);
+  }
+  return names;
+}
+
+/**
+ * Reconhece os comandos do quadro. `frozen` = o lutador não age neste quadro
+ * (hitstop ou superpause): especiais e supers no buffer não envelhecem
+ * enquanto ele está congelado, então um meia-lua feito durante o impacto sai
+ * no primeiro quadro livre. Especiais e supers valem por pelo menos
+ * INPUT_BUFFER_FRAMES quadros livres depois de completos.
+ */
+export function updateCommands(p: FighterState, ch: CharacterData, frame: number, frozen = false): void {
+  if (frozen) {
+    for (const name of bufferedCommands(ch)) {
+      const until = p.cmdActive[name];
+      // ainda valia no quadro anterior: segura mais um quadro
+      if (until !== undefined && until >= frame - 1) p.cmdActive[name] = until + 1;
+    }
+  }
   const h = (ago: number) => inputAgo(p, ago);
   for (const cmd of ch.commands) {
-    if (matchCommand(cmd, h)) p.cmdActive[cmd.name] = frame + cmd.bufferTime - 1;
+    if (!matchCommand(cmd, h)) continue;
+    const special = (cmd.tier ?? CommandTier.NORMAL) >= CommandTier.SPECIAL;
+    const buffer = special ? Math.max(cmd.bufferTime, INPUT_BUFFER_FRAMES) : cmd.bufferTime;
+    // completo num quadro congelado: este quadro não conta para o buffer
+    const until = frame + buffer - 1 + (special && frozen ? 1 : 0);
+    const cur = p.cmdActive[cmd.name];
+    p.cmdActive[cmd.name] = cur === undefined || cur < until ? until : cur;
   }
 }
 
@@ -433,8 +561,13 @@ export function buildHitDef(c: Controller, ctx: FighterCtx): HitDefState {
   const animType = ANIM_TYPES[rawWord(c, "animtype") ?? "light"] ?? 0;
   const groundType = GROUND_TYPES[rawWord(c, "ground.type") ?? "high"] ?? 1;
   const damage = num("damage", 0, 0);
-  const pauseP1 = num("pausetime", 0, 0);
-  const pauseP2 = num("pausetime", 1, 0);
+  const attrKind = (attr[1] ?? "NA").trim();
+  const hitLevel = hitLevelOf(animType, attrKind);
+  // pausetime explícito (até 0) vale como no MUGEN; sem ele, o hitstop vem do nível do golpe
+  // (arremessos — attr ?T — ficam com o 0 do MUGEN: não há impacto na pegada)
+  const levelPause = !has("pausetime") && !attrKind.endsWith("T");
+  const pauseP1 = levelPause ? HITSTOP_BY_LEVEL[hitLevel][0] : num("pausetime", 0, 0);
+  const pauseP2 = levelPause ? HITSTOP_BY_LEVEL[hitLevel][1] : num("pausetime", 1, 0);
   const groundVelX = num("ground.velocity", 0, 0);
   const groundVelY = num("ground.velocity", 1, 0);
   const airVelX = num("air.velocity", 0, 0);
@@ -447,7 +580,7 @@ export function buildHitDef(c: Controller, ctx: FighterCtx): HitDefState {
 
   return {
     attrState: attr[0] ?? "S",
-    attrKind: attr[1] ?? "NA",
+    attrKind,
     damage,
     guardDamage: num("damage", 1, 0),
     animType,
@@ -456,8 +589,9 @@ export function buildHitDef(c: Controller, ctx: FighterCtx): HitDefState {
     hitFlag: (c.raw["hitflag"] ?? "MAF").toUpperCase(),
     pauseP1,
     pauseP2,
-    guardPauseP1: has("guard.pausetime") ? num("guard.pausetime", 0) : pauseP1,
-    guardPauseP2: has("guard.pausetime", 1) ? num("guard.pausetime", 1) : pauseP2,
+    // defesa congela menos que acerto, a não ser que o HitDef diga o contrário
+    guardPauseP1: has("guard.pausetime") ? num("guard.pausetime", 0) : guardPause(pauseP1),
+    guardPauseP2: has("guard.pausetime", 1) ? num("guard.pausetime", 1) : guardPause(pauseP2),
     groundType,
     airType: GROUND_TYPES[rawWord(c, "air.type") ?? ""] ?? groundType,
     groundSlideTime: groundSlide,
@@ -485,13 +619,42 @@ export function buildHitDef(c: Controller, ctx: FighterCtx): HitDefState {
     kill: has("kill") ? num("kill") !== 0 : true,
     guardKill: has("guard.kill") ? num("guard.kill") !== 0 : true,
     sparkLevel: Math.min(2, animType),
+    hitLevel,
+    p2StateNo: has("p2stateno") ? num("p2stateno") : -1,
+    p2Facing: has("p2facing") ? Math.sign(num("p2facing")) : 0,
+    hitSound: parseSound(c.raw["hitsound"], (src) => evalNum(parseExprSafe(src), ctx, Number.NaN)),
+    guardSound: parseSound(c.raw["guardsound"], (src) => evalNum(parseExprSafe(src), ctx, Number.NaN)),
   };
+}
+
+/** Nível do golpe (HitLevel) pelo animtype e pelo attr: SA/ST/SP especial, HA/HT/HP super. */
+export function hitLevelOf(animType: number, attrKind: string): number {
+  const kind = attrKind.toUpperCase().charAt(0);
+  if (kind === "H") return HitLevel.SUPER;
+  if (kind === "S") return HitLevel.SPECIAL;
+  return Math.max(HitLevel.LIGHT, Math.min(HitLevel.HEAVY, animType));
+}
+
+/** Hitstop na defesa derivado do hitstop do acerto (nunca maior que ele). */
+export function guardPause(hitPause: number): number {
+  if (hitPause <= 0) return 0;
+  return Math.min(hitPause, Math.max(GUARD_HITSTOP_MIN, Math.round(hitPause * GUARD_HITSTOP_RATIO)));
+}
+
+function parseExprSafe(src: string): Expr {
+  try {
+    return parseExpr(src);
+  } catch {
+    return { k: "num", v: Number.NaN } as unknown as Expr;
+  }
 }
 
 // ------------------------------------------------------ controladores
 
 export interface StateRunner {
   spawnProjectile(p: FighterState, c: Controller, ctx: FighterCtx): void;
+  spawnHelper(p: FighterState, c: Controller, ctx: FighterCtx): void;
+  spawnExplod(p: FighterState, c: Controller, ctx: FighterCtx): void;
 }
 
 function setVarFromKey(p: FighterState, key: string, value: number, add: boolean): boolean {
@@ -541,6 +704,7 @@ function execController(
       const value = param("value");
       if (!value) return false;
       const to = evalNum(value, ctx);
+      if (c.type === "selfstate") p.customOwner = -1;
       const ctrl = param("ctrl");
       const anim = param("anim");
       const ctrlValue = ctrl ? evalBool(ctrl, ctx) : null;
@@ -550,10 +714,14 @@ function execController(
       if (animValue !== null) changeAnim(p, ch, animValue);
       return true;
     }
-    case "changeanim":
-    case "changeanim2": {
+    case "changeanim": {
       const value = param("value");
       if (value) changeAnim(p, ch, evalNum(value, ctx), param("elem") ? num("elem") : 1);
+      return false;
+    }
+    case "changeanim2": {
+      const value = param("value");
+      if (value) changeAnim2(p, w, roster, evalNum(value, ctx), param("elem") ? num("elem") : 1);
       return false;
     }
     case "velset":
@@ -658,16 +826,123 @@ function execController(
         w.superPauseOwner = p.side;
         if (c.type === "superpause") {
           addPower(p, param("poweradd") ? num("poweradd") : 0);
-          w.events.push({ kind: "super", x: p.x, y: p.y - 60, side: p.side, level: 2, frame: w.frame });
+          // nível 3 = super turbinado (MAX ou vida no vermelho), ver snk.ts
+          const boosted = p.maxTime > 0 || p.life * 4 <= p.lifeMax;
+          w.events.push({ kind: "super", x: p.x, y: p.y - 60, side: p.side, level: boosted ? 3 : 2, frame: w.frame });
         }
       }
       return false;
     }
     case "targetlifeadd": {
-      if (p.moveHit > 0) {
+      if (p.hasTarget || p.moveHit > 0) {
         const t = opponentOf(w, p);
+        const kill = param("kill") ? num("kill") !== 0 : true;
         t.life = Math.max(0, Math.min(t.lifeMax, t.life + Math.trunc(num("value"))));
+        if (t.life <= 0 && !kill) t.life = 1;
+        if (t.life <= 0) w.events.push({ kind: "ko", x: t.x, y: t.y, side: t.side, level: 2, frame: w.frame });
       }
+      return false;
+    }
+    // ---- alvo (arremessos no estilo MUGEN)
+    case "targetstate": {
+      if (!p.hasTarget || !param("value")) return false;
+      const t = opponentOf(w, p);
+      t.customOwner = p.side;
+      changeState(t, w, roster, num("value"));
+      return false;
+    }
+    case "targetbind": {
+      if (!p.hasTarget) return false;
+      const t = opponentOf(w, p);
+      t.bindTime = param("time") ? num("time", 0, 1) : 1;
+      t.bindX = num("pos", 0, 0);
+      t.bindY = num("pos", 1, 0);
+      return false;
+    }
+    case "bindtotarget": {
+      if (!p.hasTarget) return false;
+      const t = opponentOf(w, p);
+      p.x = t.x + num("pos", 0, 0) * t.facing;
+      p.y = t.y + num("pos", 1, 0);
+      return false;
+    }
+    case "targetfacing":
+      if (p.hasTarget) opponentOf(w, p).facing = num("value", 0, 1) >= 0 ? p.facing : (p.facing === 1 ? -1 : 1);
+      return false;
+    case "targetvelset":
+    case "targetveladd": {
+      if (!p.hasTarget) return false;
+      const t = opponentOf(w, p);
+      const add = c.type === "targetveladd";
+      if (param("x")) t.vx = (add ? t.vx : 0) + num("x");
+      if (param("y")) t.vy = (add ? t.vy : 0) + num("y");
+      return false;
+    }
+    case "targetpoweradd":
+      if (p.hasTarget) addPower(opponentOf(w, p), num("value"));
+      return false;
+    case "targetdrop":
+      p.hasTarget = false;
+      return false;
+    // ---- helpers
+    case "helper":
+      runner.spawnHelper(p, c, ctx);
+      return false;
+    case "destroyself":
+      if (p.helper) p.helper.uid = -1;
+      return p.helper !== null;
+    case "bindtoparent":
+    case "bindtoroot":
+      if (p.helper) {
+        p.bindTime = param("time") ? num("time", 0, 1) : 1;
+        p.bindX = num("pos", 0, 0);
+        p.bindY = num("pos", 1, 0);
+      }
+      return false;
+    case "parentvarset":
+    case "parentvaradd":
+      if (p.helper) {
+        const parent = w.fighters[p.side];
+        const add = c.type === "parentvaradd";
+        if (param("v") && param("value")) {
+          const i = num("v");
+          if (i >= 0 && i < parent.vars.length) parent.vars[i] = Math.trunc((add ? parent.vars[i] : 0) + num("value"));
+        }
+        if (param("fv") && param("value")) {
+          const i = num("fv");
+          if (i >= 0 && i < parent.fvars.length) parent.fvars[i] = (add ? parent.fvars[i] : 0) + num("value");
+        }
+      }
+      return false;
+    // ---- efeitos e som
+    case "explod":
+      runner.spawnExplod(p, c, ctx);
+      return false;
+    case "removeexplod": {
+      const id = param("id") ? num("id") : null;
+      w.explods = w.explods.filter((e) => e.owner !== p.side || (id !== null && id >= 0 && e.id !== id));
+      return false;
+    }
+    case "modifyexplod": {
+      const id = param("id") ? num("id") : -1;
+      for (const e of w.explods) {
+        if (e.owner !== p.side || (id >= 0 && e.id !== id)) continue;
+        if (param("pos")) {
+          e.offX = num("pos", 0, e.offX);
+          e.offY = num("pos", 1, e.offY);
+        }
+        if (param("vel")) {
+          e.vx = num("vel", 0, 0) * e.facing;
+          e.vy = num("vel", 1, 0);
+        }
+        if (param("removetime")) e.removeTime = num("removetime");
+        if (param("bindtime")) e.bindTime = num("bindtime");
+      }
+      return false;
+    }
+    case "playsnd": {
+      const snd = parseSound(c.raw["value"], (src) => evalNum(parseExprSafe(src), ctx, Number.NaN));
+      if (snd) w.events.push({ kind: "sound", x: p.x, y: p.y, side: p.side, level: 0, frame: w.frame, snd: [snd[0], snd[1]], common: snd[2], charId: p.charId });
       return false;
     }
     case "defencemulset":
@@ -706,13 +981,13 @@ export function runStateDef(
   roster: Roster,
   runner: StateRunner,
 ): boolean {
-  const ch = roster[p.charId];
-  const sd = ch.states[stateNo];
+  // -1/-2/-3 são sempre do próprio personagem
+  const sd = (stateNo < 0 ? roster[p.charId] : stateCharOf(w, roster, p)).states[stateNo];
   if (!sd) return false;
   const ctx = new FighterCtx(p, w, roster);
   for (const c of sd.controllers) {
     if (!triggersPass(c, ctx)) continue;
-    const key = `${stateNo}:${c.index}`;
+    const key = (c.firedKey ??= `${stateNo}:${c.index}`);
     const fired = p.fired[key];
     if (fired !== undefined) {
       if (c.persistent === 0) continue;

@@ -1,0 +1,181 @@
+# MUGEN Arena — web (API Rails)
+
+API Rails 8.1 (API-only) + Action Cable do **MUGEN Arena**, jogo de luta 2D mobile.
+Fica em `web/` (layout "produto Expo" da frota CONEXUS: app em `mobile/`, Rails em `web/`,
+Terraform em `deploy/terraform/linode` na raiz). O contrato com o app (`mobile/`) está em [`../docs/PROTOCOL.md`](../docs/PROTOCOL.md): mudou lá, muda aqui.
+
+Esta API é um **consumidor** da plataforma CONEXUS (template `conexus-bff-stack`):
+
+| Papel | Quem faz | Aqui |
+|---|---|---|
+| Login, OAuth2/PKCE, JWT | `bff-auth` | só **verifica** o JWT (JWKS) e faz upsert do `Player` |
+| Venda | Google Play (jogo pago) | **licença do online**: confere o Play Integrity (`Integrity::License`) e grava `licensed_until` |
+| (legado) assinatura | `bff-payment` | não usado pelo app; o webhook ainda liga/desliga `Player#premium`, que não libera nada |
+| E-mail | `bff-api` | job Solid Queue → `Conexus::Messaging::Client#dispatch` |
+
+Não há Devise/OmniAuth, SDK Stripe/Mercado Pago, Resend/Twilio nem mailer neste app.
+Sem Redis/Sidekiq (ADR 0001): **Solid Queue**, **Solid Cache** e **Solid Cable**, todos no
+mesmo Postgres.
+
+## Stack
+
+- Ruby **4.0.2** (`.ruby-version`, Docker). O `Gemfile` não fixa `ruby`, então o bundle também
+  resolve em Ruby 3.3+ local.
+- Rails ~> 8.1, PostgreSQL (banco único — tabelas Solid* vêm de `db/migrate`).
+- Gem `conexus-platform` vendorizada em `vendor/conexus-platform` (`path:` no Gemfile).
+- RSpec + WebMock + FactoryBot, `rubocop-rails-omakase`, Brakeman.
+
+## Setup local
+
+```bash
+cp .env.example .env            # ajuste DATABASE_* e CONEXUS_AUTH_ALLOWED_AUDIENCES
+bundle install
+bin/rails db:prepare            # cria banco + migra (inclui Solid Queue/Cache/Cable)
+bin/dev                         # web (Puma + /cable) + worker (Solid Queue) via Procfile.dev
+```
+
+Postgres local: `docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgres:16` ou o do
+sistema (usuário/senha padrão `postgres`/`postgres`, porta 5432).
+
+Gates (os mesmos do CI do platform-infra):
+
+```bash
+bundle exec rubocop --parallel --format progress
+bundle exec rspec
+bin/brakeman --quiet --no-pager
+bin/ci                          # tudo acima em sequência
+```
+
+## Variáveis de ambiente
+
+| Variável | Para quê |
+|---|---|
+| `AUTH_PROVIDER` / `BILLING_PROVIDER` / `MESSAGING_PROVIDER` | flags CONEXUS; sempre `conexus` |
+| `CONEXUS_AUTH_URL` | bff-auth; JWKS em `<url>/.well-known/jwks.json` |
+| `CONEXUS_AUTH_ISSUER` | `iss` esperado (padrão: `CONEXUS_AUTH_URL`) |
+| `CONEXUS_AUTH_ALLOWED_AUDIENCES` | client_id(s) aceitos no `aud` (o client público do app) |
+| `CONEXUS_PAYMENTS_URL`, `CONEXUS_API_URL` | hosts dos BFFs de pagamento (legado, não usado pelo app) e mensagens |
+| `CONEXUS_WEBHOOK_SECRET` | HMAC dos webhooks recebidos (bff-auth / bff-payment) |
+| `CONEXUS_API_WEBHOOK_SECRET` | HMAC dos dispatches ao bff-api (sem ele, e-mails são pulados e logados) |
+| `CONEXUS_PRODUCT_SLUG` | `mugen-arena` — filtra eventos de cobrança e vira `source_app` |
+| `CONEXUS_AUTH_CLIENT_ID` / `_SECRET` | reservado (o app mobile é cliente público; a API não troca código) |
+| `ADMIN_GROUPS` | claim `groups` com acesso admin (padrão `mugen-arena-admin,admin`) |
+| `ADMIN_NOTIFY_EMAILS` | moderadores avisados de novas submissões |
+| `RATED_ROOM_MATCHES` | `true` para salas privadas mexerem no rating (padrão `false`) |
+| `SEASON_LENGTH_DAYS` | duração de cada temporada da ranqueada (padrão `56`); a próxima abre sozinha |
+| `RECONNECT_GRACE_SECONDS` | tolerância para um lado voltar depois de cair no meio da luta (padrão `10`) |
+| `REPLAY_RETENTION_DAYS` | dias que o replay (entradas + checksums) fica guardado sem revisão aberta (padrão `30`) |
+| `DATABASE_HOST/PORT/NAME/USERNAME/PASSWORD`, `PGSSLMODE` | Postgres (nunca `DATABASE_URL`) |
+| `DATABASE_IDLE_TIMEOUT` / `DATABASE_REAPING_FREQUENCY` | pool do Postgres compartilhado (padrão `60`/`30` s) |
+| `RAILS_MAX_THREADS` | threads do Puma (padrão `3`); o pool do AR é `RAILS_MAX_THREADS + JOB_THREADS` |
+| `SOLID_QUEUE_IN_PUMA` | roda o Solid Queue dentro do Puma, modo async (padrão da frota em produção) |
+| `JOB_THREADS` / `JOB_POLLING_INTERVAL` | threads e polling (s) do Solid Queue (padrão `2`/`1`) |
+| `PACK_MAX_BYTES` | tamanho máximo de um pack enviado (padrão 5 MiB) |
+| `CORS_ORIGINS` | origens CORS, separadas por vírgula (padrão `*`) |
+| `SECRET_KEY_BASE` | obrigatório em produção (sem `config/master.key` na imagem) |
+| `PLAY_INTEGRITY_REQUIRED` | `1` em produção: o online exige licença (fila/salas respondem `license_required`). Desligado, todos contam como licenciados |
+| `PLAY_INTEGRITY_PACKAGE` | pacote conferido no veredito (padrão `br.com.conexus.mugenarena`) |
+| `PLAY_INTEGRITY_SERVICE_ACCOUNT` | JSON da conta de serviço do Google Cloud com acesso à Play Integrity API (segredo; sem ele, `verify` → `503 license_unavailable`) |
+| `SOLID_CABLE_POLLING_INTERVAL` | polling do Solid Cable em segundos (padrão `0.05`) |
+
+## Endpoints
+
+Erros: `{ "error": "<code>", "message": "..." }` — `401 invalid_token`, `403 forbidden`,
+`404 not_found`, `422 validation_failed`, `503 auth_unavailable`; licença: `403 <motivo>`, `503 license_unavailable`.
+
+| Método | Caminho | Auth |
+|---|---|---|
+| GET | `/up` | — |
+| GET / PATCH | `/api/v1/me` | Bearer |
+| GET | `/api/v1/characters` | — (última versão aprovada de cada slug) |
+| GET | `/api/v1/characters/:slug/pack` | — (todo personagem aprovado é livre; jogo pago) |
+| POST | `/api/v1/characters` | Bearer (`{ pack }` → `201`, status `pending`) |
+| GET | `/api/v1/admin/characters?status=pending` | admin |
+| PATCH | `/api/v1/admin/characters/:slug` | admin (`{ status, premium?, reason? }`; `premium` é legado) |
+| POST | `/api/v1/license/challenge`, `/api/v1/license/verify` | Bearer (licença do jogo pago — PROTOCOL § Licença) |
+| GET | `/api/v1/leaderboard[?season=N]` | — (top 100 da temporada) |
+| GET | `/api/v1/ranked` | Bearer (rating, liga e posição na temporada) |
+| GET | `/api/v1/matches` | Bearer |
+| GET | `/api/v1/matches/:id/replay` | Bearer (participantes ou admin) |
+| GET / PATCH | `/api/v1/admin/match_reviews` | admin (fila de partidas anuladas/disputadas) |
+| POST | `/conexus/webhooks` | HMAC `X-Conexus-Signature` |
+| WS | `/cable?token=<access_token>` | JWT (conexão recusada sem token válido) |
+
+Canais: `MatchmakingChannel` (fila ranked pela faixa de rating da temporada que alarga com a espera —
+±100, +50 a cada 5 s, qualquer um após 30 s —, só com a mesma `engine_version`; salas com código de 6
+caracteres) e `MatchChannel` (relay de `input`/`checksum`, `input_log`, `ready` → `start`, `result` com
+consenso + Glicko-2, `leave`, `ping` → `pong`, reconexão com `resume`/`resync`). Detalhes em
+`docs/PROTOCOL.md`; desenho e números em `docs/ONLINE.md`.
+
+### Notas de implementação
+
+- **Pack**: o servidor re-serializa o `pack` recebido (`JSON.generate`) e guarda esse texto em
+  `characters.pack_body`; o `sha256` publicado é desse corpo, servido byte a byte em `/pack`
+  (com `ETag`). Validação em `app/services/characters/pack_validator.rb` (`.def` lido por
+  `DefParser`, INI case-insensitive com comentários `;`). `stcommon` é opcional (a engine do
+  app tem o `common1.cns`).
+- **Versões**: cada submissão é uma linha; o slug pertence a quem o enviou primeiro. Uma nova
+  submissão marca `pending` anteriores do mesmo slug como `rejected` (`superseded`).
+- **Matchmaking**: tickets em `matchmaking_tickets`, pareados com `FOR UPDATE SKIP LOCKED` (seguro
+  entre pods). Cada assinatura re-tenta o pareamento a cada 3 s e mantém heartbeat; o job
+  recorrente `MatchmakingCleanupJob` remove tickets órfãos e encerra partidas que ninguém iniciou.
+- **Partidas**: o relay de `input` não toca o banco; o registro de entradas (`input_log`, ~1 bloco/s
+  por lado) e os checksums (~1/s por lado) sim. `ready`/`result`/abandono usam lock da linha da partida.
+  `leave` = derrota na hora; queda sem `leave` abre a tolerância de reconexão
+  (`MatchReconnectTimeoutJob`); checksum, entradas ou replay divergentes anulam a partida (`void`) e
+  abrem `match_reviews`.
+- **Ranqueada**: Glicko-2 por temporada (`season_ratings`, `Ratings::Glicko2`), ligas em
+  `Ranked::Leagues`, `players.rating` = rating exibido da temporada atual.
+- **E-mails**: `CharacterSubmittedNotificationJob` (um e-mail para o 1º de `ADMIN_NOTIFY_EMAILS`
+  com cópia para os demais, chave `character-submitted-<id>`) e
+  `CharacterReviewedNotificationJob` (chave `character-reviewed-<id>-<status>`). Sem
+  `MESSAGING_PROVIDER=conexus` + `CONEXUS_API_WEBHOOK_SECRET`, são pulados com log.
+
+## Deploy (platform-infra)
+
+CI e deploy vêm do [`platform-infra`](https://github.com/conexus-systems/platform-infra)
+(GHCR + Terraform LKE), layout `--layout web`. Os callers ficam em `.github/workflows/` na raiz
+do repo e só passam inputs (`working-directory: web`, `dockerfile: web/Dockerfile`,
+`build_context: web`); o Terraform fica em [`../deploy/terraform/linode`](../deploy/terraform/linode)
+— nunca em `web/deploy`.
+
+```bash
+gh workflow run "Deploy — Production" --ref main                    # testes → GHCR → Terraform
+gh workflow run "Deploy — Production" --ref main -f skip_build=true # só Terraform
+```
+
+- Imagem: `Dockerfile` deste diretório (Ruby 4.0.2). O módulo `rails-lke` sobe o pod com
+  args `["web"]`; o `bin/docker-entrypoint` traduz para `./bin/rails server -b 0.0.0.0` e roda
+  `db:prepare` antes.
+- Um pod só (`mugen-arena-web`): Puma em single mode + Action Cable + Solid Queue dentro do Puma
+  (`SOLID_QUEUE_IN_PUMA=true`, gravado pelo módulo). Readiness/liveness em `/up`.
+- Secrets: o módulo grava DB, flags CONEXUS, `JOB_*` e `DATABASE_*_TIMEOUT`; o resto da tabela
+  acima entra por `extra_app_secrets` (ver `deploy/terraform/linode/README.md`).
+
+## Registro nos BFFs CONEXUS
+
+1. **bff-auth — cliente OAuth público do app** (PKCE S256, sem secret), no mesmo molde da task
+   `oauth_clients:multiminer` (ou num console de um pod `platform-auth-web`):
+
+   ```ruby
+   client = OAuthClient.find_or_initialize_by(client_id: "mugen-arena")
+   client.update!(name: "MUGEN Arena", public_client: true, client_secret_digest: nil, active: true,
+                  redirect_uris: [ "br.com.conexus.mugenarena://oauth/callback" ])
+   ```
+
+2. **bff-auth — webhooks `user.*`**: crie o `WebhookEndpoint` desse client apontando para
+   `https://mugen-arena.conexus-systems.com.br/conexus/webhooks`, com o mesmo segredo de `CONEXUS_WEBHOOK_SECRET`:
+
+   ```ruby
+   client.webhook_endpoints.create!(url: "https://<host>/conexus/webhooks", secret: "<CONEXUS_WEBHOOK_SECRET>")
+   ```
+
+3. **Esta API**: `CONEXUS_AUTH_ALLOWED_AUDIENCES=mugen-arena` (o `client_id` acima).
+4. **bff-payment**: não é mais necessário — o jogo é pago na Google Play e o app não abre checkout. Se o
+   cadastro antigo existir, pode ficar (o webhook só mexe em `Player#premium`, que não libera nada).
+   A licença usa o Play Integrity: veja `PLAY_INTEGRITY_*` acima e `mobile/PLAY_LISTING.md`.
+5. **bff-api**: adicione o `client_id` a `CONEXUS_AUTH_ALLOWED_AUDIENCES` e mapeie-o em
+   `CONEXUS_AUTH_AUDIENCE_APPS` (`...,mugen-arena:mugen-arena`, formato `client_id:source_app`).
+   O segredo HMAC aceito para o `source_app` `mugen-arena` vai em `CONEXUS_API_WEBHOOK_SECRET` aqui.
+6. **Admins**: o claim `groups` é por app no bff-auth; dê o grupo `mugen-arena-admin` (ou `admin`)
+   aos moderadores nesse client para liberar `/api/v1/admin/*`.

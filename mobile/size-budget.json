@@ -1,0 +1,8 @@
+{
+  "_comment": "Limites do `npm run size` (MiB). Medido na 0.4.0: export 26,7 / bundle 6,6 / assets 20,0. native_estimate_mb é hipótese de planejamento (Hermes + React Native + Skia + AdMob por ABI), NÃO medida: troque pelo número do APK/AAB do EAS (`npm run size -- --apk <arquivo>`). Ver docs/DEVICE_LAB.md § Tamanho.",
+  "export_total_mb": 32,
+  "js_bundle_mb": 8.5,
+  "assets_mb": 24,
+  "native_estimate_mb": 60,
+  "download_target_mb": 150
+}

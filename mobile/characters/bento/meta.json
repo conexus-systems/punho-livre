@@ -1,0 +1,35 @@
+{
+  "id": "bento",
+  "name": "Bento",
+  "bio": "Sumotori criado na Liberdade, em São Paulo. Enorme, paciente e impossível de empurrar.",
+  "specials": [
+    {
+      "name": "Arremesso Sumô",
+      "cmd": "hcf_p"
+    },
+    {
+      "name": "Cem Tapas",
+      "cmd": "dd_p"
+    },
+    {
+      "name": "Shiko",
+      "cmd": "qcb_k"
+    },
+    {
+      "name": "Investida",
+      "cmd": "qcf_p"
+    }
+  ],
+  "super": {
+    "name": "Yokozuna",
+    "cmd": "super_p"
+  },
+  "super2": {
+    "name": "Abraço do Yokozuna",
+    "cmd": "super2_p"
+  },
+  "quotes": [
+    "O círculo é pequeno. Você saiu dele.",
+    "Arroz, treino e paciência."
+  ]
+}

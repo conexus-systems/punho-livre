@@ -10,6 +10,8 @@
  * pura e determinística dado o `EvalContext`.
  */
 
+import { pow } from "./detmath";
+
 export type Expr =
   | { k: "num"; v: number; float?: boolean }
   | { k: "str"; v: string }
@@ -441,7 +443,7 @@ function binary(e: Extract<Expr, { k: "bin" }>, ctx: EvalContext): Value {
       if (b === 0) return 0;
       return Math.trunc(a) % Math.trunc(b);
     case "**":
-      return a ** b;
+      return pow(a, b);
     case "&":
       return a & b;
     case "|":

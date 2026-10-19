@@ -20,7 +20,8 @@ npm run pack -- /caminho/kfm --id kungfu --upload https://mugen-arena.conexus-sy
   (raw, RLE8, RLE5, LZ5, PNG8/24/32).
 - `--upload` envia ao backend (`POST /api/v1/characters`, token do bff-auth). O pack
   fica `pending`; um admin (grupo `mugen-arena-admin` no bff-auth) aprova pelo app em
-  *Personagens → Revisão*, opcionalmente como **premium**. O autor recebe e-mail (bff-api).
+  *Personagens → Revisão*. O autor recebe e-mail (bff-api). (A marca **premium** é legado: com o jogo pago,
+  todo personagem aprovado é livre para todos e o servidor não bloqueia o download.)
 - Aprovado, aparece em *Personagens* para todos baixarem; o app confere o sha256 e
   valida o pack na engine antes de instalar. No online, o oponente baixa automaticamente
   o personagem que você escolheu.
@@ -45,6 +46,13 @@ gerado como em qualquer personagem MUGEN.
 Especiais disponíveis: `projectile`, `rising`, `spin`, `dash`, `teleport`, `slam`,
 `cartwheel`, `divekick`. Supers: `rush`, `beam`.
 
+## 3. Arte de produção, hitbox e frame data
+
+Para sprites feitos fora do gerador (3D pré-renderizado ou pixel art), use o importador
+(`npm run import-sprites -- <pasta>`, entrada `manifest.json` + PNGs) e o editor de hitbox
+(`npm run editor`). A frame data do elenco é medida na engine por `npm run framedata` e fica em
+[framedata/](framedata/). Tudo descrito em [SPRITE_PIPELINE.md](SPRITE_PIPELINE.md).
+
 ## Compatibilidade da engine
 
 Suportado:
@@ -63,11 +71,25 @@ Suportado:
   InGuardDist, NumProj(ID), SelfAnimExist, IfElse/Cond, funções matemáticas, redirecionamento
   `p2,` / `enemy,`, intervalos `[a, b]`, divisão inteira estilo MUGEN.
 - Comandos `.cmd`: `~` (com tempo), `/`, `$`, `>`, `+`, `time`, `buffer.time`, `[Defaults]`.
+  Diferenças de propósito (ver docs/GAME_FEEL.md): especiais e supers valem por pelo menos 5 quadros
+  (buffer que não envelhece no hitstop/superpause) e, no `[Statedef -1]`, os ChangeState de super são
+  testados antes dos de especial, e estes antes dos de normal.
+- HitDef sem `pausetime` ganha hitstop pelo nível do golpe (arremessos `?T` continuam 0); sem
+  `guard.pausetime`, a defesa congela 60% do acerto; contra-ataque e K.O. congelam mais. `pausetime`
+  e `guard.pausetime` explícitos são respeitados.
 - Movimentos internos do MUGEN: andar, agachar, pular, defesa automática segurando para trás.
 - Estados comuns (`common1`) próprios da engine: parado, agachar, andar, pulo, pouso,
   corrida, recuo, defesa, apanhar (em pé/agachado/ar), queda, quique, deitado, levantar,
   vitória/derrota/intro.
+- Sistema SNK (0.2.0) para qualquer personagem, inclusive importado: estados 6000–6070 do `common1`
+  (rolamento 6000/6001, blowback 6010/6015, guard cancel 6020, arremesso 6030/6040/6050, guard crush
+  6060, MAX 6070). Um personagem pode sobrescrever qualquer um. Sem as animações 6000+, a engine usa
+  substitutas (agachado para o rolamento, 240/250 para o blowback, 640/630 no ar, 800 para o arremesso).
+  A entrada vem de `src/engine/snk.ts`: A = x, B = a, C = z, D = c.
 
-Ainda não suportado: Helper, Explod visível, sons `.snd`, arremessos (`p2stateno`,
-TargetState, TargetBind), juggle points, AssertSpecial com efeito, cenários/screenpacks
+Suportado desde a 0.4.0: Helper (com DestroySelf, BindToParent, ParentVar*), Explod (Remove/Modify), PlaySnd e
+sons do `.snd` (convertidos pelo `npm run pack`), arremessos com `p2stateno`/estados personalizados, ChangeAnim2,
+SelfState e Target* (State, Bind, LifeAdd, Facing, VelSet/Add, PowerAdd, Drop).
+
+Ainda não suportado: juggle points, AfterImage, PalFX, EnvShake, AssertSpecial com efeito, cenários/screenpacks
 do MUGEN, paletas além da escolhida no pack.

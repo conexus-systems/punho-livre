@@ -7,18 +7,19 @@
 // Saída: mobile/characters/<id>/ — arquivos versionados no repositório. Depois
 // rode `npm run characters` para atualizar src/characters/builtin.generated.ts.
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { ROSTER } from "./characters.mjs";
 import { POSES } from "./poses.mjs";
+import { encodeWebP, initPainter, paintFighter, paintProjectile } from "./paint.mjs";
 import { packAtlas } from "./raster.mjs";
-import { boxes, projectileShapes, proportions, renderShapes, shapes, solve } from "./rig.mjs";
+import { boxes, proportions, solve } from "./rig.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.resolve(here, "../../characters");
-const SCALE = 2; // pixels por unidade do MUGEN
+const SCALE = 2.6; // pixels por unidade do MUGEN
 const H_ = true; // marca frame ativo (Clsn1)
 
 // --------------------------------------------------------- animações
@@ -28,7 +29,8 @@ const F = (frames, loopStart = 0) => ({ frames, loopStart });
 function commonAnims() {
   const walk = ["walk1", "walk2", "walk3", "walk4", "walk5", "walk6"].map((p) => [p, 5]);
   return {
-    0: F([["stand1", 10], ["stand2", 10], ["stand3", 10], ["stand2", 10]]),
+    // respiração com quadros intermediários (pose "a~b" = meio caminho)
+    0: F([["stand1", 5], ["stand1~stand2", 5], ["stand2", 5], ["stand2~stand3", 5], ["stand3", 5], ["stand3~stand2", 5], ["stand2", 5], ["stand2~stand1", 5]]),
     5: F([["turn", 3]]),
     6: F([["crouch1", 3]]),
     10: F([["crouchDown", 3]]),
@@ -73,6 +75,16 @@ function commonAnims() {
     5100: F([["bounce", -1]]),
     5110: F([["lie", -1]]),
     5120: F([["getUp1", 8], ["getUp2", 8], ["stand1", 4]]),
+    // sistema SNK (estados 6000+ do common1 da engine)
+    6000: F([["crouchDown", 2], ["roll1", 4], ["roll2", 4], ["roll3", 4], ["roll4", 4], ["roll1", 3], ["crouchDown", 3]]),
+    6001: F([["crouchDown", 2], ["roll4", 4], ["roll3", 4], ["roll2", 4], ["roll1", 4], ["roll4", 3], ["crouchDown", 3]]),
+    6010: F([["blowWind", 9], ["blow", 6, H_], ["blow", 8], ["roundWind", 8]]),
+    6015: F([["jumpUp", 4], ["airBlow", 10, H_], ["airBlow", -1]]),
+    6030: F([["grab", 12], ["toss", 14], ["stand3", 10]]),
+    6040: F([["hitHard", -1]]),
+    6050: F([["guardHit", 10], ["stand3", 8]]),
+    6060: F([["dizzy1", 10], ["dizzy2", 10]]),
+    6070: F([["maxPose", 12], ["superPose", 18]]),
   };
 }
 
@@ -105,7 +117,8 @@ function hitDef(stateNo, label, trigger, o) {
     `attr = ${o.attr ?? "S, NA"}`,
     `animtype = ${o.at ?? "Light"}`,
     `damage = ${o.dmg[0]}, ${o.dmg[1] ?? 0}`,
-    `guardflag = ${o.guard ?? "MA"}`,
+    // sem guardflag = imbloqueável (agarrões)
+    ...(o.guard === "" ? [] : [`guardflag = ${o.guard ?? "MA"}`]),
     `hitflag = ${o.hitflag ?? "MAF"}`,
     `pausetime = ${o.pause?.[0] ?? 8}, ${o.pause?.[1] ?? 8}`,
     `ground.type = ${o.trip ? "Trip" : o.gtype ?? "High"}`,
@@ -368,6 +381,164 @@ const SPECIALS = {
   },
 };
 
+// especiais adicionados na versão "tunada"
+Object.assign(SPECIALS, {
+  /** Agarrão de comando: imbloqueável, só de perto, derruba. */
+  grab(sp, base) {
+    const anims = {
+      [base]: F([["grabWind", 4], ["grabReach", 5, H_], ["grabReach", 14], ["stand3", 4]]),
+      [base + 1]: F([["grab", 6], ["toss", 10], ["slam", 10], ["crouch1", 8]]),
+    };
+    const states = [
+      statedef(base, { anim: base, ctrl: 0, velset: [0, 0], poweradd: 40 }),
+      ctrl(base, "avanca", "VelSet", ["AnimElem = 2"], { x: 2 }),
+      ctrl(base, "freia", "VelSet", ["AnimElem = 3"], { x: 0 }),
+      hitDef(base, "agarra", "AnimElem = 2", {
+        attr: "S, ST",
+        at: "Hard",
+        dmg: [sp.damage, 0],
+        guard: "",
+        hitflag: "M-",
+        pause: [10, 14],
+        gvel: -5,
+        gvely: -7,
+        avel: [-4, -6],
+        fall: 1,
+        hittime: 26,
+        p1stateno: base + 1,
+      }),
+      ctrl(base, "fim", "ChangeState", ["AnimTime = 0"], { value: 0, ctrl: 1 }),
+      statedef(base + 1, { anim: base + 1, ctrl: 0, velset: [0, 0] }),
+      ctrl(base + 1, "fim", "ChangeState", ["AnimTime = 0"], { value: 0, ctrl: 1 }),
+    ].join("\n\n");
+    return { anims, states };
+  },
+
+  /** Postura de contra-golpe: invencível; se o oponente atacar perto, revida. */
+  counter(sp, base) {
+    const anims = {
+      [base]: F([["counterStance", 26]]),
+      [base + 1]: F([["palmWind", 3], ["dashPunch", 6, H_], ["stand3", 12]]),
+    };
+    const states = [
+      statedef(base, { type: "S", movetype: "I", anim: base, ctrl: 0, velset: [0, 0], poweradd: 20 }),
+      ctrl(base, "invencivel", "NotHitBy", ["Time < 22"], { value: "SCA", time: 1 }),
+      ctrl(base, "revida", "ChangeState", ["Time >= 2 && Time < 22 && P2MoveType = A && P2BodyDist X < 60"], { value: base + 1 }),
+      ctrl(base, "fim", "ChangeState", ["AnimTime = 0"], { value: 0, ctrl: 1 }),
+      statedef(base + 1, { anim: base + 1, ctrl: 0, velset: [0, 0], poweradd: 60 }),
+      ctrl(base + 1, "avanca", "PosAdd", ["Time = 0"], { x: 8 }),
+      ctrl(base + 1, "invencivel", "NotHitBy", ["Time < 10"], { value: "SCA", time: 1 }),
+      hitDef(base + 1, "golpe", "AnimElem = 2", { attr: "S, SA", at: "Hard", dmg: [sp.damage, 0], guard: "", pause: [14, 16], gvel: -6, gvely: -6, avel: [-5, -6], fall: 1, hittime: 24 }),
+      ctrl(base + 1, "fim", "ChangeState", ["AnimTime = 0"], { value: 0, ctrl: 1 }),
+    ].join("\n\n");
+    return { anims, states };
+  },
+
+  /** Projétil lançado do ar, na diagonal para baixo. */
+  airProjectile(sp, base, ch) {
+    const flight = base + 50;
+    const burst = base + 60;
+    const anims = {
+      [base]: F([["airThrowWind", 5], ["airThrow", 14], ["jumpDown", -1]]),
+      [flight]: F([[`proj:${sp.proj}:0`, 3], [`proj:${sp.proj}:1`, 3]]),
+      [burst]: F([0, 1, 2, 3].map((i) => [`proj:burst:${i}`, 3])),
+    };
+    const states = [
+      statedef(base, { type: "A", physics: "N", anim: base, ctrl: 0, poweradd: 35 }),
+      ctrl(base, "paira", "VelSet", ["Time = 0"], { x: 0.5, y: -1.5 }),
+      ctrl(base, "cai", "VelAdd", ["Time > 0"], { y: 0.3 }),
+      [
+        `[State ${base}, projetil]`,
+        "type = Projectile",
+        "trigger1 = AnimElem = 2",
+        `projid = ${base}`,
+        `projanim = ${flight}`,
+        `projhitanim = ${burst}`,
+        `velocity = ${(sp.speed * 0.8).toFixed(1)}, ${(sp.speed * 0.6).toFixed(1)}`,
+        `offset = ${Math.round(ch.H * 0.35)}, ${-Math.round(ch.H * 0.5)}`,
+        "attr = A, SP",
+        `damage = ${sp.damage}, ${Math.round(sp.damage / 6)}`,
+        "animtype = Medium",
+        "guardflag = HA",
+        "hitflag = MAF",
+        "pausetime = 0, 12",
+        "ground.hittime = 16",
+        "ground.velocity = -4",
+        "air.velocity = -3, -4",
+      ].join("\n"),
+      ctrl(base, "pousa", "ChangeState", ["Pos Y >= 0 && Vel Y > 0"], { value: 52 }),
+    ].join("\n\n");
+    return { anims, states, triggerAll: [`NumProjID(${base}) = 0`] };
+  },
+
+  /** Salta e cai como um martelo; a queda solta uma onda de choque rasteira. */
+  groundPound(sp, base, ch) {
+    const flight = base + 50;
+    const burst = base + 60;
+    const anims = {
+      [base]: F([["jumpStart", 4], ["jumpUp", 10], ["airHammer", -1, H_]]),
+      [base + 1]: F([["slam", 10], ["crouch1", 10]]),
+      [flight]: F([["proj:wave:0", 3], ["proj:wave:1", 3]]),
+      [burst]: F([0, 1, 2, 3].map((i) => [`proj:burst:${i}`, 3])),
+    };
+    const states = [
+      statedef(base, { type: "A", physics: "N", anim: base, ctrl: 0, poweradd: 45 }),
+      ctrl(base, "sobe", "VelSet", ["Time = 4"], { x: 2.2, y: -7 }),
+      ctrl(base, "gravidade", "VelAdd", ["Time > 4"], { y: 0.55 }),
+      hitDef(base, "corpo", "AnimElem = 3", { attr: "A, SA", at: "Hard", dmg: [Math.round(sp.damage * 0.6), 6], guard: "HA", pause: [10, 12], gvel: -4, gvely: -5, avel: [-3, -5], fall: 1, hittime: 20 }),
+      ctrl(base, "pousa", "ChangeState", ["Time > 6 && Pos Y >= 0 && Vel Y > 0"], { value: base + 1 }),
+      statedef(base + 1, { type: "S", physics: "S", anim: base + 1, ctrl: 0, velset: [0, 0] }),
+      ctrl(base + 1, "chao", "PosSet", ["Time = 0"], { y: 0 }),
+      [
+        `[State ${base + 1}, onda]`,
+        "type = Projectile",
+        "trigger1 = Time = 0",
+        `projid = ${base}`,
+        `projanim = ${flight}`,
+        `projhitanim = ${burst}`,
+        "projremovetime = 40",
+        `velocity = ${sp.speed ?? 4.5}, 0`,
+        `offset = ${Math.round(ch.H * 0.3)}, 0`,
+        "attr = S, SP",
+        `damage = ${sp.damage}, 6`,
+        "animtype = Medium",
+        "guardflag = L",
+        "hitflag = MA",
+        "pausetime = 0, 12",
+        "ground.type = Trip",
+        "ground.hittime = 18",
+        "ground.velocity = -3",
+        "fall = 1",
+      ].join("\n"),
+      ctrl(base + 1, "fim", "ChangeState", ["AnimTime = 0"], { value: 0, ctrl: 1 }),
+    ].join("\n\n");
+    return { anims, states, triggerAll: [`NumProjID(${base}) = 0`] };
+  },
+
+  /** Rajada de golpes no lugar (mãos ou pés). */
+  flurry(sp, base) {
+    const hits = sp.hits ?? 5;
+    const a = sp.kicks ? "shortKick" : "jab";
+    const b = sp.kicks ? "midKick" : "straight";
+    const frames = [[sp.kicks ? "shortKickWind" : "jabWind", 4]];
+    for (let i = 0; i < hits; i++) frames.push([i % 2 ? b : a, 3, H_]);
+    frames.push([sp.kicks ? "midKickWind" : "straightWind", 10]);
+    const anims = { [base]: F(frames) };
+    const states = [
+      statedef(base, { anim: base, ctrl: 0, velset: [0, 0], poweradd: 45 }),
+      ctrl(base, "avanca", "VelSet", [`AnimElemTime(2) >= 0 && AnimElemTime(${hits + 2}) < 0`], { x: 0.8 }),
+      hitDef(
+        base,
+        "rajada",
+        Array.from({ length: hits }, (_, i) => `AnimElem = ${i + 2}`),
+        { attr: "S, SA", at: "Medium", dmg: [sp.damage, 3], pause: [3, 6], gvel: -1.6, hittime: 14, avel: [-2, -3], airfall: 0 },
+      ),
+      ctrl(base, "fim", "ChangeState", ["AnimTime = 0"], { value: 0, ctrl: 1 }),
+    ].join("\n\n");
+    return { anims, states };
+  },
+});
+
 const SUPERS = {
   rush(sp, base, ch) {
     const kicks = sp.kicks === true;
@@ -381,8 +552,8 @@ const SUPERS = {
     const per = Math.round(sp.damage * 0.12);
     const states = [
       statedef(base, { anim: base, ctrl: 0, velset: [0, 0] }),
-      ctrl(base, "custo", "PowerAdd", ["Time = 0"], { value: -1000 }),
-      ctrl(base, "pausa", "SuperPause", ["Time = 0"], { time: 30 }),
+      ctrl(base, "custo", "PowerAdd", ["Time = 0"], { value: -(sp.cost ?? 1000) }),
+      ctrl(base, "pausa", "SuperPause", ["Time = 0"], { time: sp.cost >= 2000 ? 45 : 30 }),
       ctrl(base, "invencivel", "NotHitBy", ["Time = 0"], { value: "SCA", time: 20 }),
       ctrl(base, "avanca", "VelSet", [`AnimElemTime(2) >= 0 && AnimElemTime(${seq.length + 1}) < 0`], { x: 3.6 }),
       hitDef(
@@ -419,8 +590,8 @@ const SUPERS = {
     };
     const states = [
       statedef(base, { anim: base, ctrl: 0, velset: [0, 0] }),
-      ctrl(base, "custo", "PowerAdd", ["Time = 0"], { value: -1000 }),
-      ctrl(base, "pausa", "SuperPause", ["Time = 0"], { time: 30 }),
+      ctrl(base, "custo", "PowerAdd", ["Time = 0"], { value: -(sp.cost ?? 1000) }),
+      ctrl(base, "pausa", "SuperPause", ["Time = 0"], { time: sp.cost >= 2000 ? 45 : 30 }),
       ctrl(base, "invencivel", "NotHitBy", ["Time = 0"], { value: "SCA", time: 25 }),
       [
         `[State ${base}, raio]`,
@@ -449,6 +620,20 @@ const SUPERS = {
   },
 };
 
+/** Super de agarrão: o agarrão de comando com pausa de super, mais dano e invencibilidade. */
+SUPERS.grab = (sp, base, ch) => {
+  const r = SPECIALS.grab({ ...sp }, base, ch);
+  const extra = [
+    ctrl(base, "custo", "PowerAdd", ["Time = 0"], { value: -(sp.cost ?? 1000) }),
+    ctrl(base, "pausa", "SuperPause", ["Time = 0"], { time: sp.cost >= 2000 ? 45 : 30 }),
+    ctrl(base, "invencivel", "NotHitBy", ["Time = 0"], { value: "SCA", time: 12 }),
+  ].join("\n\n");
+  // o custo e a pausa entram logo depois do cabeçalho do primeiro Statedef
+  const first = r.states.indexOf("\n\n");
+  const states = `${r.states.slice(0, first)}\n\n${extra}${r.states.slice(first)}`.replace("attr = S, ST", "attr = S, HT");
+  return { anims: r.anims, states };
+};
+
 // ------------------------------------------------------------ comandos
 
 const CMD_SEQ = {
@@ -462,9 +647,22 @@ const CMD_SEQ = {
   dp_k: ["~F, D, DF, a", "~F, D, DF, b", "~F, D, DF, c"],
   dd_p: ["~D, D, x", "~D, D, y", "~D, D, z"],
   dd_k: ["~D, D, a", "~D, D, b", "~D, D, c"],
+  // supers de 2 estoques: duas meias-luas para trás
+  super2_p: ["~D, DB, B, D, DB, B, x", "~D, DB, B, D, DB, B, y", "~D, DB, B, D, DB, B, z"],
+  super2_k: ["~D, DB, B, D, DB, B, a", "~D, DB, B, D, DB, B, b", "~D, DB, B, D, DB, B, c"],
+  // meia-volta para a frente (agarrões)
+  hcf_p: ["~B, DB, D, DF, F, x", "~B, DB, D, DF, F, y", "~B, DB, D, DF, F, z"],
+  hcf_k: ["~B, DB, D, DF, F, a", "~B, DB, D, DF, F, b", "~B, DB, D, DF, F, c"],
+  // golpes de carga (segurar trás/baixo)
+  chg_bf_p: ["~30$B, F, x", "~30$B, F, y", "~30$B, F, z"],
+  chg_bf_k: ["~30$B, F, a", "~30$B, F, b", "~30$B, F, c"],
+  chg_du_k: ["~30$D, U, a", "~30$D, U, b", "~30$D, U, c"],
+  chg_du_p: ["~30$D, U, x", "~30$D, U, y", "~30$D, U, z"],
 };
 
-function cmdFile(ch, specials, superDef) {
+const AIR_KINDS = new Set(["divekick", "airProjectile"]);
+
+function cmdFile(ch, specials, superDef, super2) {
   const out = [
     `; ${ch.name} — comandos (formato MUGEN .cmd)`,
     "; Gerado por scripts/roster/generate.mjs",
@@ -484,10 +682,10 @@ function cmdFile(ch, specials, superDef) {
     "",
   ];
   const cmd = (name, command, time = 15) => out.push("[Command]", `name = "${name}"`, `command = ${command}`, `time = ${time}`, "");
-  const used = new Set([superDef.cmd, ...specials.map((s) => s.cmd)]);
-  for (const name of used) for (const c of CMD_SEQ[name]) cmd(name, c, name.startsWith("super") ? 35 : 15);
-  cmd("FF", "F, F", 10);
-  cmd("BB", "B, B", 10);
+  const used = new Set([...(super2 ? [super2.cmd] : []), superDef.cmd, ...specials.map((s) => s.cmd)]);
+  for (const name of used) for (const c of CMD_SEQ[name]) cmd(name, c, name.startsWith("super") ? 35 : name.startsWith("chg") ? 12 : 15);
+  cmd("FF", "F, >F", 10);
+  cmd("BB", "B, >B", 10);
   for (const b of ["x", "y", "z", "a", "b", "c", "s"]) cmd(b, b, 1);
   cmd("holdfwd", "/$F", 1);
   cmd("holdback", "/$B", 1);
@@ -502,10 +700,15 @@ function cmdFile(ch, specials, superDef) {
     out.push("");
   };
 
+  if (super2) entry(super2.name, 3100, [`command = "${super2.cmd}"`, "power >= 2000", "statetype != A"], ["ctrl", "stateno = [200, 2999] && movecontact"]);
   entry(superDef.name, 3000, [`command = "${superDef.cmd}"`, "power >= 1000", "statetype != A"], ["ctrl", "stateno = [200, 2999] && movecontact"]);
-  specials.forEach((sp, i) => {
+  // movimento mais longo primeiro: a meia-volta (hcf) também completa a meia-lua (qcf) e, na ordem do
+  // .cmd, a primeira entrada que casa vence
+  const motion = (sp) => CMD_SEQ[sp.cmd][0].split(",").length;
+  const ordered = specials.map((sp, i) => ({ sp, i })).sort((a, b) => motion(b.sp) - motion(a.sp) || a.i - b.i);
+  ordered.forEach(({ sp, i }) => {
     const base = 1000 + i * 100;
-    const air = sp.kind === "divekick";
+    const air = AIR_KINDS.has(sp.kind);
     entry(sp.name, base, [`command = "${sp.cmd}"`, air ? "statetype = A" : "statetype != A", ...(sp.triggerAll ?? [])], air ? ["ctrl"] : ["ctrl", "stateno = [200, 499] && movecontact"]);
   });
   entry("Corrida", 100, ['command = "FF"', "statetype = S"], ["ctrl"]);
@@ -610,7 +813,8 @@ function airFile(ch, anims, spriteOf, P, solved) {
       if (pose.startsWith("proj:")) {
         const [, kind] = pose.split(":");
         const r = Math.round(ch.H * (kind === "beam" ? 0.12 : 0.11));
-        const box = kind === "beam" ? [0, -r, Math.round(r * 7), r] : kind === "wave" ? [-r, -r * 3, r, 0] : [-r, -r, r, r];
+        const box =
+          kind === "beam" ? [0, -r, Math.round(r * 7), r] : kind === "wave" ? [-r, -r * 3, r, 0] : kind === "slash" ? [-r, -r * 2, Math.round(r * 1.5), r * 2] : [-r, -r, r, r];
         if (kind !== "burst") out.push("Clsn1: 1", ` Clsn1[0] = ${fmt(box)}`);
         const [g, n] = spriteOf(pose);
         out.push(`${g}, ${n}, 0, 0, ${time}`);
@@ -621,7 +825,7 @@ function airFile(ch, anims, spriteOf, P, solved) {
         return;
       }
       const S = solved(pose);
-      const { clsn1, clsn2 } = boxes(P, S);
+      const { clsn1, clsn2 } = boxes(P, S, ch.look);
       out.push(`Clsn2: ${clsn2.length}`);
       clsn2.forEach((b, j) => out.push(` Clsn2[${j}] = ${fmt(b)}`));
       if (active && clsn1.length) {
@@ -634,6 +838,79 @@ function airFile(ch, anims, spriteOf, P, solved) {
     out.push("");
   }
   return out.join("\n");
+}
+
+/** Pose no meio do caminho entre duas (ângulos e deslocamentos interpolados). */
+function blend(a, b) {
+  if (!a || !b) return undefined;
+  const out = { ...a };
+  for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    const x = a[k];
+    const y = b[k];
+    if (typeof x === "number" && typeof y === "number") out[k] = (x + y) / 2;
+    else if (Array.isArray(x) && Array.isArray(y)) out[k] = x.map((v, i) => (v + y[i]) / 2);
+    else if (x === undefined) out[k] = y;
+  }
+  return out;
+}
+
+// ------------------------------------------------- quadros intermediários
+
+const plainPose = (p) => typeof p === "string" && !p.startsWith("proj:") && p !== "__empty__" && !p.includes("~");
+
+/** Pose de descanso para onde o fim do golpe volta (o estado seguinte). */
+function restPose(id) {
+  if (id >= 200 && id < 300) return "stand1";
+  if (id >= 400 && id < 500) return "crouch1";
+  return null;
+}
+
+/**
+ * Divide os quadros longos (≥ 4 ticks, sem acerto) dos golpes em dois: a pose
+ * e o meio do caminho até a próxima. O tempo total e o início de cada quadro
+ * original não mudam; devolve, por animação, o novo número (1-based) de cada
+ * elemento antigo, para renumerar AnimElem/AnimElemTime nos estados.
+ */
+function tweenAnims(anims) {
+  const maps = {};
+  for (const key of Object.keys(anims)) {
+    const id = Number(key);
+    const tweenable = (id >= 190 && id < 200) || (id >= 200 && id < 700) || (id >= 1000 && id < 5000) || id === 5120 || (id >= 6000 && id < 7000);
+    if (!tweenable) continue;
+    const { frames, loopStart } = anims[key];
+    const out = [];
+    const map = [];
+    frames.forEach((f, i) => {
+      map.push(out.length + 1);
+      const [pose, time, active] = f;
+      let next = frames[i + 1]?.[0];
+      if (next === undefined) next = loopStart > 0 ? frames[loopStart][0] : restPose(id);
+      if (!active && time >= 4 && plainPose(pose) && plainPose(next) && next !== pose) {
+        const a = Math.ceil(time / 2);
+        out.push([pose, a], [`${pose}~${next}`, time - a]);
+      } else {
+        out.push(f);
+      }
+    });
+    if (out.length === frames.length) continue;
+    anims[key] = { frames: out, loopStart: loopStart > 0 ? map[loopStart] - 1 : 0 };
+    maps[id] = map;
+  }
+  return maps;
+}
+
+/** Ajusta AnimElem = n e AnimElemTime(n) de cada Statedef à animação dele. */
+function renumberElems(text, maps) {
+  return text
+    .split(/(?=\[Statedef )/)
+    .map((block) => {
+      const anim = /\nanim = (\d+)/.exec(block);
+      const map = anim ? maps[Number(anim[1])] : null;
+      if (!map) return block;
+      const to = (n) => map[Number(n) - 1] ?? n;
+      return block.replace(/AnimElem = (\d+)/g, (_, n) => `AnimElem = ${to(n)}`).replace(/AnimElemTime\((\d+)\)/g, (_, n) => `AnimElemTime(${to(n)})`);
+    })
+    .join("");
 }
 
 function generate(ch) {
@@ -654,8 +931,17 @@ function generate(ch) {
     return { ...sp, triggerAll: r.triggerAll };
   });
   const sup = SUPERS[ch.super.kind](ch.super, 3000, ch);
+  if (ch.super2) {
+    const sup2 = SUPERS[ch.super2.kind]({ cost: 2000, ...ch.super2 }, 3100, ch);
+    Object.assign(anims, sup2.anims);
+    stateTexts.push(sup2.states);
+  }
   Object.assign(anims, sup.anims);
   stateTexts.push(sup.states);
+
+  // quadros intermediários nos golpes; renumera AnimElem nos estados
+  const elemMaps = tweenAnims(anims);
+  const cnsText = renumberElems(stateTexts.join("\n\n"), elemMaps);
 
   // sprites: um por pose/efeito usado
   const spriteKeys = [];
@@ -671,7 +957,7 @@ function generate(ch) {
   const cache = new Map();
   const solved = (name) => {
     if (!cache.has(name)) {
-      const pose = poses[name];
+      const pose = name.includes("~") ? blend(...name.split("~").map((n) => poses[n])) : poses[name];
       if (!pose) throw new Error(`${ch.id}: pose desconhecida "${name}"`);
       cache.set(name, solve(P, pose));
     }
@@ -680,15 +966,14 @@ function generate(ch) {
 
   const air = airFile(ch, anims, spriteOf, P, solved);
   const items = spriteKeys.map((key) => {
-    let list;
+    let r;
     if (key.startsWith("proj:")) {
       const [, kind, frame] = key.split(":");
-      list = projectileShapes(kind, ch.look, ch.H, Number(frame));
+      r = paintProjectile(kind, ch.look, ch.H, Number(frame), SCALE);
     } else {
-      list = shapes(P, solved(key), ch.look);
+      r = paintFighter(P, solved(key), ch.look, SCALE);
     }
-    const { canvas, axisX, axisY } = renderShapes(list, SCALE);
-    return { key, canvas, axisX, axisY };
+    return { key, canvas: r.canvas, axisX: r.axisX, axisY: r.axisY };
   });
   const { pages, places } = packAtlas(items, 2048);
   const frames = {};
@@ -701,10 +986,11 @@ function generate(ch) {
   const dir = path.join(OUT, ch.id);
   mkdirSync(dir, { recursive: true });
   writeFileSync(path.join(dir, `${ch.id}.def`), defFile(ch));
-  writeFileSync(path.join(dir, `${ch.id}.cns`), `${cnsHeader(ch)}\n${stateTexts.join("\n\n")}\n`);
-  writeFileSync(path.join(dir, `${ch.id}.cmd`), cmdFile(ch, specials, ch.super));
+  writeFileSync(path.join(dir, `${ch.id}.cns`), `${cnsHeader(ch)}\n${cnsText}\n`);
+  writeFileSync(path.join(dir, `${ch.id}.cmd`), cmdFile(ch, specials, ch.super, ch.super2));
   writeFileSync(path.join(dir, `${ch.id}.air`), air);
-  pages.forEach((pg, i) => writeFileSync(path.join(dir, `sprites${i}.png`), pg.toPNG()));
+  for (const f of readdirSync(dir)) if (/^sprites\d+\.(png|webp)$/.test(f)) rmSync(path.join(dir, f));
+  pages.forEach((pg, i) => writeFileSync(path.join(dir, `sprites${i}.webp`), encodeWebP(pg)));
   writeFileSync(
     path.join(dir, "sprites.json"),
     `${JSON.stringify({ scale: SCALE, pages: pages.length, frames }, null, 0)}\n`,
@@ -718,6 +1004,8 @@ function generate(ch) {
         bio: ch.bio,
         specials: ch.specials.map((s) => ({ name: s.name, cmd: s.cmd })),
         super: { name: ch.super.name, cmd: ch.super.cmd },
+        ...(ch.super2 ? { super2: { name: ch.super2.name, cmd: ch.super2.cmd } } : {}),
+        quotes: ch.quotes ?? [],
       },
       null,
       2,
@@ -726,6 +1014,7 @@ function generate(ch) {
   return { id: ch.id, sprites: items.length, pages: pages.length };
 }
 
+await initPainter();
 const only = process.argv.slice(2);
 for (const ch of ROSTER) {
   if (only.length && !only.includes(ch.id)) continue;

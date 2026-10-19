@@ -80,6 +80,8 @@ export interface CommandDef {
   elements: CommandElement[];
   time: number;
   bufferTime: number;
+  /** Prioridade (CommandTier): 0 normal, 1 especial, 2 super. Ausente = 0. */
+  tier?: number;
 }
 
 // --------------------------------------------------------------- estados
@@ -99,6 +101,8 @@ export interface Controller {
   ignoreHitPause: boolean;
   /** Índice único dentro do estado, usado para `persistent`. */
   index: number;
+  /** Chave "estado:índice" em `FighterState.fired` (montada uma vez, no primeiro uso). */
+  firedKey?: string;
 }
 
 export interface StateDef {
@@ -150,6 +154,8 @@ export interface CharacterData {
   sprites: SpriteSheet | null;
   /** Controladores não suportados encontrados ao carregar (para diagnóstico). */
   unsupported: string[];
+  /** Sons do personagem ("grupo,índice" → URL/data URI do WAV), se o pack trouxer. */
+  sounds: Record<string, string> | null;
 }
 
 // ------------------------------------------------------------ estado vivo
@@ -216,6 +222,15 @@ export interface HitDefState {
   guardKill: boolean;
   /** Intensidade visual do impacto 0..2 (light/medium/hard). */
   sparkLevel: number;
+  /** Nível do golpe (HitLevel): 0 fraco, 1 médio, 2 forte, 3 especial, 4 super. */
+  hitLevel: number;
+  /** Estado personalizado do oponente ao acertar (arremessos MUGEN); -1 nenhum. */
+  p2StateNo: number;
+  /** 1 = oponente vira para o atacante, -1 = de costas, 0 = não muda. */
+  p2Facing: number;
+  /** Sons do acerto e da defesa: [grupo, índice, comum?]. */
+  hitSound: [number, number, boolean] | null;
+  guardSound: [number, number, boolean] | null;
 }
 
 export interface FighterState {
@@ -269,6 +284,63 @@ export interface FighterState {
   roundsWon: number;
   attackMul: number;
   defenceMul: number;
+  // ---- sistema SNK (ver snk.ts)
+  /** Ticks restantes do modo MAX (0 = desligado). */
+  maxTime: number;
+  /** Duração total do MAX atual (para a barra do HUD). */
+  maxTotal: number;
+  /** Medidor de defesa: chega a 0 → guard crush. */
+  guardMeter: number;
+  /** Ticks até o medidor de defesa voltar a encher. */
+  guardRegenDelay: number;
+  /** Arremesso em andamento: 1 para frente, -1 para trás (0 = nenhum). */
+  throwDir: number;
+  // ---- compatibilidade MUGEN (estados personalizados, alvo, helpers)
+  /** Em estado personalizado (p2stateno/TargetState): lado dono dos estados; -1 = os próprios. */
+  customOwner: number;
+  /** Animações de outro personagem (ChangeAnim2 em estado personalizado): lado; -1 = as próprias. */
+  animOwner: number;
+  /** Este lutador tem o oponente como alvo (acertou com o golpe atual). */
+  hasTarget: boolean;
+  /** Preso ao oponente por TargetBind: ticks restantes e deslocamento. */
+  bindTime: number;
+  bindX: number;
+  bindY: number;
+  /** Helper: id do MUGEN e identificador único; null no lutador principal. */
+  helper: { id: number; uid: number } | null;
+}
+
+/** Efeito visual do MUGEN (Explod). Só visual, mas fica no estado por causa de NumExplod. */
+export interface ExplodState {
+  uid: number;
+  id: number;
+  owner: 0 | 1;
+  /** Personagem dono das animações. */
+  charId: string;
+  anim: number;
+  animElem: number;
+  animElemTime: number;
+  animTick: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  ax: number;
+  ay: number;
+  facing: 1 | -1;
+  /** Segue um lutador (lado) por `bindTime` ticks (-1 sempre). */
+  bindTo: number;
+  bindTime: number;
+  offX: number;
+  offY: number;
+  /** -2 até a animação acabar, -1 para sempre, n ticks. */
+  removeTime: number;
+  age: number;
+  onTop: boolean;
+  scaleX: number;
+  scaleY: number;
+  removeOnGetHit: boolean;
+  additive: boolean;
 }
 
 export interface ProjectileState {
@@ -295,13 +367,36 @@ export interface ProjectileState {
   hitTicksLeft: number;
 }
 
+export type GameEventKind =
+  | "hit"
+  | "guard"
+  | "ko"
+  | "round"
+  | "fight"
+  | "super"
+  /** Sistema SNK: textos e efeitos do HUD. */
+  | "counter"
+  | "justdefend"
+  | "guardcrush"
+  | "max"
+  | "guardcancel"
+  | "throw"
+  | "tech"
+  /** PlaySnd: `snd` = [grupo, índice]; `common` = som comum (prefixo F). */
+  | "sound";
+
 export interface GameEvent {
-  kind: "hit" | "guard" | "ko" | "round" | "fight" | "super";
+  kind: GameEventKind;
   x: number;
   y: number;
   side: 0 | 1;
+  /** hit/guard: nível do golpe (HitLevel 0..4); super: 2 ou 3 (turbinado); outros: livre. */
   level: number;
   frame: number;
+  snd?: [number, number];
+  common?: boolean;
+  /** Personagem dono do som. */
+  charId?: string;
 }
 
 /**
@@ -332,6 +427,18 @@ export interface WorldState {
   superPauseOwner: -1 | 0 | 1;
   events: GameEvent[];
   stageId: string;
+  /** Batalha de equipes (KOF): null no 1 contra 1. */
+  teams: [TeamState, TeamState] | null;
+  explods: ExplodState[];
+  helpers: FighterState[];
+  nextUid: number;
+}
+
+export interface TeamState {
+  /** Ids dos personagens, na ordem de entrada. */
+  members: string[];
+  /** Índice de quem está lutando (= quantos já caíram). */
+  index: number;
 }
 
 export interface MatchConfig {
@@ -343,4 +450,10 @@ export interface MatchConfig {
   roundTime: number;
   /** Treino: vida regenera, sem KO. */
   training?: boolean;
+  /**
+   * Batalha de equipes estilo KOF (eliminação): cada lado entra com até 3
+   * lutadores; quem vence fica com a vida que tinha (mais uma recuperação) e
+   * quem perde é substituído pelo próximo. `chars` é ignorado quando presente.
+   */
+  teams?: [string[], string[]];
 }

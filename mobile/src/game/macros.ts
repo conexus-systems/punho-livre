@@ -15,7 +15,9 @@ export function macroFromCommand(cmd: CommandDef): Macro {
   const out: number[] = [];
   cmd.elements.forEach((el, i) => {
     const next = cmd.elements[i + 1];
-    for (let t = 0; t < TICKS_PER_STEP; t++) out.push(el.keys);
+    // carga (~30$B): segura a direção o tempo pedido antes de soltar
+    const hold = el.release && el.releaseTime > 0 ? el.releaseTime + 2 : TICKS_PER_STEP;
+    for (let t = 0; t < hold; t++) out.push(el.keys);
     if (el.release) out.push(0);
     else if (next && (next.keys & el.keys) !== 0 && !next.release) out.push(0);
   });

@@ -1,0 +1,18 @@
+# Plan-only Terraform. Nao dispara em pull_request (minutos).
+# Apply de producao: gh workflow run "Deploy — Production" --ref main
+# (opcional -f skip_build=true). Nunca terraform apply na maquina.
+name: Terraform — plan
+
+on:
+  workflow_call:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    uses: conexus-systems/platform-infra/.github/workflows/terraform-plan.yml@v1
+    secrets: inherit
+    with:
+      terraform_dir: deploy/terraform/linode

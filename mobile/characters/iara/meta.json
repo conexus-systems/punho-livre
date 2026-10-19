@@ -1,0 +1,35 @@
+{
+  "id": "iara",
+  "name": "Iara",
+  "bio": "Guardiã dos rios da Amazônia. Luta com a água como se fosse uma extensão do corpo.",
+  "specials": [
+    {
+      "name": "Onda do Rio",
+      "cmd": "qcf_p"
+    },
+    {
+      "name": "Gota Cortante",
+      "cmd": "qcf_p"
+    },
+    {
+      "name": "Correnteza",
+      "cmd": "dd_k"
+    },
+    {
+      "name": "Redemoinho",
+      "cmd": "dp_p"
+    }
+  ],
+  "super": {
+    "name": "Pororoca",
+    "cmd": "super_p"
+  },
+  "super2": {
+    "name": "Encontro das Águas",
+    "cmd": "super2_p"
+  },
+  "quotes": [
+    "O rio sempre encontra passagem.",
+    "Você lutou contra a correnteza."
+  ]
+}

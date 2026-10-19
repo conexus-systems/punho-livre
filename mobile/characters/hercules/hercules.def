@@ -1,0 +1,24 @@
+; Hércules — Lutador greco-romano de Tessalônica. Agarra, levanta e não solta.
+; Personagem original do MUGEN Arena (CONEXUS). Gerado por scripts/roster/generate.mjs.
+
+[Info]
+name = "Hércules"
+displayname = "Hércules"
+versiondate = 10,18,2026
+mugenversion = 1.0
+author = "CONEXUS Arena"
+localcoord = 320, 240
+
+[Files]
+cmd = hercules.cmd
+cns = hercules.cns
+stcommon = common1.cns ; fornecido pela engine
+anim = hercules.air
+
+; Extensão do MUGEN Arena (ignorada pelo MUGEN): cores do HUD/efeitos
+[Arena]
+body = #7F1D1D
+accent = #FACC15
+skin = #D6A47A
+trim = #111827
+energy = #FACC15

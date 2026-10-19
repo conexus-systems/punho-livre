@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from "react";
 
+import { DEFAULT_CONTROLS, type ControlSettings } from "@/src/game/controlLayout";
+
 /** Store mínima (sem dependências) com seletor para React. */
 export function createStore<T extends object>(initial: T) {
   let state = initial;
@@ -32,6 +34,9 @@ export interface Player {
   losses: number;
   premium: boolean;
   admin: boolean;
+  /** Jogo pago: compra comprovada na Google Play até esta data (só o online exige). */
+  licensed_until?: string | null;
+  license_required?: boolean;
 }
 
 export interface Session {
@@ -47,17 +52,24 @@ export interface Session {
 export interface AppState {
   session: Session | null;
   player: Player | null;
-  /** Entitlement ativo no bff-payment para o produto. */
-  premium: boolean;
-  /** Partidas offline concluídas desde o último interstitial. */
-  matchesSinceAd: number;
-  settings: { assist: boolean; vibration: boolean; difficulty: 1 | 2 | 3; inputDelay: number };
+  settings: {
+    assist: boolean;
+    vibration: boolean;
+    difficulty: 1 | 2 | 3;
+    inputDelay: number;
+    /** Botões da luta: 4 do padrão SNK (A B C D + A+B e C+D) ou os 6 do MUGEN. */
+    buttons: "snk" | "mugen";
+    music: boolean;
+    sfx: boolean;
+    /** Modo simples/clássico, direcional, layout editado e vibração em acertos (docs/CONTROLS.md). */
+    controls: ControlSettings;
+    /** Acessibilidade: sem tremor de tela, zoom de impacto nem flashes fortes na luta. */
+    reduceMotion: boolean;
+  };
 }
 
 export const app = createStore<AppState>({
   session: null,
   player: null,
-  premium: false,
-  matchesSinceAd: 0,
-  settings: { assist: true, vibration: true, difficulty: 2, inputDelay: 2 },
+  settings: { assist: true, vibration: true, difficulty: 2, inputDelay: 2, buttons: "snk", music: true, sfx: true, controls: DEFAULT_CONTROLS, reduceMotion: false },
 });

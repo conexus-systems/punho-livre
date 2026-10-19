@@ -27,3 +27,4 @@ export const TileMode = types.TileMode;
 export const PaintStyle = types.PaintStyle;
 export const BlendMode = types.BlendMode;
 export const matchFont = (style: { fontSize?: number }) => state.Skia.Font(state.typeface, style.fontSize ?? 14);
+export const StrokeCap = types.StrokeCap;

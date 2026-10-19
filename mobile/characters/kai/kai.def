@@ -1,0 +1,24 @@
+; Kai — Faixa-preta de jiu-jitsu e surfista de Floripa. Leva qualquer luta para o chão.
+; Personagem original do MUGEN Arena (CONEXUS). Gerado por scripts/roster/generate.mjs.
+
+[Info]
+name = "Kai"
+displayname = "Kai"
+versiondate = 10,18,2026
+mugenversion = 1.0
+author = "CONEXUS Arena"
+localcoord = 320, 240
+
+[Files]
+cmd = kai.cmd
+cns = kai.cns
+stcommon = common1.cns ; fornecido pela engine
+anim = kai.air
+
+; Extensão do MUGEN Arena (ignorada pelo MUGEN): cores do HUD/efeitos
+[Arena]
+body = #F8FAFC
+accent = #111827
+skin = #C98F62
+trim = #2DD4BF
+energy = #2DD4BF

@@ -1,0 +1,35 @@
+{
+  "id": "icaro",
+  "name": "Ícaro",
+  "bio": "Faixa-preta de taekwondo de Recife. Quase não encosta no chão.",
+  "specials": [
+    {
+      "name": "Chute do Falcão",
+      "cmd": "chg_du_k"
+    },
+    {
+      "name": "Mergulho",
+      "cmd": "qcf_k"
+    },
+    {
+      "name": "Tornado",
+      "cmd": "qcb_k"
+    },
+    {
+      "name": "Voadora",
+      "cmd": "chg_bf_k"
+    }
+  ],
+  "super": {
+    "name": "Asas de Ícaro",
+    "cmd": "super_k"
+  },
+  "super2": {
+    "name": "Queda do Sol",
+    "cmd": "super2_k"
+  },
+  "quotes": [
+    "Lá de cima tudo parece lento.",
+    "Pernas são braços mais compridos."
+  ]
+}

@@ -1,0 +1,74 @@
+# Orçamento de desempenho e tamanho do app (docs/DEVICE_LAB.md).
+#
+# Fica fora do ci-mobile.yml@v1 (platform-infra) porque é específico do jogo:
+#   - `npm run bench`     engine CPU × CPU, frames/s da simulação e do rollback (Node)
+#   - `npm run bench:web` luta fixa de 60 s da versão web num Chromium headless (sem GPU:
+#                         só compara versões na mesma máquina; não é número de aparelho)
+#   - `npm run size`      export Android (bundle Hermes + assets) contra size-budget.json;
+#                         falha o job se estourar
+# Os números saem como artifact `mobile-budget` (JSON). Sem segredos.
+name: Mobile budget
+
+on:
+  pull_request:
+    paths:
+      - "mobile/**"
+      - ".github/workflows/mobile-budget.yml"
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/mobile-budget.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-budget-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  budget:
+    name: Bench e tamanho
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - run: npm ci
+
+      - name: Bench da engine
+        run: BENCH_JSON=out/bench-engine.json npm run bench
+
+      - name: Bench web (Chromium headless, 60 s)
+        run: |
+          npx playwright install --with-deps chromium
+          BENCH_JSON=out/bench-web.json npm run bench:web
+
+      - name: Tamanho (export Android)
+        run: npm run size -- --json out/size.json
+
+      - name: Resumo
+        if: always()
+        run: |
+          {
+            echo "### Orçamento mobile"
+            for f in out/*.json; do echo; echo "\`$f\`"; echo '```json'; cat "$f"; echo '```'; done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-budget
+          path: mobile/out/*.json
+          if-no-files-found: warn

@@ -24,8 +24,8 @@ function linked(latency: (tick: number) => number) {
       const msg = { at: Math.max(last, tick + latency(tick)), from, deliver: () => sessions[from === 0 ? 1 : 0].onRemoteInputs(copy, ack) };
       queue.push(msg);
     },
-    sendChecksum: (frame, value) => {
-      queue.push({ at: tick + latency(tick), deliver: () => sessions[from === 0 ? 1 : 0].onRemoteChecksum(frame, value) });
+    sendChecksum: (frame, value, inputsHash) => {
+      queue.push({ at: tick + latency(tick), deliver: () => sessions[from === 0 ? 1 : 0].onRemoteChecksum(frame, value, inputsHash) });
     },
   });
   sessions.push(new RollbackSession(createWorld(cfg, roster), roster, 0, transport(0), 2, 10));

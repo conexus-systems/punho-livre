@@ -1,0 +1,35 @@
+{
+  "id": "hercules",
+  "name": "Hércules",
+  "bio": "Lutador greco-romano de Tessalônica. Agarra, levanta e não solta.",
+  "specials": [
+    {
+      "name": "Suplex Olímpico",
+      "cmd": "hcf_p"
+    },
+    {
+      "name": "Investida Grega",
+      "cmd": "qcf_p"
+    },
+    {
+      "name": "Terremoto Grego",
+      "cmd": "qcb_k"
+    },
+    {
+      "name": "Muralha",
+      "cmd": "dd_p"
+    }
+  ],
+  "super": {
+    "name": "Doze Trabalhos",
+    "cmd": "super_p"
+  },
+  "super2": {
+    "name": "Fúria do Olimpo",
+    "cmd": "super2_p"
+  },
+  "quotes": [
+    "Doze trabalhos. Você foi o mais fácil.",
+    "Força sem técnica é só peso."
+  ]
+}

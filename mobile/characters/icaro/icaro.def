@@ -1,0 +1,24 @@
+; Ícaro — Faixa-preta de taekwondo de Recife. Quase não encosta no chão.
+; Personagem original do MUGEN Arena (CONEXUS). Gerado por scripts/roster/generate.mjs.
+
+[Info]
+name = "Ícaro"
+displayname = "Ícaro"
+versiondate = 10,18,2026
+mugenversion = 1.0
+author = "CONEXUS Arena"
+localcoord = 320, 240
+
+[Files]
+cmd = icaro.cmd
+cns = icaro.cns
+stcommon = common1.cns ; fornecido pela engine
+anim = icaro.air
+
+; Extensão do MUGEN Arena (ignorada pelo MUGEN): cores do HUD/efeitos
+[Arena]
+body = #F8FAFC
+accent = #111827
+skin = #8D5A3B
+trim = #38BDF8
+energy = #38BDF8

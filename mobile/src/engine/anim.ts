@@ -19,8 +19,10 @@ export function advanceAnim(o: AnimCursor, anim: Animation): void {
   if (o.animElem >= anim.frames.length) o.animElem = 0;
   const f = anim.frames[o.animElem];
   o.animTick++;
-  if (f.time < 0) return;
+  // quadro infinito (-1): o tempo no elemento continua contando, como no MUGEN; senão AnimElem = n
+  // ficaria verdadeiro para sempre e um HitDef nele rearmaria depois de cada acerto
   o.animElemTime++;
+  if (f.time < 0) return;
   if (o.animElemTime >= f.time) {
     o.animElem++;
     o.animElemTime = 0;

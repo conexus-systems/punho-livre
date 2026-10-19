@@ -88,6 +88,12 @@ type = VarSet
 trigger1 = Time = 0
 sysvar(1) = 0
 
+; pulo curto (hop): sysvar(2) = 1 marca que o pulo saiu do chão agora
+[State 40, hop]
+type = VarSet
+trigger1 = Time = 0
+sysvar(2) = 1
+
 [State 40, frente]
 type = VarSet
 trigger1 = command = "holdfwd"
@@ -119,6 +125,17 @@ type = ChangeAnim
 trigger1 = Time = 0
 value = ifelse(Vel X = 0, 41, ifelse(Vel X > 0, 42, 43))
 
+; soltou para cima logo depois de sair do chão → pulo curto (estilo KOF)
+[State 50, hop]
+type = VelMul
+trigger1 = Time = 3 && sysvar(2) = 1 && command != "holdup" && Vel Y < 0
+y = .68
+
+[State 50, hop fim]
+type = VarSet
+trigger1 = Time = 3
+sysvar(2) = 0
+
 [State 50, desce]
 type = ChangeAnim
 trigger1 = Vel Y > -2
@@ -131,6 +148,11 @@ type = S
 physics = S
 ctrl = 0
 anim = 47
+
+[State 52, hop]
+type = VarSet
+trigger1 = Time = 0
+sysvar(2) = 0
 
 [State 52, chao]
 type = PosSet
@@ -684,4 +706,254 @@ anim = 190
 type = ChangeState
 trigger1 = AnimTime = 0
 value = 0
+
+; ================================================================ sistema SNK
+; Estados do sistema estilo SNK (KOF/Garou). A engine (snk.ts) decide quando
+; entrar neles a partir das entradas (A+B, C+D, A+B+C, arremesso) e cuida do
+; que liga os dois lutadores (arremesso, guard crush, MAX). Os números 6000+
+; ficam fora da faixa usada por personagens do MUGEN; um personagem pode
+; sobrescrever qualquer um deles.
+
+; ---------------------------------------------- rolamento (A+B), invencível
+[Statedef 6000]
+type = S
+movetype = I
+physics = N
+anim = 6000
+ctrl = 0
+velset = 0, 0
+
+[State 6000, invencivel]
+type = NotHitBy
+trigger1 = Time < 16
+value = SCA
+time = 1
+
+[State 6000, vel]
+type = VelSet
+trigger1 = Time = 1
+x = 4.6
+
+[State 6000, freia]
+type = VelSet
+trigger1 = Time = 18
+x = 0
+
+[State 6000, fim]
+type = ChangeState
+trigger1 = Time >= 24
+value = 0
+ctrl = 1
+
+[Statedef 6001]
+type = S
+movetype = I
+physics = N
+anim = 6001
+ctrl = 0
+velset = 0, 0
+
+[State 6001, invencivel]
+type = NotHitBy
+trigger1 = Time < 16
+value = SCA
+time = 1
+
+[State 6001, vel]
+type = VelSet
+trigger1 = Time = 1
+x = -4.6
+
+[State 6001, freia]
+type = VelSet
+trigger1 = Time = 18
+x = 0
+
+[State 6001, fim]
+type = ChangeState
+trigger1 = Time >= 24
+value = 0
+ctrl = 1
+
+; ------------------------------------------------- blowback (C+D) no chão
+[Statedef 6010]
+type = S
+movetype = A
+physics = S
+anim = 6010
+ctrl = 0
+velset = 0, 0
+poweradd = 20
+
+[State 6010, golpe]
+type = HitDef
+trigger1 = Time = 0
+attr = S, NA
+animtype = Hard
+damage = 70, 8
+guardflag = MA
+hitflag = MAF
+pausetime = 14, 14
+ground.type = High
+ground.slidetime = 14
+ground.hittime = 22
+ground.velocity = -8, -5.5
+air.velocity = -7, -5
+air.fall = 1
+fall = 1
+
+[State 6010, fim]
+type = ChangeState
+trigger1 = AnimTime = 0 || Time >= 50
+value = 0
+ctrl = 1
+
+; ------------------------------------------------------ blowback no ar
+[Statedef 6015]
+type = A
+movetype = A
+physics = A
+anim = 6015
+ctrl = 0
+
+[State 6015, golpe]
+type = HitDef
+trigger1 = Time = 0
+attr = A, NA
+animtype = Hard
+damage = 62, 7
+guardflag = HA
+hitflag = MAF
+pausetime = 12, 12
+ground.type = High
+ground.hittime = 20
+ground.velocity = -7, -5
+air.velocity = -6, -5
+fall = 1
+
+; ------------------------------- guard cancel C+D (1 estoque, durante a defesa)
+[Statedef 6020]
+type = S
+movetype = A
+physics = S
+anim = 6010
+ctrl = 0
+velset = 0, 0
+
+[State 6020, invencivel]
+type = NotHitBy
+trigger1 = Time < 12
+value = SCA
+time = 1
+
+[State 6020, golpe]
+type = HitDef
+trigger1 = Time = 0
+attr = S, NA
+animtype = Hard
+damage = 40, 0
+kill = 0
+guardflag = MA
+hitflag = MAF
+pausetime = 14, 14
+ground.type = High
+ground.hittime = 22
+ground.velocity = -8, -5.5
+air.velocity = -7, -5
+fall = 1
+
+[State 6020, fim]
+type = ChangeState
+trigger1 = AnimTime = 0 || Time >= 50
+value = 0
+ctrl = 1
+
+; ------------------------------------------- arremesso (F/B + C ou D, colado)
+[Statedef 6030]
+type = S
+movetype = A
+physics = S
+anim = 6030
+ctrl = 0
+velset = 0, 0
+
+[State 6030, fim]
+type = ChangeState
+trigger1 = Time >= 34 && (AnimTime = 0 || Time >= 40)
+value = 0
+ctrl = 1
+
+; sendo arremessado: a engine solta (dano) ou escapa (C ou D a tempo)
+[Statedef 6040]
+type = S
+movetype = H
+physics = N
+anim = 6040
+ctrl = 0
+velset = 0, 0
+
+[State 6040, seguranca]
+type = ChangeState
+trigger1 = Time >= 60
+value = 0
+ctrl = 1
+
+; escapou do arremesso: os dois se afastam
+[Statedef 6050]
+type = S
+movetype = I
+physics = S
+anim = 6050
+ctrl = 0
+
+[State 6050, empurra]
+type = VelSet
+trigger1 = Time = 0
+x = -5
+
+[State 6050, fim]
+type = ChangeState
+trigger1 = Time >= 18
+value = 0
+ctrl = 1
+
+; --------------------------------------- guard crush: defesa quebrada, aberto
+[Statedef 6060]
+type = S
+movetype = H
+physics = S
+anim = 6060
+ctrl = 0
+
+[State 6060, empurra]
+type = VelSet
+trigger1 = Time = 0
+x = -3
+
+[State 6060, fim]
+type = ChangeState
+trigger1 = Time >= 40
+value = 0
+ctrl = 1
+
+; ----------------------------------------- ativar o MAX (A+B+C, 1 estoque)
+[Statedef 6070]
+type = S
+movetype = I
+physics = S
+anim = 6070
+ctrl = 0
+velset = 0, 0
+
+[State 6070, invencivel]
+type = NotHitBy
+trigger1 = 1
+value = SCA
+time = 1
+
+[State 6070, fim]
+type = ChangeState
+trigger1 = Time >= 30
+value = 0
+ctrl = 1
 `;

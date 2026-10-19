@@ -31,7 +31,7 @@ describe("elenco nativo", () => {
     const parsed = parseStates(Object.entries(files).filter(([n]) => /\.(cns|cmd)$/.test(n)).map(([, t]) => t));
     expect(parsed.problems).toEqual([]);
     expect(Object.keys(ch.anims).length).toBeGreaterThan(60);
-    expect(ch.commands.some((c) => c.name === "qcf_p" || c.name === "qcb_k" || c.name === "dd_p")).toBe(true);
+    for (const sp of BUILTIN[id].meta.specials) expect(ch.commands.some((c) => c.name === sp.cmd)).toBe(true);
   });
 });
 
@@ -59,17 +59,20 @@ describe("simulação", () => {
     const w = fight("kaze", "volt");
     toFight(w);
     run(w, 40, () => [Btn.R, 0]);
+    // P2 (virado para a esquerda) segura baixo-trás = baixo+direita bem antes do golpe
+    // (agachado não anda; apertar no último instante seria Just Defend, sem raspão)
+    const back = Btn.D | Btn.R;
+    run(w, 20, () => [0, back]);
     const lifeBefore = w.fighters[1].life;
-    // P2 (virado para a esquerda) segura para trás = direita
-    run(w, 2, () => [Btn.x, Btn.R]);
+    run(w, 2, () => [Btn.x, back]);
     const states: number[] = [];
     run(w, 30, (_f, world) => {
       states.push(world.fighters[1].stateNo);
-      return [0, Btn.R];
+      return [0, back];
     });
     // só o dano de raspão (chip) do jab e passou pelos estados de defesa
     expect(w.fighters[1].life).toBe(lifeBefore - 3);
-    expect(states.some((s) => s >= 150 && s <= 151)).toBe(true);
+    expect(states.some((s) => s >= 150 && s <= 153)).toBe(true);
   });
 
   it("meia-lua + soco solta projétil (Kaze Ha)", () => {
