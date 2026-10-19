@@ -1,0 +1,20 @@
+{
+  "name": "punho-livre",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Punho Livre: jogo de luta 2.5D para navegador e Android",
+  "scripts": {
+    "start": "node server/server.js",
+    "check": "node tools/check.cjs",
+    "test": "node --test --test-concurrency=1 \"tests/*.test.cjs\"",
+    "apk": "FORMAT=apk ./android/build.sh",
+    "aab": "FORMAT=aab ./android/build.sh",
+    "store-assets": "node tools/store-assets.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

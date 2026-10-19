@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Gera o APK do Punho Livre sem precisar do Android SDK.
 # Toda a arte e os sons são gerados pelo próprio jogo (src/content/), então o
-# APK leva só index.html, style.css, src/ e fonts/.
+# APK leva só a pasta web/ (index.html, style.css, src/ e fonts/).
 #
 # Requisitos: Java 11+ (java, javac, keytool), Maven, Python 3, curl, unzip.
 # As ferramentas vêm do Maven Central e ficam em cache em android/.tools:
@@ -47,8 +47,7 @@ rm -rf "$BUILD"
 mkdir -p "$BUILD/assets" "$BUILD/res"
 
 echo "Empacotando o jogo..."
-cp "$ROOT/index.html" "$ROOT/style.css" "$BUILD/assets/"
-cp -r "$ROOT/src" "$ROOT/fonts" "$BUILD/assets/"
+cp -r "$ROOT/web/." "$BUILD/assets/"
 cp -r "$AND/res/." "$BUILD/res/"
 
 echo "Compilando recursos..."
@@ -75,7 +74,7 @@ if [ -z "${KEYSTORE:-}" ]; then
     echo "Criando chave de assinatura local..."
     keytool -genkeypair -storetype PKCS12 -keystore "$KEYSTORE" -storepass "$KEYSTORE_PASS" \
       -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 \
-      -dname "CN=Punho Livre, O=tantoniazi, C=BR" 2> /dev/null
+      -dname "CN=Punho Livre, O=Conexus Systems, C=BR" 2> /dev/null
   fi
 fi
 
