@@ -14,7 +14,7 @@ const path = require('path');
 const { WebSocketServer } = require('ws');
 
 const PORT = Number(process.env.PORT) || 8080;
-const ROOT = path.resolve(process.env.GAME_ROOT || path.join(__dirname, '..', 'web'));
+const ROOT = path.resolve(process.env.GAME_ROOT || path.join(__dirname, '..'));
 const MAX_PLAYERS = 4;
 const STATIC = ['index.html', 'style.css', 'src/', 'fonts/'];
 

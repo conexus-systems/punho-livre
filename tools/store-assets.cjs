@@ -8,7 +8,7 @@ const fs = require('fs');
 
 const ROOT = path.resolve(__dirname, '..');
 const OUT = path.join(ROOT, 'store');
-const URL = 'file://' + path.join(ROOT, 'web', 'index.html');
+const URL = 'file://' + path.join(ROOT, 'index.html');
 
 const ready = async (page) => {
   await page.goto(URL);
