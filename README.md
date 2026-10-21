@@ -22,7 +22,7 @@ Também dá para abrir `web/index.html` direto no navegador (só o jogo em rede 
 |-------|----------|
 | [`web/`](web/) | O jogo: `index.html`, `style.css`, fonte e todo o JavaScript em `web/src/` |
 | [`server/`](server/) | Servidor Node das salas de jogo em rede (e que também entrega o jogo) |
-| [`android/`](android/) | App Android (WebView) e o build do APK/AAB sem Android SDK |
+| [`android/`](android/) | App Android nativo (Kotlin, Gradle) com anúncios AdMob |
 | [`store/`](store/) | Ficha da Play Store: textos, arte, política de privacidade, checklist |
 | [`tests/`](tests/) | Testes automáticos de navegador (Playwright) |
 | [`tools/`](tools/) | Conferência de sintaxe e gerador da arte da loja |
@@ -35,8 +35,8 @@ Também dá para abrir `web/index.html` direto no navegador (só o jogo em rede 
 | `npm start` | Servidor local do jogo e das salas de rede |
 | `npm run check` | Confere sintaxe e a lista de scripts do `index.html` |
 | `npm test` | Roda os testes de navegador (precisa de `npx playwright install chromium`) |
-| `npm run apk` | Gera `dist/punho-livre.apk` |
-| `npm run aab` | Gera `dist/punho-livre.aab` (pacote da Play Store) |
+| `npm run apk` | Gera o APK de depuração em `android/app/build/outputs/apk/debug/` |
+| `npm run aab` | Gera o AAB de release (pacote da Play Store; exige IDs do AdMob, ver `store/CHECKLIST.md`) |
 | `npm run store-assets` | Regera ícone, gráfico e capturas de tela em `store/` |
 
 ## Documentação

@@ -328,6 +328,8 @@ class Match {
   end() {
     if (this.ended) return;
     this.ended = true;
+    // anúncio entre as lutas (só no app Android; o app decide a frequência)
+    if (window.AndroidAds && !this.net && !this.demo && this.mode !== 'training') window.AndroidAds.onMatchEnd();
     Music.setDuck(1);
     for (const o of this.live) if (o.destroy) o.destroy();
     if (this.opts.onEnd) this.opts.onEnd(this);

@@ -66,10 +66,10 @@ Por isso a simulação não pode usar `Math.random`, `Math.hypot` nem nada que d
 
 ## Android
 
-`android/build.sh` monta o app sem Android SDK: `aapt2` (do `apktool-lib`) compila recursos e
-manifesto, `smali` gera o `classes.dex` da `MainActivity` (escrita em smali), `apksig` assina o
-APK e o `bundletool` gera o AAB. A atividade abre `web/` (copiado para os assets do app), liga o
-botão voltar ao jogo (`window.androidBack`) e fecha o app pela tela inicial.
+Projeto Gradle em `android/` (Kotlin, AGP 8.13, minSdk 24, target 36). A `MainActivity` abre
+`web/` (copiado para os assets do app) numa WebView, liga o botão voltar ao jogo (`window.androidBack`)
+e fecha o app pela tela inicial (`window.AndroidApp.exit`). A `AdsBridge` expõe `window.AndroidAds`:
+o jogo avisa o fim de cada luta (`onMatchEnd`) e liga/desliga o banner (`setBannerVisible`, só nos menus).
 
 ## Testes
 

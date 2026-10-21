@@ -6,3 +6,7 @@ test-results/
 *.p12
 *.jks
 .DS_Store
+android/local.properties
+android/.gradle/
+android/app/build/
+android/build/

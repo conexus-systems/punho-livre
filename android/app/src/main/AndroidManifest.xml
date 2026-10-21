@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.conexus.punholivre">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- jogo em rede (WebSocket com o servidor de salas) -->
+    <!-- jogo em rede (WebSocket com o servidor de salas) e anúncios -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- tela de toque e controle são opcionais: o jogo também roda com teclado/controle -->
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.hardware.gamepad" android:required="false" />
 
     <application
+        android:name=".PunhoLivreApp"
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
@@ -19,6 +20,11 @@
         android:hardwareAccelerated="true"
         android:usesCleartextTraffic="true"
         android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen">
+
+        <!-- ID do app no AdMob (vem do build: ver android/app/build.gradle.kts) -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}" />
 
         <activity
             android:name=".MainActivity"

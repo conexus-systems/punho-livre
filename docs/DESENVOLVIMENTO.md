@@ -48,15 +48,15 @@ sheet.draw(Game.ctx, o.data.frame[61].pic, 100, 100, false);
 ## Gerar o app
 
 ```bash
-npm run apk       # dist/punho-livre.apk
-npm run aab       # dist/punho-livre.aab
+npm run apk       # APK de depuração (IDs de teste do AdMob)
+npm run aab       # AAB de release (exige os IDs reais do AdMob)
 ```
 
-As duas assinam com uma chave de teste criada em `android/.tools/`. Para publicar, use a sua
-chave (`KEYSTORE`, `KEYSTORE_PASS`, `KEY_ALIAS`) e siga [`store/CHECKLIST.md`](../store/CHECKLIST.md).
+Precisa de JDK 17 e do Android SDK (`android/local.properties` com `sdk.dir=...`). Para publicar,
+use a sua chave de upload (`ANDROID_KEYSTORE_PATH` e senhas) e siga [`store/CHECKLIST.md`](../store/CHECKLIST.md).
 O pacote Android é `com.conexus.punholivre` e não pode mudar depois de publicado.
 
 ## Integração contínua
 
 `.github/workflows/ci.yml` roda a conferência e os testes em cada push e pull request, e depois
-gera o APK e o AAB como artefatos do GitHub Actions.
+gera o APK e o AAB (com IDs de teste) como artefatos do GitHub Actions.

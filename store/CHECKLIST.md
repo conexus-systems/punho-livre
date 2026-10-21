@@ -23,19 +23,24 @@
 - [ ] Aumentar `VERSION_CODE` (sempre maior que o anterior) e `VERSION_NAME`.
 - [ ] Gerar o pacote assinado com a sua chave:
       ```
-      FORMAT=aab VERSION_CODE=3 VERSION_NAME=2.1 \
-        KEYSTORE=punholivre-upload.p12 KEYSTORE_PASS=... KEY_ALIAS=upload \
-        OUT=dist/punho-livre.apk ./android/build.sh
+      ANDROID_KEYSTORE_PATH=/caminho/punholivre-upload.p12 ANDROID_KEYSTORE_PASSWORD=... \
+      ANDROID_KEY_ALIAS=upload ANDROID_KEY_PASSWORD=... \
+      ADMOB_ANDROID_APP_ID=ca-app-pub-... ADMOB_ANDROID_BANNER_ID=ca-app-pub-... \
+      ADMOB_ANDROID_INTERSTITIAL_ID=ca-app-pub-... \
+      ./android/gradlew -p android bundleRelease -PversionCode=3 -PversionName=2.1
       ```
-      O arquivo sai em `dist/punho-livre.aab`.
-- [ ] Testar o APK (`FORMAT=apk`) num aparelho real: toque, botão voltar, pausa ao sair do app,
+      O arquivo sai em `android/app/build/outputs/bundle/release/app-release.aab`. Sem os IDs reais do AdMob
+      o build de release para (de propósito); para teste local use `-PallowTestAds=true`.
+- [ ] Testar o APK (`npm run apk`) num aparelho real: toque, botão voltar, pausa ao sair do app,
       rotação, jogo em rede.
 - [ ] Na Play Console: *Testes internos* primeiro (envie o .aab, adicione seu e-mail como testador),
       depois *Produção*.
 - [ ] Contas pessoais novas precisam de um **teste fechado com pelo menos 12 testadores por
       14 dias** antes de liberar para produção (regra da Google para contas criadas depois de 2023).
 - [ ] Preencher: ficha da loja (store/listing-pt-BR.md), classificação de conteúdo, segurança dos
-      dados, público-alvo, preço (R$ 19,99) e países de distribuição.
+      dados, público-alvo, preço (Grátis, com anúncios) e países de distribuição.
+- [ ] Criar a conta **Google AdMob**, o app lá e os blocos de anúncio (banner e intersticial), e colocar os IDs reais nas variáveis acima.
+- [ ] Declarar anúncios na Play (Conteúdo do app → Anúncios) e o ID de publicidade na segurança dos dados.
 
 ## Depois de publicar
 

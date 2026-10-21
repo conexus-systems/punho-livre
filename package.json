@@ -7,8 +7,8 @@
     "start": "node server/server.js",
     "check": "node tools/check.cjs",
     "test": "node --test --test-concurrency=1 \"tests/*.test.cjs\"",
-    "apk": "FORMAT=apk ./android/build.sh",
-    "aab": "FORMAT=aab ./android/build.sh",
+    "apk": "./android/gradlew -p android assembleDebug",
+    "aab": "./android/gradlew -p android bundleRelease",
     "store-assets": "node tools/store-assets.cjs"
   },
   "devDependencies": {

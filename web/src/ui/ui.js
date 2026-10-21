@@ -10,7 +10,10 @@ const Game = {
     this.screen = s;
     if (s.enter) s.enter();
     if (!(s instanceof LoadingScreen)) Music.play(trackFor(s));
-    TouchSpecials.update(s instanceof MatchScreen || s instanceof NetMatchScreen ? s.match : null);
+    const inMatch = s instanceof MatchScreen || s instanceof NetMatchScreen;
+    TouchSpecials.update(inMatch ? s.match : null);
+    // banner do AdMob só nos menus (app Android)
+    if (window.AndroidAds) window.AndroidAds.setBannerVisible(!inMatch);
   },
   update() {
     // nas partidas as teclas vão para os personagens (na de rede, para o envio)

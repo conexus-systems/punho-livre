@@ -30,12 +30,15 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
-      - name: Gerar APK e AAB (assinados com a chave de teste)
-        run: FORMAT=both ./android/build.sh
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - name: Gerar APK de teste e AAB (IDs de teste do AdMob, sem assinatura de loja)
+        run: |
+          ./android/gradlew -p android assembleDebug
+          ./android/gradlew -p android bundleRelease -PallowTestAds=true
       - uses: actions/upload-artifact@v4
         with:
           name: punho-livre-android
           path: |
-            dist/punho-livre.apk
-            dist/punho-livre.aab
+            android/app/build/outputs/apk/debug/app-debug.apk
+            android/app/build/outputs/bundle/release/app-release.aab

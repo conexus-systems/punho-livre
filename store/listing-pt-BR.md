@@ -19,8 +19,8 @@ Brigue com até 4 amigos: 8 lutadores, golpes especiais, online e controle.
 ```
 PUNHO LIVRE é um jogo de luta 2.5D de ação rápida: ande pelo cenário, pule, defenda, agarre, arremesse e solte golpes especiais contra até 7 adversários ao mesmo tempo.
 
-SEM ANÚNCIOS, SEM COMPRAS DENTRO DO APP
-Você paga uma vez e tem o jogo completo. Nada de moedas, caixas ou propagandas.
+GRÁTIS, COM ANÚNCIOS DISCRETOS
+O jogo completo é grátis. Um banner aparece nos menus e, de vez em quando, um anúncio entre as lutas.
 
 8 LUTADORES, CADA UM COM SEU ESTILO
 • Brasa: lutador de rua que lança bolas de fogo
@@ -66,7 +66,7 @@ O app não coleta dados pessoais.
 ## Categoria e etiquetas
 
 - Tipo: **Jogo** · Categoria: **Ação** (ou *Luta*, se aparecer como etiqueta)
-- Preço: **R$ 19,99** (aplicado em *Monetizar → Preço do app*; a Play converte para os outros países e você pode ajustar por país)
+- Preço: **Grátis** (app com anúncios; a Play não permite cobrar pelo download e mostrar anúncios no mesmo app)
 
 ## Arte (já gerada na pasta store/)
 
@@ -80,8 +80,8 @@ Regere com `node tools/store-assets.cjs` depois de qualquer mudança visual.
 
 ## Respostas dos formulários da Play Console
 
-- **Anúncios:** não tem.
-- **Compras no app:** não tem (app pago).
+- **Anúncios:** sim (Google AdMob: banner nos menus e intersticial entre lutas).
+- **Compras no app:** não tem.
 - **Acesso ao app:** todo o conteúdo é acessível sem login.
 - **Público-alvo:** 13 anos ou mais (evita as regras de apps para crianças).
 - **Classificação de conteúdo (IARC):** violência de desenho animado, sem sangue, sem linguagem
