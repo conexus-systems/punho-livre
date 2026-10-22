@@ -11,7 +11,7 @@ Punho Livre: Luta 2.5D
 ## Descrição curta (máx. 80 caracteres)
 
 ```
-Brigue com até 4 amigos: 8 lutadores, golpes especiais, online e controle.
+Brigue com até 4 amigos: 8 lutadores, rounds, sobrevivência, online e controle.
 ```
 
 ## Descrição completa (máx. 4000 caracteres)
@@ -33,8 +33,9 @@ Você paga uma vez e tem o jogo completo. Nada de moedas, caixas ou propagandas.
 • Bala: boxeador de socos rápidos
 
 MODOS DE JOGO
-• Versus: até 8 lutadores, em times ou cada um por si, contra computadores ou amigos
+• Versus: até 8 lutadores, em times ou cada um por si, contra computadores ou amigos. Luta única ou melhor de 3/5 rounds, com tempo por round
 • História: 5 fases com bandidos e chefes; cada fase vencida libera a próxima
+• Sobrevivência: ondas sem fim de inimigos cada vez mais fortes, com chefes e recorde salvo
 • Treino: um boneco que nunca cai e MP infinito para aprender os especiais
 • Online: crie uma sala, passe o código de 4 letras e lute com amigos
 • Demonstração: assista aos lutadores do computador
@@ -46,21 +47,23 @@ FEITO PARA O CELULAR
 • Funciona offline e também com controle bluetooth (até 4 jogadores no mesmo aparelho)
 
 COMBOS E MECÂNICAS
-Combos, corrida, rolamento, defesa e quebra de guarda, tontura, agarrão, quedas, fogo, gelo, bolas de energia que podem ser rebatidas e armas para pegar, bater e arremessar.
+Combos com contador de HITS, corrida, rolamento, defesa e quebra de guarda, tontura, agarrão, quedas, fogo, gelo, bolas de energia que podem ser rebatidas e armas para pegar, bater e arremessar. K.O. em câmera lenta e números de dano na tela.
 
 4 dificuldades para o computador, de Fácil a Maluco, e várias arenas: praia, rua da cidade, floresta, templo, porto e dojô.
 
 O app não coleta dados pessoais.
 ```
 
-## O que há de novo (versão 2.0)
+## O que há de novo (versão 3.0)
 
 ```
-• Lutadores, golpes, cenários e sons totalmente novos
-• Modo Treino e tela Como jogar
-• Música, ajustes de som e dos botões, salvamento de progresso
-• Suporte a controle bluetooth
-• Menu de pausa e pausa automática ao sair do app
+• Novo modo Sobrevivência: ondas sem fim, chefes e recorde salvo
+• Rounds no Versus: luta única, melhor de 3 ou melhor de 5, com tempo por round
+• Abertura de round, K.O. em câmera lenta e contador de combos
+• Números de dano, clarão ao apanhar e opção de desligar o tremor de tela
+• Reiniciar a luta pelo menu de pausa
+• Tela de escolha com barras de vida, força e velocidade
+• Jogo reescrito do zero em Rust, mais rápido e estável
 ```
 
 ## Categoria e etiquetas

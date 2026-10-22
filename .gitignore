@@ -6,3 +6,5 @@ test-results/
 *.p12
 *.jks
 .DS_Store
+rust/target/
+web/pkg/

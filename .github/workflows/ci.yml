@@ -2,12 +2,16 @@ name: CI
 
 on:
   push:
-    branches: [main, reorganizacao]
+    branches: [main, ccr-7b05c043-tpupcs, reorganizacao]
   pull_request:
+  workflow_dispatch:
+
+env:
+  WASM_BINDGEN_VERSION: 0.2.129
 
 jobs:
   testes:
-    name: Conferência e testes
+    name: Rust, conferência e testes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,11 +19,32 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - name: wasm-bindgen-cli (a versão tem que ser a mesma do Cargo.toml)
+        id: wb
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/wasm-bindgen
+          key: wasm-bindgen-${{ env.WASM_BINDGEN_VERSION }}
+      - if: steps.wb.outputs.cache-hit != 'true'
+        run: cargo install wasm-bindgen-cli --version "$WASM_BINDGEN_VERSION" --locked
       - run: npm ci
       - run: npm ci --prefix server
       - run: npx playwright install --with-deps chromium
+      - run: npm run build
       - run: npm run check
       - run: npm test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: punho-livre-web
+          path: web/pkg
+          retention-days: 7
 
   android:
     name: APK e AAB
@@ -27,12 +52,16 @@ jobs:
     needs: testes
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: punho-livre-web
+          path: web/pkg
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
       - name: Gerar APK e AAB (assinados com a chave de teste)
-        run: FORMAT=both ./android/build.sh
+        run: FORMAT=both SKIP_WASM=1 ./android/build.sh
       - uses: actions/upload-artifact@v4
         with:
           name: punho-livre-android

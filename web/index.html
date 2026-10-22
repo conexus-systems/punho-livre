@@ -47,30 +47,37 @@
   <button type="button" id="net-back" class="secondary">Voltar</button>
 </form>
 
-<script src="src/core/global.js"></script>
-<script src="src/core/save.js"></script>
-<script src="src/ui/logo.js"></script>
-<script src="src/content/painter.js"></script>
-<script src="src/content/moves.js"></script>
-<script src="src/content/roster.js"></script>
-<script src="src/content/scenes.js"></script>
-<script src="src/content/build.js"></script>
-<script src="src/core/assets.js"></script>
-<script src="src/audio/music.js"></script>
-<script src="src/core/input.js"></script>
-<script src="src/engine/object.js"></script>
-<script src="src/engine/character.js"></script>
-<script src="src/engine/weapon.js"></script>
-<script src="src/engine/ball.js"></script>
-<script src="src/engine/effects.js"></script>
-<script src="src/engine/background.js"></script>
-<script src="src/engine/ai.js"></script>
-<script src="src/ui/hud.js"></script>
-<script src="src/engine/match.js"></script>
-<script src="src/engine/stage.js"></script>
-<script src="src/ui/ui.js"></script>
-<script src="src/ui/settings.js"></script>
-<script src="src/net/net.js"></script>
-<script src="src/core/main.js"></script>
+<!-- O jogo é Rust compilado para WebAssembly (ver rust/ e tools/build-wasm.sh).
+     O .wasm vem em base64 (punho_wasm.js) para funcionar também aberto direto do disco e dentro do app. -->
+<script src="pkg/punho.js"></script>
+<script src="pkg/punho_wasm.js"></script>
+<script>
+(function () {
+  function b64ToBytes(s) {
+    var bin = atob(s), n = bin.length, out = new Uint8Array(n);
+    for (var i = 0; i < n; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  function fail(e) {
+    var c = document.getElementById('game');
+    var g = c.getContext('2d');
+    g.fillStyle = '#0b1030'; g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = '#fff'; g.font = 'bold 18px Arial'; g.textAlign = 'center';
+    g.fillText('Não foi possível iniciar o jogo.', c.width / 2, 200);
+    g.font = '11px Arial'; g.fillStyle = '#afdcff';
+    g.fillText(String(e && e.message || e), c.width / 2, 250, 740);
+    console.error(e);
+  }
+  var fonts = document.fonts ? document.fonts.load('40px "Bangers"').catch(function () {}) : Promise.resolve();
+  Promise.all([wasm_bindgen({ module_or_path: b64ToBytes(PUNHO_WASM_B64) }), fonts]).then(function () {
+    window.PUNHO = wasm_bindgen;
+    wasm_bindgen.start_game();
+    // Botão voltar do app Android: fecha na tela inicial, senão age como Esc.
+    window.androidBack = function () {
+      if (wasm_bindgen.punho_android_back() && window.AndroidApp) window.AndroidApp.exit();
+    };
+  }).catch(fail);
+})();
+</script>
 </body>
 </html>

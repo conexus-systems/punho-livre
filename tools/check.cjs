@@ -1,5 +1,5 @@
-// Confere a sintaxe de todo o JavaScript do jogo e do servidor, a ordem dos scripts
-// do index.html e se os arquivos referenciados existem.
+// Conferência rápida: sintaxe do JavaScript que sobrou (servidor, testes e ferramentas),
+// o index.html e o Rust (cargo check para WebAssembly e para o computador, mais o formato).
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
@@ -10,25 +10,36 @@ const fail = (msg) => { console.error('✗ ' + msg); failed++; };
 
 function walk(dir, out = []) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (e.name === 'node_modules' || e.name.startsWith('.')) continue;
+    if (e.name === 'node_modules' || e.name === 'pkg' || e.name === 'target' || e.name.startsWith('.')) continue;
     const p = path.join(dir, e.name);
     if (e.isDirectory()) walk(p, out); else if (/\.(js|cjs|mjs)$/.test(e.name)) out.push(p);
   }
   return out;
 }
 
-for (const dir of ['web/src', 'server', 'tools', 'tests']) {
+let n = 0;
+for (const dir of ['server', 'tools', 'tests']) {
   for (const f of walk(path.join(ROOT, dir))) {
+    n++;
     const r = spawnSync(process.execPath, ['--check', f], { encoding: 'utf8' });
     if (r.status !== 0) fail(`${path.relative(ROOT, f)}: ${r.stderr.trim().split('\n')[0]}`);
   }
 }
 
+// o index.html só pode carregar arquivos que existem (o pkg/ é gerado por tools/build-wasm.sh)
 const html = fs.readFileSync(path.join(ROOT, 'web/index.html'), 'utf8');
-const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]);
-for (const s of scripts) if (!fs.existsSync(path.join(ROOT, 'web', s))) fail(`index.html referencia ${s}, que não existe`);
-const onDisk = walk(path.join(ROOT, 'web/src')).map((f) => path.relative(path.join(ROOT, 'web'), f).split(path.sep).join('/'));
-for (const f of onDisk) if (!scripts.includes(f)) fail(`${f} não está no index.html`);
+for (const m of html.matchAll(/<script src="([^"]+)"/g)) {
+  if (!m[1].startsWith('pkg/') && !fs.existsSync(path.join(ROOT, 'web', m[1]))) fail(`index.html referencia ${m[1]}, que não existe`);
+}
+if (!fs.existsSync(path.join(ROOT, 'rust/Cargo.lock'))) fail('rust/Cargo.lock não está no repositório');
+
+const cargo = (args, label) => {
+  const r = spawnSync('cargo', args, { cwd: path.join(ROOT, 'rust'), encoding: 'utf8' });
+  if (r.status !== 0) fail(`${label}\n${(r.stderr || r.stdout).split('\n').slice(-25).join('\n')}`);
+};
+cargo(['fmt', '--check'], 'cargo fmt --check (rode "cargo fmt" na pasta rust/)');
+cargo(['clippy', '--target', 'wasm32-unknown-unknown', '--', '-D', 'warnings'], 'cargo clippy');
+cargo(['test', '--lib'], 'cargo test');
 
 if (failed) { console.error(`\n${failed} problema(s).`); process.exit(1); }
-console.log(`✓ ${onDisk.length} arquivos do jogo e ${scripts.length} scripts conferidos`);
+console.log(`✓ ${n} arquivos JavaScript, o index.html e o Rust (formato, clippy e testes) conferidos`);
