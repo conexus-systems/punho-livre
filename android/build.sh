@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Gera o APK do Punho Livre sem precisar do Android SDK.
-# Toda a arte e os sons são gerados pelo próprio jogo (src/content/), então o
-# APK leva só a pasta web/ (index.html, style.css, src/ e fonts/).
+# O jogo é Rust compilado para WebAssembly (rust/). Toda a arte e os sons são gerados por
+# ele mesmo ao abrir, então o APK leva só a pasta web/ (index.html, style.css, fonts/ e
+# pkg/ com a cola JavaScript e o .wasm em base64).
 #
-# Requisitos: Java 11+ (java, javac, keytool), Maven, Python 3, curl, unzip.
+# Requisitos: Rust com o alvo wasm32-unknown-unknown e o wasm-bindgen-cli (ver tools/build-wasm.sh),
+# Java 11+ (java, javac, keytool), Maven, Python 3, curl, unzip.
 # As ferramentas vêm do Maven Central e ficam em cache em android/.tools:
 #   - aapt2 e o framework Android, embutidos no apktool-lib
 #   - smali (monta o classes.dex a partir de android/smali)
@@ -15,6 +17,7 @@
 #   OUT            caminho do APK (padrão: dist/punho-livre.apk)
 #   KEYSTORE (PKCS12), KEYSTORE_PASS, KEY_ALIAS   para assinar com a sua chave
 #   VERSION_CODE, VERSION_NAME
+#   SKIP_WASM=1    não recompila o Rust (usa o web/pkg que já existe)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -23,8 +26,8 @@ TOOLS="$AND/.tools"
 BUILD="$AND/build"
 OUT="${OUT:-$ROOT/dist/punho-livre.apk}"
 APKTOOL_VERSION=3.0.3
-VERSION_CODE="${VERSION_CODE:-2}"
-VERSION_NAME="${VERSION_NAME:-2.0}"
+VERSION_CODE="${VERSION_CODE:-30000}"
+VERSION_NAME="${VERSION_NAME:-3.0.0}"
 TARGET_SDK="${TARGET_SDK:-36}"
 FORMAT="${FORMAT:-apk}"
 
@@ -46,8 +49,16 @@ CP="$TOOLS/lib/*"
 rm -rf "$BUILD"
 mkdir -p "$BUILD/assets" "$BUILD/res"
 
+if [ "${SKIP_WASM:-0}" != 1 ]; then
+  echo "Compilando o jogo (Rust -> WebAssembly)..."
+  "$ROOT/tools/build-wasm.sh" release
+fi
+[ -f "$ROOT/web/pkg/punho_wasm.js" ] || { echo "web/pkg não existe: rode tools/build-wasm.sh" >&2; exit 1; }
+
 echo "Empacotando o jogo..."
 cp -r "$ROOT/web/." "$BUILD/assets/"
+# a WebView lê o jogo de file:///android_asset, onde o fetch do .wasm não funciona: o app usa o base64
+rm -f "$BUILD/assets/pkg/punho_bg.wasm" "$BUILD/assets/README.md"
 cp -r "$AND/res/." "$BUILD/res/"
 
 echo "Compilando recursos..."

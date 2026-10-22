@@ -20,10 +20,11 @@
 
 ## A cada versão
 
-- [ ] Aumentar `VERSION_CODE` (sempre maior que o anterior) e `VERSION_NAME`.
+- [ ] Aumentar `VERSION_CODE` (sempre maior que o anterior; a regra é `maior*10000 + menor*100 + correção`) e `VERSION_NAME`.
+      Mais simples: criar a tag `vX.Y.Z` e deixar o fluxo `Release` (GitHub Actions) gerar o pacote.
 - [ ] Gerar o pacote assinado com a sua chave:
       ```
-      FORMAT=aab VERSION_CODE=3 VERSION_NAME=2.1 \
+      FORMAT=aab VERSION_CODE=30100 VERSION_NAME=3.1.0 \
         KEYSTORE=punholivre-upload.p12 KEYSTORE_PASS=... KEY_ALIAS=upload \
         OUT=dist/punho-livre.apk ./android/build.sh
       ```
@@ -41,4 +42,4 @@
 
 - [ ] Responder avaliações e acompanhar falhas (*Android vitals*).
 - [ ] Se hospedar um servidor de salas na internet, usar `wss://` (HTTPS) e preencher o endereço
-      padrão em `src/net.js` para o jogador não precisar digitar.
+      padrão no formulário de rede (`web/index.html`, campo do servidor) para o jogador não precisar digitar.

@@ -1,10 +1,12 @@
 {
   "name": "punho-livre",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
-  "description": "Punho Livre: jogo de luta 2.5D para navegador e Android",
+  "description": "Punho Livre: jogo de luta 2.5D em Rust (WebAssembly) para navegador e Android",
   "scripts": {
     "start": "node server/server.js",
+    "build": "./tools/build-wasm.sh release",
+    "build:dev": "./tools/build-wasm.sh dev",
     "check": "node tools/check.cjs",
     "test": "node --test --test-concurrency=1 \"tests/*.test.cjs\"",
     "apk": "FORMAT=apk ./android/build.sh",

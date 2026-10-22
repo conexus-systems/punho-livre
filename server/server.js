@@ -3,7 +3,7 @@
 //  - Salas de jogo em rede por código de 4 letras (até 4 jogadores humanos).
 //    O jogo roda em "lockstep": cada cliente simula a partida inteira e o
 //    servidor só repassa as teclas de cada jogador para os outros.
-//  - Também serve os arquivos do jogo (index.html, style.css, src/ e fonts/) para
+//  - Também serve os arquivos do jogo (index.html, style.css, pkg/ e fonts/) para
 //    jogar direto pelo navegador em http://endereço:porta/.
 //
 // Uso: node server.js   (porta pela variável PORT, padrão 8080)
@@ -16,11 +16,11 @@ const { WebSocketServer } = require('ws');
 const PORT = Number(process.env.PORT) || 8080;
 const ROOT = path.resolve(process.env.GAME_ROOT || path.join(__dirname, '..', 'web'));
 const MAX_PLAYERS = 4;
-const STATIC = ['index.html', 'style.css', 'src/', 'fonts/'];
+const STATIC = ['index.html', 'style.css', 'pkg/', 'fonts/'];
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
-  '.png': 'image/png', '.woff2': 'font/woff2', '.json': 'application/json',
+  '.png': 'image/png', '.woff2': 'font/woff2', '.json': 'application/json', '.wasm': 'application/wasm',
 };
 
 // ---- arquivos do jogo ----
