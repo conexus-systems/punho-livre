@@ -22,14 +22,15 @@
 
 - [ ] Aumentar `VERSION_CODE` (sempre maior que o anterior; a regra é `maior*10000 + menor*100 + correção`) e `VERSION_NAME`.
       Mais simples: criar a tag `vX.Y.Z` e deixar o fluxo `Release` (GitHub Actions) gerar o pacote.
-- [ ] Gerar o pacote assinado com a sua chave:
+- [ ] Gerar o pacote com os IDs reais do AdMob e a sua chave:
       ```
-      FORMAT=aab VERSION_CODE=30100 VERSION_NAME=3.1.0 \
-        KEYSTORE=punholivre-upload.p12 KEYSTORE_PASS=... KEY_ALIAS=upload \
-        OUT=dist/punho-livre.apk ./android/build.sh
+      ADMOB_ANDROID_APP_ID=... ADMOB_ANDROID_BANNER_ID=... ADMOB_ANDROID_INTERSTITIAL_ID=... \
+      ANDROID_KEYSTORE_PATH=punholivre-upload.p12 ANDROID_KEYSTORE_PASSWORD=... \
+      ANDROID_KEY_ALIAS=upload ANDROID_KEY_PASSWORD=... \
+      ./android/gradlew -p android bundleRelease -PversionCode=30100 -PversionName=3.1.0
       ```
-      O arquivo sai em `dist/punho-livre.aab`.
-- [ ] Testar o APK (`FORMAT=apk`) num aparelho real: toque, botão voltar, pausa ao sair do app,
+      O arquivo sai em `android/app/build/outputs/bundle/release/app-release.aab`.
+- [ ] Testar o APK (`./android/gradlew -p android assembleRelease`) num aparelho real: toque, botão voltar, pausa ao sair do app,
       rotação, jogo em rede.
 - [ ] Na Play Console: *Testes internos* primeiro (envie o .aab, adicione seu e-mail como testador),
       depois *Produção*.

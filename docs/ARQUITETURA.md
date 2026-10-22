@@ -87,11 +87,10 @@ uma fila e as telas as consomem no próprio `update`, sem callbacks mexendo na t
 
 ## Android
 
-`android/build.sh` compila o Rust, depois monta o app sem Android SDK: `aapt2` (do `apktool-lib`)
-compila recursos e manifesto, `smali` gera o `classes.dex` da `MainActivity` (escrita em smali),
-`apksig` assina o APK e o `bundletool` gera o AAB. A atividade abre `web/` (copiado para os assets
-do app, com o `.wasm` em base64), liga o botão voltar ao jogo (`window.androidBack`) e fecha o app
-pela tela inicial.
+`android/` é um projeto Gradle (Kotlin). Ele copia `web/` para os assets do app (sem o `.wasm` binário,
+que o app não usa), abre o jogo numa WebView, liga o botão voltar ao jogo (`window.androidBack`) e
+fecha o app pela tela inicial. Os anúncios do AdMob ficam em `AdsBridge` e o jogo os controla pela
+ponte `window.AndroidAds` (`rust/src/ui/ads.rs`). Detalhes em [`android/README.md`](../android/README.md).
 
 ## Testes
 

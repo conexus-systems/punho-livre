@@ -97,6 +97,7 @@ pub fn set_screen(g: &mut Game, s: Screen) {
         music::play(Some(track_for(&g.screen)));
     }
     crate::ui::touch::specials_update(&g.screen);
+    crate::ui::ads::set_banner_visible(!matches!(g.screen, Screen::Match(_) | Screen::NetMatch(_)));
 }
 
 pub fn set_screen_by_name(g: &mut Game, name: &str) {

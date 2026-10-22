@@ -44,6 +44,7 @@ pub mod engine {
 pub mod ui {
     pub mod hud;
     pub mod logo;
+    pub mod ads;
     pub mod screens;
     pub mod select;
     pub mod settings;
