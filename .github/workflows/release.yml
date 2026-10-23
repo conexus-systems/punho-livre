@@ -2,8 +2,10 @@ name: Release
 
 # Publica uma versão: crie e envie uma tag (git tag v3.0.0 && git push origin v3.0.0).
 # O fluxo confere o jogo, gera o APK e o AAB e abre a release no GitHub com os dois arquivos.
-# Para assinar com a sua chave (em vez da chave de teste), cadastre os segredos:
+# Para assinar com a sua chave (em vez da chave de debug), cadastre os segredos:
 #   KEYSTORE_BASE64 (o .p12 em base64), KEYSTORE_PASS e KEY_ALIAS.
+# Os IDs reais do AdMob são obrigatórios para a release (sem eles o build para):
+#   ADMOB_ANDROID_APP_ID, ADMOB_ANDROID_BANNER_ID e ADMOB_ANDROID_INTERSTITIAL_ID.
 
 on:
   push:
@@ -17,7 +19,7 @@ env:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -35,7 +37,12 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 17
+      - name: Android SDK (plataforma 36 e build-tools)
+        run: |
+          SDKMANAGER="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)"
+          yes | "$SDKMANAGER" --licenses > /dev/null
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
       - run: npm ci
       - run: npm ci --prefix server
       - run: npx playwright install --with-deps chromium
@@ -55,14 +62,24 @@ jobs:
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.p12"
-            echo "KEYSTORE=$RUNNER_TEMP/release.p12" >> "$GITHUB_ENV"
-            echo "KEYSTORE_PASS=${{ secrets.KEYSTORE_PASS }}" >> "$GITHUB_ENV"
-            echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> "$GITHUB_ENV"
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.p12" >> "$GITHUB_ENV"
+            echo "ANDROID_KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASS }}" >> "$GITHUB_ENV"
+            echo "ANDROID_KEY_PASSWORD=${{ secrets.KEYSTORE_PASS }}" >> "$GITHUB_ENV"
+            echo "ANDROID_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> "$GITHUB_ENV"
           else
-            echo "Sem chave própria: o pacote sai assinado com a chave de teste (serve para instalar, não para a Play Store)."
+            echo "Sem chave própria: o pacote sai assinado com a chave de debug (serve para instalar, não para a Play Store)."
           fi
       - name: APK e AAB
-        run: FORMAT=both SKIP_WASM=1 VERSION_CODE=${{ steps.ver.outputs.code }} VERSION_NAME=${{ steps.ver.outputs.name }} ./android/build.sh
+        env:
+          ADMOB_ANDROID_APP_ID: ${{ secrets.ADMOB_ANDROID_APP_ID }}
+          ADMOB_ANDROID_BANNER_ID: ${{ secrets.ADMOB_ANDROID_BANNER_ID }}
+          ADMOB_ANDROID_INTERSTITIAL_ID: ${{ secrets.ADMOB_ANDROID_INTERSTITIAL_ID }}
+        run: |
+          ./android/gradlew -p android assembleRelease bundleRelease \
+            -PversionCode=${{ steps.ver.outputs.code }} -PversionName=${{ steps.ver.outputs.name }}
+          mkdir -p dist
+          cp android/app/build/outputs/apk/release/app-release.apk dist/punho-livre.apk
+          cp android/app/build/outputs/bundle/release/app-release.aab dist/punho-livre.aab
       - name: Notas da versão (do CHANGELOG.md)
         run: |
           awk -v v="${{ steps.ver.outputs.name }}" '

@@ -1,0 +1,45 @@
+# Deploy de produção do jogo. Manual (workflow_dispatch), só a partir de main.
+# A lógica vive em conexus-systems/platform-infra/.github/workflows/deploy-lke.yml.
+name: Deploy — Production
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy-production-punho-livre
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Validate branch
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - name: Ensure running from main
+        run: |
+          if [ "${{ github.ref_name }}" != "main" ]; then
+            echo "::error::Deploy de producao so a partir de 'main' (recebido '${{ github.ref_name }}')."
+            exit 1
+          fi
+
+  deploy:
+    name: Deploy
+    needs: guard
+    uses: conexus-systems/platform-infra/.github/workflows/deploy-lke.yml@v1
+    with:
+      mode: manifests
+      namespace: platform
+      build_runner: blacksmith-2vcpu-ubuntu-2404
+      deploy_runner: blacksmith-2vcpu-ubuntu-2404
+      app_slug: punho-livre
+      image_name: punho-livre
+      deployments: |
+        punho-livre-web:punho-livre-web
+      manifests: |
+        deploy/kubernetes/deployment.yaml
+        deploy/kubernetes/service.yaml
+        deploy/kubernetes/ingress.yaml
+    secrets: inherit

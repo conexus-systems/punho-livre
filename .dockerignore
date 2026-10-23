@@ -1,0 +1,12 @@
+.git
+.github
+android
+docs
+node_modules
+rust/target
+server/node_modules
+store
+tests
+tools/check.cjs
+tools/store-assets.cjs
+web/pkg

@@ -9,8 +9,8 @@
     "build:dev": "./tools/build-wasm.sh dev",
     "check": "node tools/check.cjs",
     "test": "node --test --test-concurrency=1 \"tests/*.test.cjs\"",
-    "apk": "FORMAT=apk ./android/build.sh",
-    "aab": "FORMAT=aab ./android/build.sh",
+    "apk": "./android/gradlew -p android assembleRelease -PallowTestAds=true && mkdir -p dist && cp android/app/build/outputs/apk/release/app-release.apk dist/punho-livre.apk",
+    "aab": "./android/gradlew -p android bundleRelease -PallowTestAds=true && mkdir -p dist && cp android/app/build/outputs/bundle/release/app-release.aab dist/punho-livre.aab",
     "store-assets": "node tools/store-assets.cjs"
   },
   "devDependencies": {

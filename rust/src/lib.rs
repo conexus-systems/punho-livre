@@ -42,6 +42,7 @@ pub mod engine {
     pub mod weapon;
 }
 pub mod ui {
+    pub mod ads;
     pub mod hud;
     pub mod logo;
     pub mod screens;

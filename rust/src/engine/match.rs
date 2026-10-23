@@ -1173,6 +1173,9 @@ impl Match {
         }
         self.ended = true;
         music::set_duck(1.0);
+        if !self.net && !self.demo && self.mode != Mode::Training {
+            crate::ui::ads::on_match_end();
+        }
     }
 
     // ---- desenho ----

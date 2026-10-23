@@ -65,8 +65,10 @@ npm run apk       # dist/punho-livre.apk
 npm run aab       # dist/punho-livre.aab
 ```
 
-As duas compilam o Rust e assinam com uma chave de teste criada em `android/.tools/`. Para
-publicar, use a sua chave (`KEYSTORE`, `KEYSTORE_PASS`, `KEY_ALIAS`) e siga
+As duas compilam o Rust e usam os IDs de teste do AdMob e a chave de debug. Para publicar, use os
+IDs reais (`ADMOB_ANDROID_APP_ID`, `ADMOB_ANDROID_BANNER_ID`, `ADMOB_ANDROID_INTERSTITIAL_ID`) e a sua
+chave (`ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`),
+e siga
 [`store/CHECKLIST.md`](../store/CHECKLIST.md). O pacote Android é `com.conexus.punholivre` e não
 pode mudar depois de publicado.
 

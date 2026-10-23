@@ -206,7 +206,7 @@ impl AboutScreen {
         let lines = [
             (format!("Punho Livre {}", APP_VERSION), 18.0, UI_TEXT),
             ("Lutadores, golpes, cenários, efeitos e sons criados para este jogo.".to_string(), 13.0, UI_MUTED),
-            ("Este app não coleta dados pessoais e não tem anúncios.".to_string(), 13.0, UI_MUTED),
+            ("Este app não coleta dados pessoais. Tem anúncios do Google entre as lutas.".to_string(), 13.0, UI_MUTED),
             ("No jogo em rede, só o seu apelido e as teclas vão ao servidor escolhido.".to_string(), 13.0, UI_MUTED),
         ];
         for (i, (s, size, color)) in lines.iter().enumerate() {

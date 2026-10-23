@@ -1,0 +1,30 @@
+# Host proposto: jogo.conexus-systems.com.br. Confirme antes do primeiro deploy.
+# WebSocket (/ws) passa pelo mesmo Ingress; o nginx-ingress já faz o upgrade da conexão.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: punho-livre
+  namespace: platform
+  labels:
+    app.kubernetes.io/name: punho-livre
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - jogo.conexus-systems.com.br
+      secretName: conexus-origin-tls
+  rules:
+    - host: jogo.conexus-systems.com.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: punho-livre-web
+                port:
+                  number: 80

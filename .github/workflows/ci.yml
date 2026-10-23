@@ -12,7 +12,7 @@ env:
 jobs:
   testes:
     name: Rust, conferência e testes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -48,7 +48,7 @@ jobs:
 
   android:
     name: APK e AAB
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: testes
     steps:
       - uses: actions/checkout@v4
@@ -59,12 +59,17 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
-      - name: Gerar APK e AAB (assinados com a chave de teste)
-        run: FORMAT=both SKIP_WASM=1 ./android/build.sh
+          java-version: 17
+      - name: Android SDK (plataforma 36 e build-tools)
+        run: |
+          SDKMANAGER="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)"
+          yes | "$SDKMANAGER" --licenses > /dev/null
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+      - name: Gerar APK e AAB de teste (IDs de teste do AdMob, assinados com a chave de debug)
+        run: ./android/gradlew -p android assembleRelease bundleRelease -PallowTestAds=true
       - uses: actions/upload-artifact@v4
         with:
           name: punho-livre-android
           path: |
-            dist/punho-livre.apk
-            dist/punho-livre.aab
+            android/app/build/outputs/apk/release/app-release.apk
+            android/app/build/outputs/bundle/release/app-release.aab

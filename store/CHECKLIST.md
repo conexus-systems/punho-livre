@@ -3,7 +3,7 @@
 ## Uma vez só
 
 - [ ] **Conta de desenvolvedor** da Play Console (taxa única de US$ 25) e verificação de identidade.
-- [ ] **Perfil de pagamentos / comerciante** (obrigatório para app pago): dados bancários e fiscais.
+- [ ] **Perfil de pagamentos / comerciante** (só se o app for pago; hoje é grátis com anúncios, então não é obrigatório).
       Como pessoa física no Brasil, informe o CPF; a Google retém imposto conforme a lei. Para
       vender com frequência vale falar com um contador (MEI, por exemplo).
 - [ ] **Chave de assinatura própria** (guarde em lugar seguro; sem ela não dá para atualizar o app):
@@ -22,21 +22,22 @@
 
 - [ ] Aumentar `VERSION_CODE` (sempre maior que o anterior; a regra é `maior*10000 + menor*100 + correção`) e `VERSION_NAME`.
       Mais simples: criar a tag `vX.Y.Z` e deixar o fluxo `Release` (GitHub Actions) gerar o pacote.
-- [ ] Gerar o pacote assinado com a sua chave:
+- [ ] Gerar o pacote com os IDs reais do AdMob e a sua chave:
       ```
-      FORMAT=aab VERSION_CODE=30100 VERSION_NAME=3.1.0 \
-        KEYSTORE=punholivre-upload.p12 KEYSTORE_PASS=... KEY_ALIAS=upload \
-        OUT=dist/punho-livre.apk ./android/build.sh
+      ADMOB_ANDROID_APP_ID=... ADMOB_ANDROID_BANNER_ID=... ADMOB_ANDROID_INTERSTITIAL_ID=... \
+      ANDROID_KEYSTORE_PATH=punholivre-upload.p12 ANDROID_KEYSTORE_PASSWORD=... \
+      ANDROID_KEY_ALIAS=upload ANDROID_KEY_PASSWORD=... \
+      ./android/gradlew -p android bundleRelease -PversionCode=30100 -PversionName=3.1.0
       ```
-      O arquivo sai em `dist/punho-livre.aab`.
-- [ ] Testar o APK (`FORMAT=apk`) num aparelho real: toque, botão voltar, pausa ao sair do app,
+      O arquivo sai em `android/app/build/outputs/bundle/release/app-release.aab`.
+- [ ] Testar o APK (`./android/gradlew -p android assembleRelease`) num aparelho real: toque, botão voltar, pausa ao sair do app,
       rotação, jogo em rede.
 - [ ] Na Play Console: *Testes internos* primeiro (envie o .aab, adicione seu e-mail como testador),
       depois *Produção*.
 - [ ] Contas pessoais novas precisam de um **teste fechado com pelo menos 12 testadores por
       14 dias** antes de liberar para produção (regra da Google para contas criadas depois de 2023).
 - [ ] Preencher: ficha da loja (store/listing-pt-BR.md), classificação de conteúdo, segurança dos
-      dados, público-alvo, preço (R$ 19,99) e países de distribuição.
+      dados, público-alvo, preço (grátis) e países de distribuição.
 
 ## Depois de publicar
 
