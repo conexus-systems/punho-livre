@@ -1,8 +1,8 @@
 //! Ponte com os anúncios do app Android (`window.AndroidAds`, ver android/). No navegador
 //! essa ponte não existe e as chamadas não fazem nada.
 
-use wasm_bindgen::JsValue;
 use wasm_bindgen::JsCast;
+use wasm_bindgen::JsValue;
 
 fn call(method: &str, arg: Option<JsValue>) {
     let Some(win) = web_sys::window() else { return };

@@ -42,9 +42,9 @@ pub mod engine {
     pub mod weapon;
 }
 pub mod ui {
+    pub mod ads;
     pub mod hud;
     pub mod logo;
-    pub mod ads;
     pub mod screens;
     pub mod select;
     pub mod settings;
