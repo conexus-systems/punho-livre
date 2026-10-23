@@ -12,8 +12,10 @@ Não sou advogado; use isto como lista de perguntas para um profissional.
 2. **Conteúdo.** Todos os desenhos, golpes, cenários, sons, músicas e o logo são gerados por
    código deste repositório. A fonte Bangers é livre (SIL OFL 1.1). Não há arte de terceiros.
 3. **Marca.** Pesquise "Punho Livre" no INPI (classe 9 e 41) e na Play Store antes de publicar.
-4. **Dados pessoais (LGPD).** O app não coleta dados; mantenha a política de privacidade em dia.
-   Se criar contas, ranking online ou anúncios no futuro, isso muda.
-5. **Impostos.** A venda de app pago gera renda. A Google fica com 15% dos primeiros US$ 1 milhão
+4. **Dados pessoais (LGPD).** O app não coleta dados próprios, mas mostra anúncios do Google AdMob,
+   que usam o ID de publicidade. Mantenha a política de privacidade em dia. Se criar contas ou
+   ranking online, isso muda.
+5. **Impostos.** Hoje o app é grátis e a receita vem dos anúncios (pagos pelo Google, que deve ser
+   declarado). Se um dia virar pago, a venda de app pago gera renda. A Google fica com 15% dos primeiros US$ 1 milhão
    por ano e 30% do que passar disso, e repassa o restante. Consulte um contador sobre como
    declarar (pessoa física, MEI ou empresa).

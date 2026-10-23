@@ -3,7 +3,7 @@
 ## Uma vez só
 
 - [ ] **Conta de desenvolvedor** da Play Console (taxa única de US$ 25) e verificação de identidade.
-- [ ] **Perfil de pagamentos / comerciante** (obrigatório para app pago): dados bancários e fiscais.
+- [ ] **Perfil de pagamentos / comerciante** (só se o app for pago; hoje é grátis com anúncios, então não é obrigatório).
       Como pessoa física no Brasil, informe o CPF; a Google retém imposto conforme a lei. Para
       vender com frequência vale falar com um contador (MEI, por exemplo).
 - [ ] **Chave de assinatura própria** (guarde em lugar seguro; sem ela não dá para atualizar o app):
@@ -37,7 +37,7 @@
 - [ ] Contas pessoais novas precisam de um **teste fechado com pelo menos 12 testadores por
       14 dias** antes de liberar para produção (regra da Google para contas criadas depois de 2023).
 - [ ] Preencher: ficha da loja (store/listing-pt-BR.md), classificação de conteúdo, segurança dos
-      dados, público-alvo, preço (R$ 19,99) e países de distribuição.
+      dados, público-alvo, preço (grátis) e países de distribuição.
 
 ## Depois de publicar
 
