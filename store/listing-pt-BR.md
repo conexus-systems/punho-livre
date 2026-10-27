@@ -96,4 +96,4 @@ Regere com `node tools/store-assets.cjs` depois de qualquer mudança visual.
   anúncios, declare também o **ID de publicidade** (coletado pelo SDK do AdMob).
 - **Permissões:** INTERNET (jogo em rede e anúncios) e VIBRAR (vibração ao levar dano, com interruptor em Ajustes). O AdMob pode acrescentar ACCESS_NETWORK_STATE e o ID de publicidade (AD_ID); declare o AD_ID no formulário de ID de publicidade.
 - **Política de privacidade:** hospede `politica-de-privacidade.html` (por exemplo no GitHub
-  Pages) e cole o endereço. Troque [DATA] e [E-MAIL DE CONTATO] antes.
+  Pages) e cole o endereço. Data e e-mail de contato já estão preenchidos.
