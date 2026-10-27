@@ -2,9 +2,12 @@
 
 use std::cell::RefCell;
 use std::collections::HashSet;
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 
+#[cfg(target_arch = "wasm32")]
 use crate::audio::sound;
 use crate::core::consts::*;
 
@@ -336,26 +339,18 @@ pub fn with<R>(f: impl FnOnce(&mut Input) -> R) -> R {
     INPUT.with(|i| f(&mut i.borrow_mut()))
 }
 
-pub fn local_storage() -> Option<web_sys::Storage> {
-    web_sys::window().and_then(|w| w.local_storage().ok().flatten())
-}
-
 impl Input {
     pub fn load_keys(&mut self) {
-        if let Some(st) = local_storage() {
-            if let Ok(Some(raw)) = st.get_item("punho.keys") {
-                if let Ok(v) = serde_json::from_str::<Vec<KeyMap>>(&raw) {
-                    if v.len() == 4 {
-                        self.keys = v;
-                    }
+        if let Some(raw) = crate::platform::storage_get("punho.keys") {
+            if let Ok(v) = serde_json::from_str::<Vec<KeyMap>>(&raw) {
+                if v.len() == 4 {
+                    self.keys = v;
                 }
             }
         }
     }
     pub fn save_keys(&self) {
-        if let Some(st) = local_storage() {
-            let _ = st.set_item("punho.keys", &serde_json::to_string(&self.keys).unwrap_or_default());
-        }
+        crate::platform::storage_set("punho.keys", &serde_json::to_string(&self.keys).unwrap_or_default());
     }
     pub fn is_game_key(&self, code: &str) -> bool {
         self.keys.iter().any(|k| k.iter().any(|c| c == code))
@@ -418,6 +413,10 @@ impl Input {
 
     // Controles bluetooth/USB: o controle de índice i joga como o jogador i+1.
     // A e Y atacam, B pula, X defende, Start pausa. Direcional ou analógico esquerdo movem.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn poll_pads(&mut self) {}
+
+    #[cfg(target_arch = "wasm32")]
     pub fn poll_pads(&mut self) {
         let Some(win) = web_sys::window() else { return };
         let Ok(pads) = win.navigator().get_gamepads() else { return };
@@ -457,7 +456,13 @@ impl Input {
     }
 }
 
-/// Liga os eventos de teclado da janela.
+/// Liga os eventos de teclado da janela (no app nativo, o laço de eventos chama `set_key`).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn init() {
+    with(|i| i.load_keys());
+}
+
+#[cfg(target_arch = "wasm32")]
 pub fn init() {
     with(|i| i.load_keys());
     let win = web_sys::window().unwrap();
@@ -519,9 +524,7 @@ pub fn buzz(ms: i32) {
     if crate::core::save::settings().vibrate == 0 {
         return;
     }
-    if let Some(w) = web_sys::window() {
-        let _ = w.navigator().vibrate_with_duration(ms as u32);
-    }
+    crate::platform::vibrate(ms);
 }
 
 #[cfg(test)]

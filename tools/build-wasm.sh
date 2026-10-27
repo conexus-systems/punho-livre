@@ -9,10 +9,10 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PROFILE="${1:-release}"
 cd "$ROOT/rust"
 if [ "$PROFILE" = dev ]; then
-  cargo build --target wasm32-unknown-unknown
+  cargo build --lib --target wasm32-unknown-unknown
   WASM="target/wasm32-unknown-unknown/debug/punho_livre.wasm"
 else
-  cargo build --release --target wasm32-unknown-unknown
+  cargo build --release --lib --target wasm32-unknown-unknown
   WASM="target/wasm32-unknown-unknown/release/punho_livre.wasm"
 fi
 mkdir -p "$ROOT/web/pkg"

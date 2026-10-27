@@ -7,7 +7,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use crate::audio::sound;
-use crate::core::input::local_storage;
+use crate::platform;
 
 const SAVE_KEY: &str = "punho.save";
 
@@ -68,11 +68,9 @@ thread_local! {
 
 pub fn load() {
     let mut d = SaveData::default();
-    if let Some(st) = local_storage() {
-        if let Ok(Some(raw)) = st.get_item(SAVE_KEY) {
-            if let Ok(v) = serde_json::from_str::<SaveData>(&raw) {
-                d = v;
-            }
+    if let Some(raw) = platform::storage_get(SAVE_KEY) {
+        if let Ok(v) = serde_json::from_str::<SaveData>(&raw) {
+            d = v;
         }
     }
     d.settings.difficulty = d.settings.difficulty.clamp(0, 3);
@@ -81,9 +79,7 @@ pub fn load() {
 
 pub fn save() {
     let raw = SAVE.with(|s| serde_json::to_string(&*s.borrow()).unwrap_or_default());
-    if let Some(st) = local_storage() {
-        let _ = st.set_item(SAVE_KEY, &raw);
-    }
+    platform::storage_set(SAVE_KEY, &raw);
 }
 
 pub fn settings() -> Settings {
@@ -120,6 +116,7 @@ pub fn apply() {
     let s = settings();
     sound::set_volumes(s.sfx as f64 / 10.0, s.music as f64 / 10.0);
     DIFFICULTY.with(|d| *d.borrow_mut() = s.difficulty);
+    #[cfg(target_arch = "wasm32")]
     if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
         if let Some(root) = doc.document_element() {
             if let Some(el) = wasm_bindgen::JsCast::dyn_ref::<web_sys::HtmlElement>(&root) {

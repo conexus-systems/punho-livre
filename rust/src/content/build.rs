@@ -3,7 +3,6 @@
 //! passos (um lutador por quadro de animação) para a barra de carregamento andar.
 
 use std::collections::HashMap;
-use web_sys::HtmlCanvasElement;
 
 use crate::content::moves::*;
 use crate::content::painter::*;
@@ -13,7 +12,7 @@ use crate::core::input::Tag;
 use crate::engine::data::*;
 use crate::gfx::*;
 
-type Images = HashMap<String, HtmlCanvasElement>;
+type Images = HashMap<String, Canvas>;
 
 pub struct Builder {
     step: usize,
@@ -130,7 +129,7 @@ impl Default for Builder {
 
 // ---- lutadores ----
 
-fn render_fighter_sheet(b: &FighterBuilder, look: &crate::content::roster::Look) -> HtmlCanvasElement {
+fn render_fighter_sheet(b: &FighterBuilder, look: &crate::content::roster::Look) -> Canvas {
     let cols = 10;
     let rows = b.poses.len().div_ceil(cols);
     let c = make_canvas(cols as f64 * CELL, rows as f64 * CELL);
@@ -167,13 +166,13 @@ fn render_fighter_sheet(b: &FighterBuilder, look: &crate::content::roster::Look)
     c
 }
 
-fn portrait_canvas(def: &FighterDef, size: f64) -> HtmlCanvasElement {
+fn portrait_canvas(def: &FighterDef, size: f64) -> Canvas {
     let c = make_canvas(size, size);
     draw_portrait(&ctx_of(&c), &def.look, 0.0, 0.0, size, Some(def.color));
     c
 }
 
-fn small_canvas(def: &FighterDef) -> HtmlCanvasElement {
+fn small_canvas(def: &FighterDef) -> Canvas {
     let c = make_canvas(40.0, 45.0);
     draw_portrait(&ctx_of(&c), &def.look, -2.0, 0.0, 45.0, Some(def.color));
     c

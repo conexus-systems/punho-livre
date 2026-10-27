@@ -3,10 +3,9 @@
 //! e de golpe (itr), ponto da arma (wpoint), de agarrão (cpoint) e de criação (opoint).
 
 use std::collections::HashMap;
-use web_sys::HtmlCanvasElement;
 
 use crate::core::input::Tag;
-use crate::gfx::SpriteSheet;
+use crate::gfx::{Canvas, SpriteSheet};
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Rect {
@@ -263,7 +262,7 @@ pub struct BgData {
 
 pub struct Assets {
     pub objects: HashMap<i32, ObjData>,
-    pub images: HashMap<String, HtmlCanvasElement>,
+    pub images: HashMap<String, Canvas>,
     pub backgrounds: Vec<BgData>,
     pub sheets: HashMap<i32, SpriteSheet>,
     pub order: Vec<i32>, // ids dos objetos na ordem de criação
@@ -273,7 +272,7 @@ impl Assets {
     pub fn obj(&self, id: i32) -> Option<&ObjData> {
         self.objects.get(&id)
     }
-    pub fn img(&self, key: &str) -> Option<&HtmlCanvasElement> {
+    pub fn img(&self, key: &str) -> Option<&Canvas> {
         self.images.get(key)
     }
     pub fn sheet(&self, id: i32) -> Option<&SpriteSheet> {

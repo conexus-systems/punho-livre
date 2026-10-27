@@ -2,15 +2,14 @@
 //! (largura_da_camada - largura_da_tela) / (largura_do_cenário - largura_da_tela).
 
 use std::rc::Rc;
-use web_sys::HtmlCanvasElement;
 
 use crate::core::consts::*;
 use crate::engine::data::{Assets, BgData, Layer};
-use crate::gfx::Ctx;
+use crate::gfx::{Canvas, Ctx};
 
 pub struct BgLayer {
     pub l: Layer,
-    pub img: Option<HtmlCanvasElement>,
+    pub img: Option<Canvas>,
 }
 
 pub struct Background {
@@ -18,7 +17,7 @@ pub struct Background {
     pub name: String,
     pub width: f64,
     pub zboundary: [f64; 2],
-    pub shadow: Option<HtmlCanvasElement>,
+    pub shadow: Option<Canvas>,
     pub timer: i32,
     pub cam_x: f64,
     pub layers: Vec<BgLayer>,

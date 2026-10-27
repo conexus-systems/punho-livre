@@ -3,6 +3,8 @@
 
     <!-- jogo em rede (WebSocket com o servidor de salas) -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- vibração ao levar dano (Ajustes tem o interruptor) -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <!-- tela de toque e controle são opcionais: o jogo também roda com teclado/controle -->
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
@@ -15,7 +17,7 @@
         android:allowBackup="false"
         android:appCategory="game"
         android:isGame="true"
-        android:enableOnBackInvokedCallback="true"
+        android:hasCode="true"
         android:hardwareAccelerated="true"
         android:usesCleartextTraffic="true"
         android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen">
@@ -25,6 +27,7 @@
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="${admobAppId}" />
 
+        <!-- o jogo é a biblioteca nativa libpunho_livre.so (Rust), carregada pela NativeActivity -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -32,6 +35,9 @@
             android:screenOrientation="sensorLandscape"
             android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|uiMode">
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="punho_livre" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

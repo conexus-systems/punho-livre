@@ -2,15 +2,22 @@
 //! `Game` guarda a tela atual; as telas estão em `ui::screens`.
 
 use std::cell::RefCell;
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 
-use crate::audio::{music, sound};
+use crate::audio::music;
+#[cfg(target_arch = "wasm32")]
+use crate::audio::sound;
 use crate::content::build::Builder;
+#[cfg(target_arch = "wasm32")]
 use crate::core::consts::*;
 use crate::core::{input, save};
 use crate::engine::data::Assets;
-use crate::gfx::{self, Ctx};
+#[cfg(target_arch = "wasm32")]
+use crate::gfx;
+use crate::gfx::Ctx;
 use crate::ui::screens::{self, Screen};
 
 pub struct Game {
@@ -37,22 +44,26 @@ pub fn with_game<R>(f: impl FnOnce(&mut Game) -> R) -> Option<R> {
     GAME.with(|g| g.try_borrow_mut().ok().and_then(|mut g| g.as_mut().map(f)))
 }
 
-pub fn boot() {
-    let doc = gfx::document();
-    let canvas: web_sys::HtmlCanvasElement = doc.get_element_by_id("game").unwrap().dyn_into().unwrap();
-    let ctx = gfx::ctx_of(&canvas);
+/// prepara o jogo sobre o contexto de desenho da tela (o navegador e o app nativo chamam isto)
+pub fn init(ctx: Ctx) {
     ctx.smoothing(false);
     save::load();
     save::apply();
     input::init();
     crate::ui::touch::setup();
-    let on_pointer = Closure::<dyn FnMut(web_sys::Event)>::new(move |_e: web_sys::Event| sound::init());
-    let _ = canvas.add_event_listener_with_callback("pointerdown", on_pointer.as_ref().unchecked_ref());
-    on_pointer.forget();
-
     GAME.with(|g| {
         *g.borrow_mut() = Some(Game { ctx, screen: Screen::Loading { p: 0.0 }, builder: Some(Builder::new()), load_error: None });
     });
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn boot() {
+    let doc = gfx::document();
+    let canvas: web_sys::HtmlCanvasElement = doc.get_element_by_id("game").unwrap().dyn_into().unwrap();
+    init(gfx::ctx_of(&canvas));
+    let on_pointer = Closure::<dyn FnMut(web_sys::Event)>::new(move |_e: web_sys::Event| sound::init());
+    let _ = canvas.add_event_listener_with_callback("pointerdown", on_pointer.as_ref().unchecked_ref());
+    on_pointer.forget();
 
     // ao sair do app a luta pausa sozinha e o som para
     let on_vis = Closure::<dyn FnMut(web_sys::Event)>::new(move |_e: web_sys::Event| {
@@ -88,6 +99,7 @@ pub fn boot() {
     request_frame(g.borrow().as_ref().unwrap());
 }
 
+#[cfg(target_arch = "wasm32")]
 fn request_frame(f: &Closure<dyn FnMut(f64)>) {
     let _ = web_sys::window().unwrap().request_animation_frame(f.as_ref().unchecked_ref());
 }

@@ -2,19 +2,28 @@
 name = "punho-livre"
 version = "3.0.0"
 edition = "2021"
-description = "Punho Livre: jogo de luta 2.5D em Rust + WebAssembly"
+description = "Punho Livre: jogo de luta 2.5D em Rust (WebAssembly e app nativo)"
 publish = false
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+# `audio` (cpal) e `tls` (wss:// no jogo em rede) precisam de bibliotecas do sistema/NDK;
+# sem eles o app nativo compila mais leve (útil para só conferir o código)
+default = ["audio", "tls"]
+audio = ["dep:cpal"]
+tls = ["tungstenite/rustls-tls-webpki-roots"]
+
 [dependencies]
-wasm-bindgen = "=0.2.129"
-js-sys = "0.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
-[dependencies.web-sys]
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "=0.2.129"
+js-sys = "0.3"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
 version = "0.3"
 features = [
   "Window", "Document", "Element", "HtmlElement", "HtmlCanvasElement", "HtmlInputElement", "HtmlButtonElement", "HtmlFormElement",
@@ -26,6 +35,22 @@ features = [
   "WebSocket", "MessageEvent", "CloseEvent", "BinaryType",
   "FontFaceSet", "console", "AddEventListenerOptions", "HtmlCollection",
 ]
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tiny-skia = "0.11"
+ttf-parser = "0.25"
+winit = { version = "0.30", default-features = false, features = ["rwh_06", "x11", "wayland"] }
+softbuffer = "0.4"
+cpal = { version = "0.15", optional = true }
+tungstenite = { version = "0.24", default-features = false, features = ["handshake"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+winit = { version = "0.30", default-features = false, features = ["rwh_06", "android-native-activity"] }
+android-activity = { version = "0.6", features = ["native-activity"] }
+jni = "0.21"
+ndk = "0.9"
+log = "0.4"
+android_logger = "0.14"
 
 [profile.release]
 opt-level = 3

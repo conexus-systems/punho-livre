@@ -1,7 +1,7 @@
 name: Release
 
 # Publica uma versão: crie e envie uma tag (git tag v3.0.0 && git push origin v3.0.0).
-# O fluxo confere o jogo, gera o APK e o AAB e abre a release no GitHub com os dois arquivos.
+# O fluxo confere o jogo, compila o app nativo (Rust) e gera o APK e o AAB e abre a release no GitHub com os dois arquivos.
 # Para assinar com a sua chave (em vez da chave de debug), cadastre os segredos:
 #   KEYSTORE_BASE64 (o .p12 em base64), KEYSTORE_PASS e KEY_ALIAS.
 # Os IDs reais do AdMob são obrigatórios para a release (sem eles o build para):
@@ -28,12 +28,17 @@ jobs:
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: wasm32-unknown-unknown
+          targets: wasm32-unknown-unknown,aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: rust
       - run: cargo install wasm-bindgen-cli --version "$WASM_BINDGEN_VERSION" --locked
+      - run: cargo install cargo-ndk --locked
+      - name: NDK do runner (ANDROID_NDK_LATEST_HOME) para o cargo-ndk
+        run: echo "ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
+      - name: Biblioteca de áudio do Linux (o app nativo usa o cpal)
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -71,6 +76,7 @@ jobs:
           fi
       - name: APK e AAB
         env:
+          PUNHO_SERVER: ${{ vars.PUNHO_SERVER }}
           ADMOB_ANDROID_APP_ID: ${{ secrets.ADMOB_ANDROID_APP_ID }}
           ADMOB_ANDROID_BANNER_ID: ${{ secrets.ADMOB_ANDROID_BANNER_ID }}
           ADMOB_ANDROID_INTERSTITIAL_ID: ${{ secrets.ADMOB_ANDROID_INTERSTITIAL_ID }}

@@ -34,12 +34,17 @@ jobs:
           key: wasm-bindgen-${{ env.WASM_BINDGEN_VERSION }}
       - if: steps.wb.outputs.cache-hit != 'true'
         run: cargo install wasm-bindgen-cli --version "$WASM_BINDGEN_VERSION" --locked
+      - name: Biblioteca de áudio do Linux (o app nativo usa o cpal)
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
       - run: npm ci
       - run: npm ci --prefix server
       - run: npx playwright install --with-deps chromium
       - run: npm run build
       - run: npm run check
       - run: npm test
+      - name: App nativo sem janela (carrega o jogo, desenha o título e uma luta)
+        run: cargo test --release --test native_headless
+        working-directory: rust
       - uses: actions/upload-artifact@v4
         with:
           name: punho-livre-web
@@ -52,10 +57,12 @@ jobs:
     needs: testes
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          name: punho-livre-web
-          path: web/pkg
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -65,7 +72,13 @@ jobs:
           SDKMANAGER="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)"
           yes | "$SDKMANAGER" --licenses > /dev/null
           "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+      - name: NDK do runner (ANDROID_NDK_LATEST_HOME) para o cargo-ndk
+        run: echo "ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
+      - name: cargo-ndk (compila o Rust para cada ABI do Android)
+        run: cargo install cargo-ndk --locked
       - name: Gerar APK e AAB de teste (IDs de teste do AdMob, assinados com a chave de debug)
+        env:
+          PUNHO_SERVER: ${{ vars.PUNHO_SERVER }}
         run: ./android/gradlew -p android assembleRelease bundleRelease -PallowTestAds=true
       - uses: actions/upload-artifact@v4
         with:

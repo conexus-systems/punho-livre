@@ -3,6 +3,22 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). Os números de versão
 seguem `maior.menor.correção`; o `versionCode` do Android é `maior*10000 + menor*100 + correção`.
 
+## [Não lançado]
+
+### O app Android agora é nativo
+- O jogo roda como **app nativo em Rust**, sem WebView: o mesmo motor do navegador (simulação,
+  conteúdo gerado, telas e rede) compilado para `libpunho_livre.so` e carregado por uma `NativeActivity`.
+  O Kotlin ficou só com a barra imersiva, os anúncios do AdMob e a vibração (chamados por JNI).
+- Também roda no computador: `cargo run --release` na pasta `rust/` (janela com teclado, `--touch` para
+  testar os controles de toque com o mouse).
+- Camadas por plataforma (`gfx`, `audio`, `net`, `ui/touch`, `platform`): o navegador continua usando Canvas 2D,
+  Web Audio e WebSocket; o app nativo usa `tiny-skia`, um mixer sobre o `cpal` e `tungstenite`.
+- Controles de toque desenhados pelo jogo (direcional de 8 direções, A/J/D, Esc, pausa e golpes especiais),
+  com os mesmos ajustes de tamanho e opacidade.
+- Teste novo: `cargo test --release --test native_headless` carrega o jogo, desenha o título e uma luta sem janela.
+- Ainda não há no app nativo: controle bluetooth/USB e teclado na tela para digitar o endereço do servidor de
+  rede (defina `PUNHO_SERVER` ao compilar para deixá-lo preenchido).
+
 ## [3.0.0] - 2026-10-22
 
 O jogo foi reescrito em **Rust** e roda como **WebAssembly**, com a mesma cara e as mesmas regras de

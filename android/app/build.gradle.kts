@@ -10,20 +10,6 @@ val testAppId = "ca-app-pub-3940256099942544~3347511713"
 val testBannerId = "ca-app-pub-3940256099942544/6300978111"
 val testInterstitialId = "ca-app-pub-3940256099942544/1033173712"
 
-val webAssetsDir = layout.buildDirectory.dir("web-assets").get().asFile
-
-val prepareWebAssets by tasks.registering(Copy::class) {
-    from("../../web") {
-        exclude("pkg/punho_bg.wasm", "README.md")
-    }
-    into(webAssetsDir)
-}
-
-// tudo que lê os assets (merge, lint, R8, bundle) roda depois da cópia do jogo
-tasks.configureEach {
-    if (name != prepareWebAssets.name) dependsOn(prepareWebAssets)
-}
-
 fun setting(name: String): String =
     providers.gradleProperty(name).orElse(providers.environmentVariable(name)).orElse("").get().trim()
 
@@ -32,6 +18,27 @@ val realBannerId = setting("ADMOB_ANDROID_BANNER_ID")
 val realInterstitialId = setting("ADMOB_ANDROID_INTERSTITIAL_ID")
 val allowTestAds = setting("allowTestAds").toBoolean()
 val uploadKeystore = setting("ANDROID_KEYSTORE_PATH")
+
+// O jogo é Rust (rust/): `cargo ndk` gera libpunho_livre.so para cada ABI em build/rust-libs/<abi>/.
+// Com -PrustLibs=<pasta> (CI) usa bibliotecas já compiladas e não roda o cargo.
+val prebuiltRustLibs = setting("rustLibs")
+val rustLibsDir = if (prebuiltRustLibs.isNotEmpty()) file(prebuiltRustLibs) else layout.buildDirectory.dir("rust-libs").get().asFile
+val rustAbis = listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+
+val buildRust by tasks.registering(Exec::class) {
+    onlyIf { prebuiltRustLibs.isEmpty() }
+    workingDir = file("../../rust")
+    // PUNHO_SERVER (opcional) vem do ambiente: servidor de salas já preenchido na tela de rede
+    commandLine(
+        listOf("cargo", "ndk", "--platform", "24") + rustAbis.flatMap { listOf("-t", it) } +
+            listOf("-o", rustLibsDir.absolutePath, "build", "--release", "--lib"),
+    )
+}
+
+// tudo que empacota bibliotecas nativas roda depois da compilação do Rust
+tasks.configureEach {
+    if (name.startsWith("merge") && name.endsWith("JniLibFolders")) dependsOn(buildRust)
+}
 
 android {
     namespace = "com.conexus.punholivre"
@@ -51,14 +58,14 @@ android {
 
     buildFeatures { buildConfig = true }
 
+    packaging { jniLibs { useLegacyPackaging = false } }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    // o jogo inteiro (HTML, CSS, JS e fonte) é a pasta web/ do repositório, copiada para o build
-    // sem o .wasm binário (o app usa o pkg/punho_wasm.js, com o mesmo .wasm em base64)
-    sourceSets["main"].assets.srcDirs(webAssetsDir)
+    sourceSets["main"].jniLibs.srcDir(rustLibsDir)
 
     signingConfigs {
         if (uploadKeystore.isNotEmpty()) {

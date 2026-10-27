@@ -378,7 +378,7 @@ impl SelectScreen {
 
     fn random_char(&self) -> i32 {
         let list: Vec<i32> = self.chars.iter().copied().filter(|&c| c != 30).collect();
-        list[(js_sys::Math::random() * list.len() as f64).floor() as usize % list.len()]
+        list[(crate::platform::random() * list.len() as f64).floor() as usize % list.len()]
     }
 
     fn fight(&mut self) -> Option<Next> {
@@ -434,7 +434,7 @@ impl SelectScreen {
         sound::play("m_ok");
         let s = save::settings();
         let bg = if self.st.bg < 0 {
-            a.backgrounds[(js_sys::Math::random() * a.backgrounds.len() as f64).floor() as usize % a.backgrounds.len()].id
+            a.backgrounds[(crate::platform::random() * a.backgrounds.len() as f64).floor() as usize % a.backgrounds.len()].id
         } else {
             a.backgrounds[self.st.bg as usize].id
         };

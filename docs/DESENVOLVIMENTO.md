@@ -11,7 +11,10 @@ npx playwright install chromium  # navegador dos testes
 ```
 
 Requisitos: Rust (estável) com o alvo `wasm32-unknown-unknown`, Node 22+ (o servidor roda em 18+).
-Para o Android: Java 17+, Maven, Python 3, curl e unzip.
+Para o app nativo no computador: as bibliotecas de desenvolvimento do ALSA (`libasound2-dev` no Ubuntu).
+Para o Android: Java 17+, o Android SDK (API 36) e o NDK, os alvos Rust do Android e o `cargo-ndk`
+(`rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android` e
+`cargo install cargo-ndk --locked`).
 
 A versão do `wasm-bindgen-cli` precisa ser **exatamente** a do crate `wasm-bindgen` no
 `Cargo.toml` (hoje `=0.2.129`); se mudar uma, mude a outra e a variável `WASM_BINDGEN_VERSION`
@@ -28,6 +31,21 @@ dos fluxos em `.github/workflows/`.
 - `npm test` roda todos os testes de navegador (cerca de 1 minuto; precisa do `npm run build`
   antes). Um arquivo só: `node --test tests/specials.test.cjs`.
 - Na pasta `rust/`: `cargo test --lib` (unitários) e `cargo fmt` para formatar.
+
+## App nativo no computador
+
+O mesmo jogo roda sem navegador (janela `winit`, desenho `tiny-skia`, som `cpal`):
+
+```bash
+cd rust
+cargo run --release                      # teclado: as teclas de Controles; --touch usa o mouse como dedo
+cargo test --release --test native_headless   # carrega o jogo, desenha o título e uma luta (PUNHO_SHOTS=pasta grava PNGs)
+cargo test --release --test native_net        # dois jogos nativos em rede com o servidor Node (precisa de node e npm ci --prefix server)
+```
+
+O salvamento fica em `~/.local/share/punho-livre/save.json`. O código específico de cada lado está em
+`gfx/`, `audio/`, `net/`, `ui/touch/` e `platform.rs` (ver [Arquitetura](ARQUITETURA.md)); quem mexer no
+motor não precisa saber a diferença, mas qualquer coisa nova que fale com o sistema deve ter as duas pontas.
 
 ## Criar um lutador
 
@@ -56,16 +74,17 @@ novo id em `stages()` (`rust/src/engine/stage.rs`) se quiser usá-lo na Históri
 - Fases da História: `stages()` em `rust/src/engine/stage.rs`.
 - Dano, combos e clarão: `hit()` em `rust/src/engine/character.rs`.
 - Tudo o que entra na simulação precisa ser determinístico: use `Match::random()`, nunca
-  `js_sys::Math::random`. O teste de rede compara os dois aparelhos.
+  `platform::random` (que é só para efeitos visuais e sorteios de menu). O teste de rede compara os dois aparelhos.
 
 ## Gerar o app
 
 ```bash
+export ANDROID_NDK_HOME=<pasta do NDK>
 npm run apk       # dist/punho-livre.apk
 npm run aab       # dist/punho-livre.aab
 ```
 
-As duas compilam o Rust e usam os IDs de teste do AdMob e a chave de debug. Para publicar, use os
+As duas compilam o Rust para Android (`cargo ndk`, três ABIs) e usam os IDs de teste do AdMob e a chave de debug. Para publicar, use os
 IDs reais (`ADMOB_ANDROID_APP_ID`, `ADMOB_ANDROID_BANNER_ID`, `ADMOB_ANDROID_INTERSTITIAL_ID`) e a sua
 chave (`ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`),
 e siga

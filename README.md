@@ -1,7 +1,8 @@
 # Punho Livre
 
-Jogo de luta 2.5D para navegador e Android, para até 8 lutadores, com jogo em rede.
-Escrito em **Rust** e compilado para WebAssembly. Todo o conteúdo (lutadores, golpes, cenários,
+Jogo de luta 2.5D para navegador, Android e computador, para até 8 lutadores, com jogo em rede.
+Escrito em **Rust**: o mesmo motor roda como WebAssembly no navegador e como **app nativo** (Android e
+computador), sem WebView. Todo o conteúdo (lutadores, golpes, cenários,
 efeitos, sons e música) é gerado por código ao abrir o jogo, então o repositório não tem arte
 nem áudio de terceiros.
 
@@ -28,7 +29,7 @@ em rede precisa do servidor).
 | [`rust/`](rust/) | O jogo: motor, conteúdo gerado, telas, som e rede, em Rust |
 | [`web/`](web/) | A página: `index.html`, `style.css`, fonte e o `pkg/` gerado pelo build |
 | [`server/`](server/) | Servidor Node das salas de jogo em rede (e que também entrega o jogo) |
-| [`android/`](android/) | App Android (WebView) e o build do APK/AAB sem Android SDK |
+| [`android/`](android/) | App Android: a `NativeActivity` que carrega o jogo em Rust, o AdMob e o build do APK/AAB |
 | [`store/`](store/) | Ficha da Play Store: textos, arte, política de privacidade, checklist |
 | [`tests/`](tests/) | Testes automáticos de navegador (Playwright) |
 | [`tools/`](tools/) | Build do WebAssembly, conferência e gerador da arte da loja |
@@ -42,7 +43,8 @@ em rede precisa do servidor).
 | `npm run build` | Compila o Rust (release) para `web/pkg/` |
 | `npm run check` | Confere formato, clippy e testes do Rust, e a sintaxe do JavaScript que sobrou |
 | `npm test` | Roda os testes de navegador (precisa de `npm run build` e `npx playwright install chromium`) |
-| `npm run apk` | Gera `dist/punho-livre.apk` |
+| `cargo run --release` (em `rust/`) | Abre o app nativo no computador, sem navegador |
+| `npm run apk` | Gera `dist/punho-livre.apk` (app nativo; precisa do NDK e do `cargo-ndk`) |
 | `npm run aab` | Gera `dist/punho-livre.aab` (pacote da Play Store) |
 | `npm run store-assets` | Regera ícone, gráfico e capturas de tela em `store/` |
 

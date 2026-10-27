@@ -5,9 +5,18 @@
 
 use std::cell::RefCell;
 use std::collections::HashMap;
-use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsCast;
-use web_sys::{HtmlButtonElement, HtmlInputElement, MessageEvent, WebSocket};
+
+#[cfg(not(target_arch = "wasm32"))]
+mod native;
+#[cfg(target_arch = "wasm32")]
+mod web;
+
+#[cfg(not(target_arch = "wasm32"))]
+use native as backend;
+#[cfg(target_arch = "wasm32")]
+use web as backend;
+
+pub use backend::NetScreen;
 
 use crate::audio::sound;
 use crate::core::consts::*;
@@ -41,21 +50,18 @@ pub struct Room {
 }
 
 struct NetState {
-    ws: Option<WebSocket>,
     slot: i32,
     code: String,
     room: Option<Room>,
     queue: Vec<serde_json::Value>,
-    closures: Vec<Closure<dyn FnMut(web_sys::Event)>>,
-    msg_closure: Option<Closure<dyn FnMut(MessageEvent)>>,
 }
 
 thread_local! {
-    static NET: RefCell<NetState> = const { RefCell::new(NetState { ws: None, slot: -1, code: String::new(), room: None, queue: Vec::new(), closures: Vec::new(), msg_closure: None }) };
+    static NET: RefCell<NetState> = const { RefCell::new(NetState { slot: -1, code: String::new(), room: None, queue: Vec::new() }) };
 }
 
 fn server_saved() -> String {
-    input::local_storage().and_then(|s| s.get_item("pl.server").ok().flatten()).unwrap_or_default()
+    crate::platform::storage_get("pl.server").unwrap_or_default()
 }
 
 pub fn url(addr: &str) -> String {
@@ -78,7 +84,7 @@ pub fn url(addr: &str) -> String {
     let numeric_ip = host_part.split('.').count() == 4 && host_part.split('.').all(|p| !p.is_empty() && p.chars().all(|c| c.is_ascii_digit()));
     let has_port = addr.rsplit(':').next().map(|p| addr.contains(':') && !p.is_empty() && p.chars().all(|c| c.is_ascii_digit())).unwrap_or(false);
     let local = host_part == "localhost" || numeric_ip || has_port;
-    let https = web_sys::window().and_then(|w| w.location().protocol().ok()).map(|p| p == "https:").unwrap_or(false);
+    let https = crate::platform::page_is_https();
     format!("{}://{}/ws", if https || !local { "wss" } else { "ws" }, addr)
 }
 
@@ -125,72 +131,15 @@ fn handle_incoming(m: &serde_json::Value) {
 /// conecta ao servidor e manda `first` (create/join) assim que abrir
 pub fn connect(addr: &str, first: serde_json::Value) {
     close();
-    let ws = match WebSocket::new(&url(addr)) {
-        Ok(w) => w,
-        Err(_) => {
-            push(serde_json::json!({"t": "error", "msg": "Endereço do servidor inválido."}));
-            return;
-        }
-    };
-    let first = first.to_string();
-    let ws2 = ws.clone();
-    let on_open = Closure::<dyn FnMut(web_sys::Event)>::new(move |_e: web_sys::Event| {
-        let _ = ws2.send_with_str(&first);
-    });
-    ws.set_onopen(Some(on_open.as_ref().unchecked_ref()));
-    let on_error = Closure::<dyn FnMut(web_sys::Event)>::new(move |_e: web_sys::Event| {
-        push(serde_json::json!({"t": "error", "msg": "Não foi possível conectar ao servidor."}));
-    });
-    ws.set_onerror(Some(on_error.as_ref().unchecked_ref()));
-    let ws3 = ws.clone();
-    let on_close = Closure::<dyn FnMut(web_sys::Event)>::new(move |_e: web_sys::Event| {
-        let current = NET.with(|n| n.borrow().ws.as_ref().map(|w| w == &ws3).unwrap_or(false));
-        if current {
-            NET.with(|n| n.borrow_mut().ws = None);
-            push(serde_json::json!({"t": "closed"}));
-        }
-    });
-    ws.set_onclose(Some(on_close.as_ref().unchecked_ref()));
-    let on_msg = Closure::<dyn FnMut(MessageEvent)>::new(move |e: MessageEvent| {
-        let Some(s) = e.data().as_string() else { return };
-        let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) else { return };
-        handle_incoming(&v);
-        push(v);
-    });
-    ws.set_onmessage(Some(on_msg.as_ref().unchecked_ref()));
-    // tempo esgotado
-    let ws4 = ws.clone();
-    let timeout = Closure::<dyn FnMut(web_sys::Event)>::new(move |_e: web_sys::Event| {
-        if ws4.ready_state() == WebSocket::CONNECTING {
-            let _ = ws4.close();
-            push(serde_json::json!({"t": "error", "msg": "O servidor não respondeu."}));
-        }
-    });
-    let _ = web_sys::window().unwrap().set_timeout_with_callback_and_timeout_and_arguments_0(timeout.as_ref().unchecked_ref(), 8000);
-    NET.with(|n| {
-        let mut n = n.borrow_mut();
-        n.ws = Some(ws);
-        n.closures.extend([on_open, on_error, on_close, timeout]);
-        n.msg_closure = Some(on_msg);
-    });
+    backend::connect(addr, first);
 }
 
 pub fn send(v: serde_json::Value) {
-    NET.with(|n| {
-        if let Some(ws) = &n.borrow().ws {
-            if ws.ready_state() == WebSocket::OPEN {
-                let _ = ws.send_with_str(&v.to_string());
-            }
-        }
-    });
+    backend::send_text(&v.to_string());
 }
 
 pub fn close() {
-    let ws = NET.with(|n| n.borrow_mut().ws.take());
-    if let Some(ws) = ws {
-        ws.set_onclose(None);
-        let _ = ws.close();
-    }
+    backend::shutdown();
     NET.with(|n| {
         let mut n = n.borrow_mut();
         n.room = None;
@@ -213,145 +162,8 @@ fn is_host() -> bool {
     NET.with(|n| n.borrow().room.as_ref().map(|r| r.host == n.borrow().slot).unwrap_or(false))
 }
 fn drain() -> Vec<serde_json::Value> {
+    backend::poll();
     NET.with(|n| std::mem::take(&mut n.borrow_mut().queue))
-}
-
-// ---- tela de conexão (formulário HTML por cima do jogo) ----
-
-pub struct NetScreen {
-    t: i32,
-    pub status: String,
-}
-
-fn el<T: JsCast>(id: &str) -> Option<T> {
-    document().get_element_by_id(id).and_then(|e| e.dyn_into::<T>().ok())
-}
-
-fn set_status(s: &str) {
-    if let Some(e) = document().get_element_by_id("net-status") {
-        e.set_text_content(Some(s));
-    }
-}
-
-impl Default for NetScreen {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl NetScreen {
-    pub fn new() -> NetScreen {
-        NetScreen { t: 0, status: String::new() }
-    }
-
-    pub fn enter(&mut self) {
-        let Some(form) = document().get_element_by_id("netform") else { return };
-        let _ = form.remove_attribute("hidden");
-        let (Some(server), Some(name), Some(code_in)) = (el::<HtmlInputElement>("net-server"), el::<HtmlInputElement>("net-name"), el::<HtmlInputElement>("net-code")) else {
-            return;
-        };
-        let mut saved = server_saved();
-        if saved.is_empty() {
-            if let Some(loc) = web_sys::window().map(|w| w.location()) {
-                if loc.protocol().map(|p| p == "http:" || p == "https:").unwrap_or(false) {
-                    saved = loc.host().unwrap_or_default();
-                }
-            }
-        }
-        server.set_value(&saved);
-        name.set_value(&input::local_storage().and_then(|s| s.get_item("pl.name").ok().flatten()).unwrap_or_default());
-        set_status("");
-        let go = |first_kind: &'static str| {
-            let (Some(server), Some(name), Some(code_in)) = (el::<HtmlInputElement>("net-server"), el::<HtmlInputElement>("net-name"), el::<HtmlInputElement>("net-code")) else {
-                return;
-            };
-            let addr = server.value();
-            if addr.trim().is_empty() {
-                set_status("Informe o endereço do servidor.");
-                let _ = server.focus();
-                return;
-            }
-            let mut first = serde_json::json!({"t": first_kind, "name": name.value().trim()});
-            if first_kind == "join" {
-                let c = code_in.value().trim().to_string();
-                if c.len() != 4 || !c.chars().all(|ch| ch.is_ascii_alphabetic()) {
-                    set_status("O código da sala tem 4 letras.");
-                    let _ = code_in.focus();
-                    return;
-                }
-                first["code"] = serde_json::Value::String(c.to_uppercase());
-            }
-            if let Some(st) = input::local_storage() {
-                let _ = st.set_item("pl.server", addr.trim());
-                let _ = st.set_item("pl.name", name.value().trim());
-            }
-            set_status("Conectando...");
-            connect(&addr, first);
-        };
-        let bind = |id: &str, f: Box<dyn FnMut()>| {
-            if let Some(b) = el::<HtmlButtonElement>(id) {
-                let mut f = f;
-                let cb = Closure::<dyn FnMut(web_sys::Event)>::new(move |_e: web_sys::Event| f());
-                b.set_onclick(Some(cb.as_ref().unchecked_ref()));
-                cb.forget();
-            }
-        };
-        bind("net-create", Box::new(move || go("create")));
-        bind("net-join", Box::new(move || go("join")));
-        bind(
-            "net-back",
-            Box::new(|| {
-                leave_form();
-                close();
-                input::with(|i| i.set_key("Escape", true));
-                input::with(|i| i.set_key("Escape", false));
-            }),
-        );
-        if let Some(f) = el::<web_sys::HtmlFormElement>("netform") {
-            let cb = Closure::<dyn FnMut(web_sys::Event)>::new(move |e: web_sys::Event| e.prevent_default());
-            f.set_onsubmit(Some(cb.as_ref().unchecked_ref()));
-            cb.forget();
-        }
-        let _ = code_in;
-        let focus = if server.value().is_empty() { server } else { name };
-        let _ = focus.focus();
-    }
-
-    pub fn update(&mut self) -> Option<Next> {
-        self.t += 1;
-        for m in drain() {
-            match m["t"].as_str() {
-                Some("error") => set_status(m["msg"].as_str().unwrap_or("")),
-                Some("joined") => {
-                    leave_form();
-                    return Some(Next::Screen(Screen::NetLobby(NetLobbyScreen::new())));
-                }
-                _ => {}
-            }
-        }
-        if input::with(|i| i.code("Escape")) {
-            leave_form();
-            close();
-            return Some(Next::Screen(Screen::title()));
-        }
-        None
-    }
-
-    pub fn draw(&self, ctx: &Ctx) {
-        menu_backdrop(ctx, self.t as f64);
-        draw_logo(ctx, W / 2.0, 90.0, 0.45, self.t as f64);
-    }
-}
-
-fn leave_form() {
-    if let Some(f) = document().get_element_by_id("netform") {
-        let _ = f.set_attribute("hidden", "");
-    }
-    if let Some(a) = document().active_element() {
-        if let Some(h) = a.dyn_ref::<web_sys::HtmlElement>() {
-            let _ = h.blur();
-        }
-    }
 }
 
 // ---- sala de espera ----
@@ -522,7 +334,7 @@ impl NetLobbyScreen {
             if c >= 0 && (c as usize) < self.chars.len() {
                 self.chars[c as usize]
             } else {
-                self.chars[(js_sys::Math::random() * self.chars.len() as f64).floor() as usize % self.chars.len()]
+                self.chars[(crate::platform::random() * self.chars.len() as f64).floor() as usize % self.chars.len()]
             }
         };
         let mut players: Vec<serde_json::Value> =
@@ -532,7 +344,7 @@ impl NetLobbyScreen {
         }
         let a = assets();
         let bg = if room.bg < 0 {
-            a.backgrounds[(js_sys::Math::random() * a.backgrounds.len() as f64).floor() as usize % a.backgrounds.len()].id
+            a.backgrounds[(crate::platform::random() * a.backgrounds.len() as f64).floor() as usize % a.backgrounds.len()].id
         } else {
             a.backgrounds[room.bg as usize].id
         };
@@ -786,7 +598,7 @@ impl NetMatchScreen {
             self.leave_t = Some(t);
             if t <= 0 {
                 self.m.ended = true;
-                return Some(Next::Screen(if NET.with(|n| n.borrow().ws.is_some()) { Screen::NetLobby(NetLobbyScreen::new()) } else { Screen::title() }));
+                return Some(Next::Screen(if backend::is_open() { Screen::NetLobby(NetLobbyScreen::new()) } else { Screen::title() }));
             }
             return None;
         }
