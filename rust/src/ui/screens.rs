@@ -544,10 +544,10 @@ pub fn start_demo(g: &mut Game) {
     let chars: Vec<i32> = a.character_list().into_iter().filter(|&c| c != 30).collect();
     let mut players = vec![];
     for i in 0..4 {
-        let id = chars[(js_sys::Math::random() * chars.len() as f64).floor() as usize % chars.len()];
+        let id = chars[(crate::platform::random() * chars.len() as f64).floor() as usize % chars.len()];
         players.push(PlayerSpec::new(id, 100 + i, Con::New, -1, Some(2), "COM"));
     }
-    let bg = a.backgrounds[(js_sys::Math::random() * a.backgrounds.len() as f64).floor() as usize % a.backgrounds.len()].id;
+    let bg = a.backgrounds[(crate::platform::random() * a.backgrounds.len() as f64).floor() as usize % a.backgrounds.len()].id;
     let mut opts = MatchOpts::new(players, bg, Mode::Demo);
     opts.on_end = EndAction::ModeMenu;
     start_match(g, opts);

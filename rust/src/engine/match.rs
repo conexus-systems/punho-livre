@@ -21,7 +21,7 @@ use crate::ui::hud;
 
 /// teclas de teste só com ?dev na página
 pub fn dev_mode() -> bool {
-    web_sys::window().and_then(|w| w.location().search().ok()).map(|s| s.contains("dev")).unwrap_or(false)
+    crate::platform::dev_flag()
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -209,14 +209,14 @@ pub struct Match {
     pub cam_bound: Option<(f64, f64)>,
     pub result_text: String,
     pub result_sub: Option<String>,
-    pub vig: Option<web_sys::CanvasGradient>,
+    pub vig: Option<Gradient>,
     pub no_visuals: bool,
     pub dev: bool,
 }
 
 impl Match {
     pub fn new(assets: Rc<Assets>, opts: MatchOpts) -> Match {
-        let seed = opts.seed.unwrap_or_else(|| (js_sys::Date::now() as i64 & 0xffffffff) as u32);
+        let seed = opts.seed.unwrap_or_else(|| (crate::platform::epoch_ms() as i64 & 0xffffffff) as u32);
         let bg = Background::new(&assets, assets.bg(opts.bg));
         let mode = opts.mode;
         let rounds = if [1, 3, 5].contains(&opts.rounds) { opts.rounds } else { 1 };
@@ -562,8 +562,8 @@ impl Match {
         }
         let color = color.unwrap_or("rgba(220,210,190,1)");
         for _ in 0..n {
-            let a = js_sys::Math::random() * std::f64::consts::TAU;
-            let r = js_sys::Math::random;
+            let a = crate::platform::random() * std::f64::consts::TAU;
+            let r = crate::platform::random;
             self.effects.push(Fx::Puff(Puff {
                 x: x + (r() - 0.5) * 10.0,
                 y: -2.0,
@@ -1218,8 +1218,8 @@ impl Match {
         ctx.save();
         let (mut sx, mut sy) = (0.0, 0.0);
         if self.shake_amt > 0.3 && !self.paused {
-            sx = (js_sys::Math::random() - 0.5) * self.shake_amt;
-            sy = (js_sys::Math::random() - 0.5) * self.shake_amt;
+            sx = (crate::platform::random() - 0.5) * self.shake_amt;
+            sy = (crate::platform::random() - 0.5) * self.shake_amt;
             self.shake_amt *= 0.82;
         }
         ctx.translate(sx, sy - WORLD_Y);

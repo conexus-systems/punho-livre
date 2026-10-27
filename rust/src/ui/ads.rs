@@ -1,9 +1,12 @@
-//! Ponte com os anúncios do app Android (`window.AndroidAds`, ver android/). No navegador
-//! essa ponte não existe e as chamadas não fazem nada.
+//! Ponte com os anúncios do app Android. Na versão web é `window.AndroidAds` (ver android/);
+//! no app nativo, `native::host` chama o Kotlin por JNI. Fora do Android as chamadas não fazem nada.
 
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsValue;
 
+#[cfg(target_arch = "wasm32")]
 fn call(method: &str, arg: Option<JsValue>) {
     let Some(win) = web_sys::window() else { return };
     let Ok(ads) = js_sys::Reflect::get(&win, &"AndroidAds".into()) else { return };
@@ -19,11 +22,21 @@ fn call(method: &str, arg: Option<JsValue>) {
 }
 
 /// banner só nos menus: some durante a luta
+#[cfg(target_arch = "wasm32")]
 pub fn set_banner_visible(visible: bool) {
     call("setBannerVisible", Some(JsValue::from_bool(visible)));
 }
+#[cfg(not(target_arch = "wasm32"))]
+pub fn set_banner_visible(visible: bool) {
+    crate::native::host::set_banner_visible(visible);
+}
 
 /// fim de uma luta (fora do treino, da demonstração e da rede): o app decide se mostra o intersticial
+#[cfg(target_arch = "wasm32")]
 pub fn on_match_end() {
     call("onMatchEnd", None);
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub fn on_match_end() {
+    crate::native::host::on_match_end();
 }

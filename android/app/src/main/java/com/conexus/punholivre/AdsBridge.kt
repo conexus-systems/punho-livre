@@ -2,7 +2,6 @@ package com.conexus.punholivre
 
 import android.app.Activity
 import android.os.SystemClock
-import android.webkit.JavascriptInterface
 import android.view.View
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
@@ -13,7 +12,7 @@ import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 
 /**
- * Ponte de anúncios para o jogo (`window.AndroidAds`).
+ * Anúncios do jogo: o Rust chama `MainActivity.setBannerVisible` e `MainActivity.onMatchEnd`, que caem aqui.
  *
  * - Banner: visível só nos menus (`setBannerVisible`). Durante a luta some, para não tirar
  *   área de jogo nem atrapalhar os toques.
@@ -30,12 +29,10 @@ class AdsBridge(private val activity: Activity, private val banner: AdView) {
         load()
     }
 
-    @JavascriptInterface
     fun setBannerVisible(visible: Boolean) {
         activity.runOnUiThread { banner.visibility = if (visible) View.VISIBLE else View.GONE }
     }
 
-    @JavascriptInterface
     fun onMatchEnd() {
         activity.runOnUiThread {
             matchesSinceAd++

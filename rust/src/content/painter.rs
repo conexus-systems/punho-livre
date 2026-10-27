@@ -264,7 +264,7 @@ pub fn blob(ctx: &Ctx, pts: &[P], fill: &str, line: f64) {
     ctx.fill();
 }
 
-pub fn blob_grad(ctx: &Ctx, pts: &[P], fill: &web_sys::CanvasGradient, line: f64) {
+pub fn blob_grad(ctx: &Ctx, pts: &[P], fill: &Gradient, line: f64) {
     ctx.poly(pts);
     ctx.line_join("round");
     ctx.stroke_style(INK);

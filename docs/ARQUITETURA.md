@@ -1,14 +1,26 @@
 # Arquitetura
 
-O jogo é Rust compilado para WebAssembly (`rust/`), desenhado num `<canvas>` 2D, sem etapa de
-JavaScript própria além do `index.html`, que carrega o `.wasm` e chama `start_game()`. O app
-Android só abre `web/index.html` numa WebView.
+O jogo é Rust (`rust/`) com **dois alvos que compartilham o mesmo motor**: WebAssembly, desenhado
+num `<canvas>` 2D no navegador, e um **app nativo** (computador e Android), sem WebView. A simulação,
+o conteúdo gerado, as telas e a rede são o mesmo código; só mudam as pontas que falam com o sistema,
+escolhidas por `cfg(target_arch = "wasm32")`.
 
 ```
-rust/src (wasm-bindgen, web-sys)  ──cargo + wasm-bindgen──▶  web/pkg/{punho.js, punho_bg.wasm, punho_wasm.js}
-                                                                  ▲
-web/index.html ── carrega ────────────────────────────────────────┘
+rust/src ──cargo + wasm-bindgen──▶ web/pkg/{punho.js, punho_bg.wasm, punho_wasm.js} ◀── web/index.html
+   │                                (navegador: Canvas 2D, Web Audio, WebSocket, localStorage, botões HTML)
+   └──cargo (cargo-ndk no Android)──▶ punho (computador) · libpunho_livre.so (Android)
+                                    (nativo: tiny-skia, mixer cpal, tungstenite, arquivo de save, toque desenhado)
 ```
+
+| Ponta | Navegador (`wasm32`) | App nativo |
+|-------|----------------------|------------|
+| Desenho (`gfx/`) | `web.rs`: Canvas 2D | `native.rs`: `tiny-skia` (caminhos, gradientes, recorte, sombra) e texto por contornos (`ttf-parser`) com as fontes de `rust/assets/fonts` |
+| Som (`audio/`) | `web_sound.rs`, `web_music.rs`: Web Audio | `mixer.rs`: mixer sobre o `cpal`, trilha renderizada em laço |
+| Geradores de som e faixas | `audio/synth.rs` (comum aos dois) | |
+| Entrada e toque | teclas e botões do DOM (`ui/touch/web.rs`) | `winit` (teclado, toque, mouse) e controles desenhados por cima da janela (`ui/touch/native.rs`) |
+| Rede (`net/`) | `web.rs`: WebSocket do navegador e formulário HTML | `native.rs`: `tungstenite` numa thread e tela de conexão desenhada no jogo |
+| Salvamento (`platform.rs`) | `localStorage` | `save.json` na pasta de dados do app |
+| Laço e janela | `game::boot` e `requestAnimationFrame` | `native/app.rs`: `winit` + `softbuffer`, 30 TU por segundo |
 
 ## Camadas de `rust/src/`
 
@@ -87,10 +99,12 @@ uma fila e as telas as consomem no próprio `update`, sem callbacks mexendo na t
 
 ## Android
 
-`android/` é um projeto Gradle (Kotlin). Ele copia `web/` para os assets do app (sem o `.wasm` binário,
-que o app não usa), abre o jogo numa WebView, liga o botão voltar ao jogo (`window.androidBack`) e
-fecha o app pela tela inicial. Os anúncios do AdMob ficam em `AdsBridge` e o jogo os controla pela
-ponte `window.AndroidAds` (`rust/src/ui/ads.rs`). Detalhes em [`android/README.md`](../android/README.md).
+`android/` é um projeto Gradle (Kotlin) com uma `MainActivity` que é uma `NativeActivity`: ela carrega
+`libpunho_livre.so` (o jogo em Rust, compilado por `cargo ndk` para cada ABI) e o Rust cuida de janela,
+toque, desenho e som. O Kotlin só faz o que o Rust não alcança: a barra imersiva, o banner e o
+intersticial do AdMob (`AdsBridge`) e a vibração. O Rust chama `setBannerVisible`, `onMatchEnd` e
+`vibrate` por JNI (`rust/src/native/android.rs`). O botão voltar chega ao jogo como tecla.
+Detalhes em [`android/README.md`](../android/README.md).
 
 ## Testes
 

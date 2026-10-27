@@ -1,5 +1,5 @@
 // Conferência rápida: sintaxe do JavaScript que sobrou (servidor, testes e ferramentas),
-// o index.html e o Rust (cargo check para WebAssembly e para o computador, mais o formato).
+// o index.html e o Rust (clippy para WebAssembly e para o app nativo, testes e o formato).
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
@@ -38,7 +38,8 @@ const cargo = (args, label) => {
   if (r.status !== 0) fail(`${label}\n${(r.stderr || r.stdout).split('\n').slice(-25).join('\n')}`);
 };
 cargo(['fmt', '--check'], 'cargo fmt --check (rode "cargo fmt" na pasta rust/)');
-cargo(['clippy', '--target', 'wasm32-unknown-unknown', '--', '-D', 'warnings'], 'cargo clippy');
+cargo(['clippy', '--lib', '--target', 'wasm32-unknown-unknown', '--', '-D', 'warnings'], 'cargo clippy (WebAssembly)');
+cargo(['clippy', '--all-targets', '--', '-D', 'warnings'], 'cargo clippy (app nativo)');
 cargo(['test', '--lib'], 'cargo test');
 
 if (failed) { console.error(`\n${failed} problema(s).`); process.exit(1); }

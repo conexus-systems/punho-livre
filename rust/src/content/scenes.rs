@@ -2,7 +2,6 @@
 //! y = 128 do mundo; o chão (onde os lutadores andam) fica entre zboundary[0] e [1].
 
 use std::collections::HashMap;
-use web_sys::HtmlCanvasElement;
 
 use crate::core::consts::{Random, W};
 use crate::engine::data::{BgData, Layer};
@@ -14,7 +13,7 @@ const WORLD_BOTTOM: f64 = 560.0;
 const TAU: f64 = std::f64::consts::TAU;
 const PI: f64 = std::f64::consts::PI;
 
-type Images = HashMap<String, HtmlCanvasElement>;
+type Images = HashMap<String, Canvas>;
 
 fn vgrad(ctx: &Ctx, y0: f64, y1: f64, stops: &[(f64, &str)]) {
     let g = ctx.linear(0.0, y0, 0.0, y1, stops);
