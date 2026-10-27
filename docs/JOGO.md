@@ -41,7 +41,7 @@
   vibração, tremor de tela, números de dano), Como jogar, Sobre com estatísticas, salvamento
   local, menu de pausa com Reiniciar (Esc ou botão voltar; o jogo pausa sozinho ao sair do app),
   trilha sonora sintetizada, barras de vida, força e velocidade na escolha do lutador e suporte
-  a controle bluetooth/USB (A ataca, B pula, X defende, Start pausa).
+  a controle bluetooth/USB (só no navegador por enquanto; o app nativo ainda não lê controles) (A ataca, B pula, X defende, Start pausa).
 - **6 cenários:** Praia, Rua da Cidade, Floresta, Templo da Montanha, Porto e Dojô.
 - **Celular:** controles de toque com direcional de 8 direções; levar o dedo até a
   borda do direcional faz correr. Botões de golpe especial fazem a sequência inteira
