@@ -121,7 +121,7 @@ impl App {
         touch::draw(ctx);
         let Ok(mut buf) = g.surface.buffer_mut() else { return };
         canvas.with_pixels(|px, _, _| {
-            for (dst, p) in buf.iter_mut().zip(px.chunks_exact(4)) {
+            for (dst, p) in buf.iter_mut().zip(px.chunks(4)) {
                 *dst = ((p[0] as u32) << 16) | ((p[1] as u32) << 8) | p[2] as u32;
             }
         });
