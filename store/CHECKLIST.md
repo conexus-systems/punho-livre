@@ -14,7 +14,7 @@
 - [ ] Ativar o **Play App Signing** (padrão): a Google guarda a chave final e você assina o
       envio com a chave de upload acima.
 - [ ] Hospedar a **política de privacidade** (store/politica-de-privacidade.html) e preencher
-      [DATA] e [E-MAIL DE CONTATO].
+      (data e e-mail de contato já estão preenchidos).
 - [ ] **Decidir a licença do código** (ver LEGAL.md).
 - [ ] Conferir se o nome **Punho Livre** está livre no INPI e na Play Store.
 

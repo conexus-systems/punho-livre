@@ -11,7 +11,7 @@ Punho Livre: Luta 2.5D
 ## Descrição curta (máx. 80 caracteres)
 
 ```
-Brigue com até 4 amigos: 8 lutadores, rounds, sobrevivência, online e controle.
+Brigue com até 4 amigos: 8 lutadores, rounds, sobrevivência e jogo online.
 ```
 
 ## Descrição completa (máx. 4000 caracteres)
@@ -45,26 +45,25 @@ FEITO PARA O CELULAR
 • Direcional de 8 direções; leve o dedo até a borda para correr
 • Botões de golpe especial: um toque faz a sequência inteira
 • Tamanho e transparência dos botões ajustáveis
-• Funciona offline e também com controle bluetooth (até 4 jogadores no mesmo aparelho)
+• Funciona offline; até 4 jogadores no mesmo aparelho com teclado externo
 
 COMBOS E MECÂNICAS
 Combos com contador de HITS, corrida, rolamento, defesa e quebra de guarda, tontura, agarrão, quedas, fogo, gelo, bolas de energia que podem ser rebatidas e armas para pegar, bater e arremessar. K.O. em câmera lenta e números de dano na tela.
 
 4 dificuldades para o computador, de Fácil a Maluco, e várias arenas: praia, rua da cidade, floresta, templo, porto e dojô.
 
-O app não coleta dados pessoais.
+O jogo não pede cadastro nem login. Os anúncios usam o ID de publicidade do aparelho (você pode redefini-lo nas configurações do Android).
 ```
 
-## O que há de novo (versão 3.0)
+## O que há de novo (versão 3.1)
 
 ```
+• App refeito como aplicativo nativo, mais leve e fluido
+• Controles de toque novos: direcional de 8 direções, botões A/J/D e golpes especiais em um toque
 • Novo modo Sobrevivência: ondas sem fim, chefes e recorde salvo
 • Rounds no Versus: luta única, melhor de 3 ou melhor de 5, com tempo por round
 • Abertura de round, K.O. em câmera lenta e contador de combos
 • Números de dano, clarão ao apanhar e opção de desligar o tremor de tela
-• Reiniciar a luta pelo menu de pausa
-• Tela de escolha com barras de vida, força e velocidade
-• Jogo reescrito do zero em Rust, mais rápido e estável
 ```
 
 ## Categoria e etiquetas
@@ -95,6 +94,6 @@ Regere com `node tools/store-assets.cjs` depois de qualquer mudança visual.
   e teclas ao servidor de salas só durante a partida, sem gravar; confira se isso se encaixa na
   exceção de "processamento efêmero" da política atual da Play ao responder. Por causa dos
   anúncios, declare também o **ID de publicidade** (coletado pelo SDK do AdMob).
-- **Permissões:** apenas INTERNET (jogo em rede).
+- **Permissões:** INTERNET (jogo em rede e anúncios) e VIBRAR (vibração ao levar dano, com interruptor em Ajustes). O AdMob pode acrescentar ACCESS_NETWORK_STATE e o ID de publicidade (AD_ID); declare o AD_ID no formulário de ID de publicidade.
 - **Política de privacidade:** hospede `politica-de-privacidade.html` (por exemplo no GitHub
-  Pages) e cole o endereço. Troque [DATA] e [E-MAIL DE CONTATO] antes.
+  Pages) e cole o endereço. Data e e-mail de contato já estão preenchidos.
